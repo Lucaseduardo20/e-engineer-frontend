@@ -44,6 +44,7 @@ onMounted(async () => {
   border: 1px solid #d7e4df;
   background: #ffffff;
   box-shadow: 0 12px 28px rgb(15 45 38 / 0.06);
+  margin-top: 10px;
 }
 
 .side-panel__title {
