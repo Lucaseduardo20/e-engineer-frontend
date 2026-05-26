@@ -158,3 +158,20 @@ nvm use 22
 - `npm run type-check`: passou com Node 22.13.1.
 - `npm run build`: passou com Node 22.13.1.
 - `npm run test:unit -- ProjectsList`: passou com Node 22.13.1.
+
+## 2026-05-26 - Sprint 0 integracao MVP
+
+### Implementado
+
+- Criada camada `src/shared/http/api` com services para auth e projects sobre o `http-client`.
+- Stores de auth/projects passaram a usar a camada compartilhada de API.
+- `ProjectsStore` ganhou criacao persistente de projeto via `POST /projects`.
+- Tela `/projects` ganhou dialog de criacao de projeto tecnico.
+- Interceptor de auth passou a renovar JWT via `POST /auth/refresh` e repetir uma request 401 uma vez.
+- Criado teste E2E em `tests/e2e/sprint0.spec.ts` cobrindo app servido, login, listagem, criacao de projeto e refresh.
+
+### Validacoes
+
+- `npm run type-check`: passou com Node 22.13.1.
+- `npm run build`: passou com Node 22.13.1.
+- `npm run test:unit -- tests/e2e/sprint0.spec.ts`: passou com acesso liberado a `localhost`.
