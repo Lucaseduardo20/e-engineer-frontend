@@ -1,13 +1,16 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import { useAuthStore } from '@/modules/auth/stores/auth.store'
+
 type NavigationItem = {
   label: string
   path: string
-  active?: boolean
   disabled?: boolean
 }
 
 const navigationItems: NavigationItem[] = [
-  { label: 'Dashboard', path: '/dashboard', active: true },
+  { label: 'Dashboard', path: '/dashboard' },
   { label: 'Projetos', path: '/projects', disabled: true },
   { label: 'Templates', path: '/templates', disabled: true },
   { label: 'Documentos', path: '/documents', disabled: true },
@@ -16,6 +19,25 @@ const navigationItems: NavigationItem[] = [
   { label: 'Equipe', path: '/team', disabled: true },
   { label: 'Configuracoes', path: '/settings', disabled: true },
 ]
+
+const route = useRoute()
+const authStore = useAuthStore()
+
+const userName = computed(() => authStore.user?.name ?? 'Usuario')
+const userEmail = computed(() => authStore.user?.email ?? 'Sessao ativa')
+const organizationLabel = computed(() => authStore.user?.organizationId ?? 'Organizacao atual')
+const userInitials = computed(() => {
+  const words = userName.value.trim().split(/\s+/).filter(Boolean)
+
+  if (!words.length) {
+    return 'EE'
+  }
+
+  return words
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase())
+    .join('')
+})
 </script>
 
 <template>
@@ -43,7 +65,7 @@ const navigationItems: NavigationItem[] = [
             v-else
             class="authenticated-layout__nav-item"
             :class="{
-              'authenticated-layout__nav-item--active': item.active,
+              'authenticated-layout__nav-item--active': route.path === item.path,
             }"
             :to="item.path"
           >
@@ -57,15 +79,19 @@ const navigationItems: NavigationItem[] = [
       <header class="authenticated-layout__topbar">
         <div>
           <span class="authenticated-layout__topbar-label">Organizacao atual</span>
-          <strong>Engenharia Municipal Alfa</strong>
+          <strong>{{ organizationLabel }}</strong>
         </div>
 
-        <div class="authenticated-layout__user">
-          <span>LT</span>
-          <div>
-            <strong>Lucas Torres</strong>
-            <small>Coordenador tecnico</small>
+        <div class="authenticated-layout__account">
+          <div class="authenticated-layout__user">
+            <span>{{ userInitials }}</span>
+            <div>
+              <strong>{{ userName }}</strong>
+              <small>{{ userEmail }}</small>
+            </div>
           </div>
+
+          <RouterLink class="authenticated-layout__logout" to="/logout">Sair</RouterLink>
         </div>
       </header>
 
@@ -186,6 +212,12 @@ const navigationItems: NavigationItem[] = [
   gap: 0.75rem;
 }
 
+.authenticated-layout__account {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .authenticated-layout__user > span {
   display: grid;
   width: 2.5rem;
@@ -199,6 +231,19 @@ const navigationItems: NavigationItem[] = [
 
 .authenticated-layout__user small {
   color: #667085;
+}
+
+.authenticated-layout__logout {
+  display: inline-flex;
+  min-height: 2.25rem;
+  align-items: center;
+  border: 1px solid #cdd5df;
+  border-radius: 0.5rem;
+  color: #344054;
+  font-size: 0.875rem;
+  font-weight: 800;
+  padding: 0 0.75rem;
+  text-decoration: none;
 }
 
 .authenticated-layout__main {
@@ -224,13 +269,18 @@ const navigationItems: NavigationItem[] = [
 
 @media (max-width: 640px) {
   .authenticated-layout__topbar,
-  .authenticated-layout__user {
+  .authenticated-layout__user,
+  .authenticated-layout__account {
     align-items: flex-start;
   }
 
   .authenticated-layout__topbar {
     display: grid;
     padding: 1rem;
+  }
+
+  .authenticated-layout__account {
+    display: grid;
   }
 
   .authenticated-layout__main {

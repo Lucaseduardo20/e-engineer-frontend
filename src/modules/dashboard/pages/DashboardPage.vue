@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import AuthenticatedLayout from '@/app/layouts/AuthenticatedLayout.vue'
 import BasePageHeader from '@/shared/components/BasePageHeader.vue'
 import ActivityLogList from '@/modules/dashboard/components/ActivityLogList.vue'
 import DashboardMetricCard from '@/modules/dashboard/components/DashboardMetricCard.vue'
@@ -14,44 +13,42 @@ import {
 </script>
 
 <template>
-  <AuthenticatedLayout>
-    <div class="dashboard-page">
-      <BasePageHeader
-        eyebrow="Operacao tecnica"
-        title="Dashboard"
-        description="Acompanhe projetos, entregaveis, versoes oficiais e revisoes que precisam de decisao tecnica."
-        :breadcrumbs="['E-Engineer', 'Dashboard']"
-      >
-        <template #actions>
-          <button class="dashboard-page__secondary-action" type="button">Exportar resumo</button>
-          <button class="dashboard-page__primary-action" type="button">Novo projeto</button>
-        </template>
-      </BasePageHeader>
+  <div class="dashboard-page">
+    <BasePageHeader
+      eyebrow="Operacao tecnica"
+      title="Dashboard"
+      description="Acompanhe projetos, entregaveis, versoes oficiais e revisoes que precisam de decisao tecnica."
+      :breadcrumbs="['E-Engineer', 'Dashboard']"
+    >
+      <template #actions>
+        <button class="dashboard-page__secondary-action" type="button">Exportar resumo</button>
+        <button class="dashboard-page__primary-action" type="button">Novo projeto</button>
+      </template>
+    </BasePageHeader>
 
-      <section class="dashboard-page__metrics" aria-label="Indicadores principais">
-        <DashboardMetricCard v-for="metric in dashboardMetrics" :key="metric.label" :metric="metric" />
-      </section>
+    <section class="dashboard-page__metrics" aria-label="Indicadores principais">
+      <DashboardMetricCard v-for="metric in dashboardMetrics" :key="metric.label" :metric="metric" />
+    </section>
 
-      <section class="dashboard-page__content-grid">
-        <div class="dashboard-page__panel dashboard-page__panel--large">
-          <div class="dashboard-page__section-header">
-            <div>
-              <h2>Projetos recentes</h2>
-              <p>Projetos tecnicos em andamento com prazo, responsavel e status de producao.</p>
-            </div>
-          </div>
-
-          <div class="dashboard-page__project-list">
-            <RecentProjectCard v-for="project in recentProjects" :key="project.id" :project="project" />
+    <section class="dashboard-page__content-grid">
+      <div class="dashboard-page__panel dashboard-page__panel--large">
+        <div class="dashboard-page__section-header">
+          <div>
+            <h2>Projetos recentes</h2>
+            <p>Projetos tecnicos em andamento com prazo, responsavel e status de producao.</p>
           </div>
         </div>
 
-        <ActivityLogList :items="activityLog" />
-      </section>
+        <div class="dashboard-page__project-list">
+          <RecentProjectCard v-for="project in recentProjects" :key="project.id" :project="project" />
+        </div>
+      </div>
 
-      <PendingReviewList :reviews="pendingReviews" />
-    </div>
-  </AuthenticatedLayout>
+      <ActivityLogList :items="activityLog" />
+    </section>
+
+    <PendingReviewList :reviews="pendingReviews" />
+  </div>
 </template>
 
 <style scoped>
