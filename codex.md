@@ -75,3 +75,50 @@ nvm use 22
 ```
 
 - O dev server subiu em `http://localhost:5174/` porque a porta 5173 ja estava em uso.
+
+## 2026-05-25 - Autenticacao frontend
+
+### Contexto
+
+- O backend definiu `POST /auth/login` retornando `{ token, user }`.
+- O frontend precisava de login, persistencia de sessao, interceptor de token e protecao de rotas para seguir o MVP.
+- O projeto ainda nao usava Vuetify; este corte manteve CSS proprio.
+
+### Implementado
+
+- Instaladas dependencias `axios` e `zod`.
+- Criado HTTP client centralizado em `src/shared/http/http-client.ts`.
+- Criado interceptor de auth em `src/shared/http/interceptors/auth.interceptor.ts`.
+- Criado modulo `src/modules/auth` com tipos, constantes de storage, service, Pinia store, composable e entry point.
+- Criado `LoginForm.vue` com validacao Zod, loading state e erro de servidor.
+- Criadas paginas `LoginPage.vue` e `LogoutPage.vue`.
+- Criado `UnauthenticatedLayout.vue` para rotas publicas.
+- Criado guard `src/router/guards/auth.guard.ts`.
+- Atualizado router com `/login`, `/logout`, redirect `/` e `/dashboard` protegido por `meta.requiresAuth`.
+- Atualizado `App.vue` para escolher layout pelo meta da rota.
+- Atualizado `AuthenticatedLayout.vue` para exibir dados da sessao e link de logout.
+- Criados `.env` e `.env.example` com `VITE_API_URL=http://localhost:3000`.
+- Atualizados testes do `App.vue` e criado teste unitario de `LoginForm.vue`.
+- Criado teste unitario do guard de autenticacao.
+
+### Decisoes registradas
+
+- Token JWT e usuario autenticado ficam em `localStorage` com as chaves `auth:token` e `auth:user`.
+- Store Pinia `useAuthStore` e a fonte de verdade do estado de autenticacao.
+- Componentes consomem `useAuth`, store ou services; nao devem chamar Axios diretamente.
+- Interceptor adiciona `Authorization: Bearer {token}` em toda request quando houver token salvo.
+- Respostas `401` limpam a sessao e redirecionam para `/login` preservando `redirect` na query.
+- Rotas protegidas devem declarar `meta.requiresAuth = true`.
+
+### Validacoes
+
+- `npm run type-check`: passou com Node 22.13.1.
+- `npm run build`: passou com Node 22.13.1.
+- `npm run test:unit`: passou com 3 arquivos e 6 testes.
+- `npm run lint`: nao executado porque o projeto ainda nao possui script `lint` configurado.
+
+### Observacoes operacionais
+
+- Para testar login real, o backend precisa estar rodando em `VITE_API_URL` e oferecer `POST /auth/login`.
+- Sem token, `/dashboard` redireciona para `/login?redirect=/dashboard`.
+- A tela de login chama `/auth/login` e, em sucesso, redireciona para `/dashboard`.
