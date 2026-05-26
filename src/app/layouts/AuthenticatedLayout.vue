@@ -1,139 +1,125 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+import OrgSwitcher from '@/modules/organizations/components/OrgSwitcher.vue'
 import { useAuthStore } from '@/modules/auth/stores/auth.store'
+import { useUiStore } from '@/modules/ui/stores/ui.store'
 
 type NavigationItem = {
   label: string
   path: string
-  disabled?: boolean
+  icon: string
 }
 
 const navigationItems: NavigationItem[] = [
-  { label: 'Dashboard', path: '/dashboard' },
-  { label: 'Projetos', path: '/projects', disabled: true },
-  { label: 'Templates', path: '/templates', disabled: true },
-  { label: 'Documentos', path: '/documents', disabled: true },
-  { label: 'Revisoes', path: '/reviews', disabled: true },
-  { label: 'Base de Conhecimento', path: '/knowledge-base', disabled: true },
-  { label: 'Equipe', path: '/team', disabled: true },
-  { label: 'Configuracoes', path: '/settings', disabled: true },
+  { label: 'Dashboard', path: '/dashboard', icon: '$info' },
+  { label: 'Projetos', path: '/projects', icon: '$file' },
+  { label: 'Documentos', path: '/documents', icon: '$upload' },
+  { label: 'Revisoes', path: '/reviews', icon: '$search' },
+  { label: 'Base de Conhecimento', path: '/knowledge-base', icon: '$command' },
+  { label: 'Equipe', path: '/team', icon: '$success' },
 ]
 
 const route = useRoute()
 const authStore = useAuthStore()
+const uiStore = useUiStore()
 
-const userName = computed(() => authStore.user?.name ?? 'Usuario')
+const userName = computed(() => authStore.user?.fullName ?? 'Usuario')
 const userEmail = computed(() => authStore.user?.email ?? 'Sessao ativa')
-const organizationLabel = computed(() => authStore.user?.organizationId ?? 'Organizacao atual')
 const userInitials = computed(() => {
   const words = userName.value.trim().split(/\s+/).filter(Boolean)
-
-  if (!words.length) {
-    return 'EE'
-  }
-
-  return words
-    .slice(0, 2)
-    .map((word) => word[0]?.toUpperCase())
-    .join('')
+  return words.length
+    ? words
+        .slice(0, 2)
+        .map((word) => word[0]?.toUpperCase())
+        .join('')
+    : 'EE'
 })
 </script>
 
 <template>
-  <div class="authenticated-layout">
-    <aside class="authenticated-layout__sidebar" aria-label="Navegacao principal">
-      <RouterLink class="authenticated-layout__brand" to="/dashboard" aria-label="E-Engineer Dashboard">
-        <span class="authenticated-layout__brand-mark">EE</span>
-        <span>
+  <v-app>
+    <v-navigation-drawer
+      :rail="uiStore.isNavigationCollapsed"
+      permanent
+      width="280"
+      color="#10231f"
+      theme="dark"
+    >
+      <div class="app-shell__brand">
+        <span class="app-shell__brand-mark">EE</span>
+        <span v-if="!uiStore.isNavigationCollapsed">
           <strong>E-Engineer</strong>
           <small>Controle tecnico</small>
         </span>
-      </RouterLink>
+      </div>
 
-      <nav class="authenticated-layout__nav">
-        <template v-for="item in navigationItems" :key="item.label">
-          <span
-            v-if="item.disabled"
-            class="authenticated-layout__nav-item authenticated-layout__nav-item--disabled"
-            aria-disabled="true"
-          >
-            {{ item.label }}
-          </span>
+      <v-list nav density="comfortable" aria-label="Navegacao principal">
+        <v-list-item
+          v-for="item in navigationItems"
+          :key="item.path"
+          :to="item.path"
+          :active="route.path === item.path"
+          :prepend-icon="item.icon"
+          rounded="lg"
+          :title="item.label"
+        />
+      </v-list>
+    </v-navigation-drawer>
 
-          <RouterLink
-            v-else
-            class="authenticated-layout__nav-item"
-            :class="{
-              'authenticated-layout__nav-item--active': route.path === item.path,
-            }"
-            :to="item.path"
-          >
-            {{ item.label }}
-          </RouterLink>
+    <v-app-bar color="white" elevation="0" border>
+      <v-tooltip :text="uiStore.isNavigationCollapsed ? 'Expandir menu' : 'Recolher menu'">
+        <template #activator="{ props }">
+          <v-btn
+            v-bind="props"
+            :icon="uiStore.isNavigationCollapsed ? '$next' : '$prev'"
+            variant="tonal"
+            color="teal"
+            size="small"
+            aria-label="Alternar menu"
+            @click="uiStore.toggleNavigation"
+          />
         </template>
-      </nav>
-    </aside>
-
-    <div class="authenticated-layout__body">
-      <header class="authenticated-layout__topbar">
-        <div>
-          <span class="authenticated-layout__topbar-label">Organizacao atual</span>
-          <strong>{{ organizationLabel }}</strong>
-        </div>
-
-        <div class="authenticated-layout__account">
-          <div class="authenticated-layout__user">
-            <span>{{ userInitials }}</span>
-            <div>
+      </v-tooltip>
+      <div class="app-shell__org"><OrgSwitcher /></div>
+      <v-spacer />
+      <v-menu>
+        <template #activator="{ props }">
+          <v-btn v-bind="props" variant="text" class="app-shell__account">
+            <v-avatar color="teal" variant="tonal" size="32">{{ userInitials }}</v-avatar>
+            <span class="app-shell__account-copy">
               <strong>{{ userName }}</strong>
               <small>{{ userEmail }}</small>
-            </div>
-          </div>
+            </span>
+          </v-btn>
+        </template>
+        <v-list>
+          <v-list-item to="/logout" title="Sair" />
+        </v-list>
+      </v-menu>
+    </v-app-bar>
 
-          <RouterLink class="authenticated-layout__logout" to="/logout">Sair</RouterLink>
-        </div>
-      </header>
-
-      <main class="authenticated-layout__main">
+    <v-main>
+      <div class="app-shell__main">
         <slot />
-      </main>
-    </div>
-  </div>
+      </div>
+    </v-main>
+  </v-app>
 </template>
 
 <style scoped>
-.authenticated-layout {
-  display: grid;
-  min-height: 100vh;
-  grid-template-columns: 17.5rem minmax(0, 1fr);
-  background: #f3f5f4;
-}
-
-.authenticated-layout__sidebar {
-  position: sticky;
-  top: 0;
+.app-shell__brand {
   display: flex;
-  height: 100vh;
-  flex-direction: column;
-  border-right: 1px solid #d9e0e6;
-  background: #10231f;
-  color: #f6fbf8;
-  padding: 1.25rem;
-}
-
-.authenticated-layout__brand {
-  display: flex;
+  min-height: 4.5rem;
   align-items: center;
   gap: 0.75rem;
-  color: inherit;
-  text-decoration: none;
+  padding: 1rem;
 }
 
-.authenticated-layout__brand-mark {
+.app-shell__brand-mark {
   display: grid;
-  width: 2.625rem;
-  height: 2.625rem;
+  width: 2.5rem;
+  height: 2.5rem;
   place-items: center;
   border-radius: 0.5rem;
   background: #d7f2e7;
@@ -141,154 +127,50 @@ const userInitials = computed(() => {
   font-weight: 900;
 }
 
-.authenticated-layout__brand strong,
-.authenticated-layout__user strong,
-.authenticated-layout__topbar strong {
+.app-shell__brand strong,
+.app-shell__brand small,
+.app-shell__account-copy strong,
+.app-shell__account-copy small {
   display: block;
 }
 
-.authenticated-layout__brand small,
-.authenticated-layout__user small {
-  color: #b9cac5;
+.app-shell__brand small,
+.app-shell__account-copy small {
   font-size: 0.75rem;
+  opacity: 0.72;
 }
 
-.authenticated-layout__nav {
-  display: grid;
-  gap: 0.25rem;
-  margin-top: 2rem;
+.app-shell__org {
+  width: min(22rem, 42vw);
+  margin-left: 1rem;
 }
 
-.authenticated-layout__nav-item {
-  border-radius: 0.5rem;
-  color: #dce8e3;
-  font-weight: 700;
-  padding: 0.75rem 0.875rem;
-  text-decoration: none;
+.app-shell__account {
+  min-height: 3rem;
 }
 
-.authenticated-layout__nav-item:hover {
-  background: rgb(255 255 255 / 0.08);
+.app-shell__account-copy {
+  margin-left: 0.5rem;
+  text-align: left;
 }
 
-.authenticated-layout__nav-item--active {
-  background: #e8f8f0;
-  color: #123c32;
-}
-
-.authenticated-layout__nav-item--disabled {
-  color: #8aa098;
-  cursor: not-allowed;
-}
-
-.authenticated-layout__body {
-  display: grid;
-  min-width: 0;
-  grid-template-rows: auto 1fr;
-}
-
-.authenticated-layout__topbar {
-  display: flex;
-  min-height: 4.5rem;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  border-bottom: 1px solid #d9e0e6;
-  background: rgb(255 255 255 / 0.92);
-  padding: 0.875rem 1.75rem;
-}
-
-.authenticated-layout__topbar-label {
-  display: block;
-  color: #697586;
-  font-size: 0.75rem;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.authenticated-layout__user {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.authenticated-layout__account {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.authenticated-layout__user > span {
-  display: grid;
-  width: 2.5rem;
-  height: 2.5rem;
-  place-items: center;
-  border-radius: 50%;
-  background: #2447a8;
-  color: #ffffff;
-  font-weight: 900;
-}
-
-.authenticated-layout__user small {
-  color: #667085;
-}
-
-.authenticated-layout__logout {
-  display: inline-flex;
-  min-height: 2.25rem;
-  align-items: center;
-  border: 1px solid #cdd5df;
-  border-radius: 0.5rem;
-  color: #344054;
-  font-size: 0.875rem;
-  font-weight: 800;
-  padding: 0 0.75rem;
-  text-decoration: none;
-}
-
-.authenticated-layout__main {
+.app-shell__main {
   width: min(100%, 92rem);
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1.5rem;
 }
 
-@media (max-width: 980px) {
-  .authenticated-layout {
-    grid-template-columns: 1fr;
+@media (max-width: 720px) {
+  .app-shell__org {
+    display: none;
   }
 
-  .authenticated-layout__sidebar {
-    position: static;
-    height: auto;
+  .app-shell__account-copy {
+    display: none;
   }
 
-  .authenticated-layout__nav {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 640px) {
-  .authenticated-layout__topbar,
-  .authenticated-layout__user,
-  .authenticated-layout__account {
-    align-items: flex-start;
-  }
-
-  .authenticated-layout__topbar {
-    display: grid;
+  .app-shell__main {
     padding: 1rem;
-  }
-
-  .authenticated-layout__account {
-    display: grid;
-  }
-
-  .authenticated-layout__main {
-    padding: 1rem;
-  }
-
-  .authenticated-layout__nav {
-    grid-template-columns: 1fr;
   }
 }
 </style>

@@ -1,9 +1,6 @@
-export type User = {
-  id: string
-  email: string
-  name: string
-  organizationId: string
-}
+import type { User } from '@/shared/types/api-contracts'
+
+export type { User }
 
 export type AuthToken = {
   token: string
@@ -22,4 +19,3 @@ export type AuthState = {
   isLoading: boolean
   error: string | null
 }
-

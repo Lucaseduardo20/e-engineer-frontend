@@ -122,3 +122,39 @@ nvm use 22
 - Para testar login real, o backend precisa estar rodando em `VITE_API_URL` e oferecer `POST /auth/login`.
 - Sem token, `/dashboard` redireciona para `/login?redirect=/dashboard`.
 - A tela de login chama `/auth/login` e, em sucesso, redireciona para `/dashboard`.
+
+## 2026-05-26 - Dashboard Vuetify integrado
+
+### Implementado
+
+- Vuetify passou a ser usado no AppShell autenticado com navigation drawer, topbar, seletor de organizacao e menu do usuario.
+- Criado client tipado `src/shared/http/api-client.ts` consumindo envelopes `{ data }`.
+- Contratos do dashboard foram definidos em `src/shared/types/api-contracts.ts`.
+- Criadas stores Pinia `useProjectsStore` e `useUiStore`.
+- Criados componentes ProjectsList, ProjectDetail, DeliverablesBoard, OrgSwitcher, KBSearch, ReviewsPanel, NotificationsFeed e AdminUsers.
+- Dashboard passou a consumir projetos, auditoria, revisoes, busca de conhecimento e usuarios via API.
+- Rotas `/projects` e `/projects/:id` foram adicionadas.
+
+### Validacoes
+
+- `npm run type-check`: passou.
+- `npm run build`: passou com Node 22.13.1.
+- `npm run test:unit -- ProjectsList`: passou com Node 22.13.1.
+
+## 2026-05-26 - Refinamento visual do Dashboard
+
+### Implementado
+
+- Dashboard recebeu header com mais contraste, cards de metrica com mini graficos e hierarquia visual mais clara.
+- Criado `BasePagination.vue` como componente reutilizavel de paginacao.
+- Criado `BaseStatusBadge.vue` e contrato central `shared/ui/status-badges.ts` para padronizar status, cores e icones.
+- `ProjectsList.vue` passou a usar paginacao externa, badges contratados, icones e linhas com melhor legibilidade.
+- AppShell recebeu icones no menu e botao de recolher/expandir com tooltip.
+- Paineis laterais de eventos, revisoes, equipe e base de conhecimento ganharam cabecalhos com icones, borda e sombra mais consistente.
+- Vuetify foi configurado com `mdi-svg`, evitando dependencia de fonte externa para icones.
+
+### Validacoes
+
+- `npm run type-check`: passou com Node 22.13.1.
+- `npm run build`: passou com Node 22.13.1.
+- `npm run test:unit -- ProjectsList`: passou com Node 22.13.1.

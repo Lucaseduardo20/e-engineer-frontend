@@ -16,7 +16,12 @@ function readStoredUser(): User | null {
   }
 
   try {
-    return JSON.parse(storedUser) as User
+    const parsed = JSON.parse(storedUser) as User & { name?: string }
+    return {
+      ...parsed,
+      fullName: parsed.fullName ?? parsed.name ?? 'Usuario',
+      roles: parsed.roles ?? [],
+    }
   } catch {
     localStorage.removeItem(AUTH_USER_STORAGE_KEY)
     return null
@@ -46,6 +51,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => Boolean(token.value && user.value))
   const organizationId = computed(() => user.value?.organizationId ?? null)
+  const userName = computed(() => user.value?.fullName ?? null)
 
   function persistSession(nextToken: string, nextUser: User) {
     token.value = nextToken
@@ -107,10 +113,10 @@ export const useAuthStore = defineStore('auth', () => {
     hasRestoredSession,
     isAuthenticated,
     organizationId,
+    userName,
     login,
     logout,
     restoreSession,
     clearError,
   }
 })
-
