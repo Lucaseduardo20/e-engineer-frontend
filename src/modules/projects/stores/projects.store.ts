@@ -1,7 +1,9 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { apiClient } from '@/shared/http/api-client'
+import { projectsService } from '@/modules/projects/services/projects.service'
 import type { Deliverable, Project } from '@/shared/types/api-contracts'
+import type { CreateProjectRequest } from '@/shared/http/api'
 
 export const useProjectsStore = defineStore('projects', () => {
   const projects = ref<Project[]>([])
@@ -23,7 +25,7 @@ export const useProjectsStore = defineStore('projects', () => {
     page.value = nextPage
 
     try {
-      const response = await apiClient.projects.list({ page: page.value, pageSize: pageSize.value })
+      const response = await projectsService.list({ page: page.value, pageSize: pageSize.value })
       projects.value = response.items
       total.value = response.total
     } catch {
@@ -39,13 +41,29 @@ export const useProjectsStore = defineStore('projects', () => {
 
     try {
       const [project, deliverablePage] = await Promise.all([
-        apiClient.projects.detail(projectId),
+        projectsService.getById(projectId),
         apiClient.deliverables.list({ projectId, page: 1, pageSize: 50 }),
       ])
       selectedProject.value = project
       deliverables.value = deliverablePage.items
     } catch {
       error.value = 'Nao foi possivel carregar o projeto selecionado.'
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  async function createProject(input: CreateProjectRequest) {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const createdProject = await projectsService.create(input)
+      await loadProjects(1)
+      return createdProject
+    } catch {
+      error.value = 'Nao foi possivel criar o projeto tecnico.'
+      return null
     } finally {
       isLoading.value = false
     }
@@ -63,5 +81,6 @@ export const useProjectsStore = defineStore('projects', () => {
     activeProjects,
     loadProjects,
     loadProjectDetail,
+    createProject,
   }
 })

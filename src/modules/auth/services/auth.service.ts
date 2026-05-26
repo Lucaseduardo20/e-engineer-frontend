@@ -1,8 +1,3 @@
-import { apiClient } from '@/shared/http/api-client'
-import type { AuthToken, LoginCredentials } from '@/modules/auth/types/auth.types'
+import { authService as sharedAuthService } from '@/shared/http/api'
 
-export const authService = {
-  async login(credentials: LoginCredentials): Promise<AuthToken> {
-    return apiClient.auth.login(credentials)
-  },
-}
+export const authService = sharedAuthService
