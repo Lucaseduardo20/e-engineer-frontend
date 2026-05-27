@@ -3,6 +3,7 @@ import type {
   ApiResponse,
   AuditLogEntry,
   Deliverable,
+  DeliverableType,
   DocumentSummary,
   Organization,
   Paginated,
@@ -16,6 +17,20 @@ type PageParams = {
   page?: number
   pageSize?: number
 }
+
+export type CreateDeliverableRequest = {
+  projectId: string
+  title: string
+  description?: string | null
+  dueDate?: string | null
+  status?: Deliverable['status']
+  type: DeliverableType
+  assignees?: string[]
+}
+
+export type UpdateDeliverableRequest = Partial<
+  Omit<CreateDeliverableRequest, 'projectId'>
+>
 
 async function unwrap<T>(request: Promise<{ data: ApiResponse<T> }>): Promise<T> {
   const response = await request
@@ -45,8 +60,17 @@ export const apiClient = {
     },
   },
   deliverables: {
-    list(params: PageParams & { projectId?: string } = {}) {
+    list(params: PageParams & { projectId?: string; status?: Deliverable['status'] } = {}) {
       return unwrap<Paginated<Deliverable>>(httpClient.get('/deliverables', { params }))
+    },
+    get(id: string) {
+      return unwrap<Deliverable>(httpClient.get(`/deliverables/${id}`))
+    },
+    create(payload: CreateDeliverableRequest) {
+      return unwrap<Deliverable>(httpClient.post('/deliverables', payload))
+    },
+    update(id: string, payload: UpdateDeliverableRequest) {
+      return unwrap<Deliverable>(httpClient.patch(`/deliverables/${id}`, payload))
     },
   },
   documents: {

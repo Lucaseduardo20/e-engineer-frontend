@@ -71,6 +71,7 @@ describe('projects store', () => {
           projectId: 'project-1',
           title: 'Memorial descritivo',
           status: 'todo',
+          type: 'descriptive_memorial',
           assignees: [],
         },
       ],
