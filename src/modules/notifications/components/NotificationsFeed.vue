@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { apiClient } from '@/shared/http/api-client'
 import type { AuditLogEntry } from '@/shared/types/api-contracts'
+import { getApiErrorMessage } from '@/shared/http/api-error'
 
 const notifications = ref<AuditLogEntry[]>([])
 const loading = ref(false)
@@ -13,8 +14,8 @@ onMounted(async () => {
 
   try {
     notifications.value = (await apiClient.audit.list({ page: 1, pageSize: 6 })).items
-  } catch {
-    error.value = 'Nao foi possivel carregar os eventos recentes.'
+  } catch (loadError) {
+    error.value = getApiErrorMessage(loadError, 'Nao foi possivel carregar os eventos recentes.')
   } finally {
     loading.value = false
   }

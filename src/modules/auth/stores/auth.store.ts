@@ -7,6 +7,7 @@ import {
 } from '@/modules/auth/constants/auth-storage.constants'
 import { authService } from '@/modules/auth/services/auth.service'
 import type { LoginCredentials, User } from '@/modules/auth/types/auth.types'
+import { getApiErrorMessage } from '@/shared/http/api-error'
 
 function readStoredUser(): User | null {
   const storedUser = localStorage.getItem(AUTH_USER_STORAGE_KEY)
@@ -39,7 +40,7 @@ function getLoginErrorMessage(error: unknown): string {
     }
   }
 
-  return 'Nao foi possivel entrar. Tente novamente em alguns instantes.'
+  return getApiErrorMessage(error, 'Nao foi possivel entrar. Tente novamente em alguns instantes.')
 }
 
 export const useAuthStore = defineStore('auth', () => {

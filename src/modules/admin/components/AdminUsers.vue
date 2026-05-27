@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { apiClient } from '@/shared/http/api-client'
 import type { User } from '@/shared/types/api-contracts'
+import { getApiErrorMessage } from '@/shared/http/api-error'
 
 const users = ref<User[]>([])
 const loading = ref(false)
@@ -13,8 +14,8 @@ onMounted(async () => {
 
   try {
     users.value = await apiClient.organizations.users()
-  } catch {
-    error.value = 'Nao foi possivel carregar a equipe.'
+  } catch (loadError) {
+    error.value = getApiErrorMessage(loadError, 'Nao foi possivel carregar a equipe.')
   } finally {
     loading.value = false
   }

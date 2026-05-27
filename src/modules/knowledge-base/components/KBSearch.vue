@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { apiClient } from '@/shared/http/api-client'
 import type { Project } from '@/shared/types/api-contracts'
+import { getApiErrorMessage } from '@/shared/http/api-error'
 
 const query = ref('')
 const results = ref<Project[]>([])
@@ -21,9 +22,9 @@ async function search() {
       pageSize: 5,
     })
     results.value = response.items
-  } catch {
+  } catch (searchError) {
     results.value = []
-    error.value = 'Nao foi possivel buscar referencias agora.'
+    error.value = getApiErrorMessage(searchError, 'Nao foi possivel buscar referencias agora.')
   } finally {
     loading.value = false
   }

@@ -4,6 +4,7 @@ import { apiClient } from '@/shared/http/api-client'
 import { projectsService } from '@/modules/projects/services/projects.service'
 import type { Deliverable, Project } from '@/shared/types/api-contracts'
 import type { CreateProjectRequest } from '@/shared/http/api'
+import { getApiErrorMessage } from '@/shared/http/api-error'
 
 export type ProjectListFilters = {
   name?: string
@@ -42,8 +43,8 @@ export const useProjectsStore = defineStore('projects', () => {
       })
       projects.value = response.items
       total.value = response.total
-    } catch {
-      error.value = 'Nao foi possivel carregar os projetos tecnicos.'
+    } catch (loadError) {
+      error.value = getApiErrorMessage(loadError, 'Nao foi possivel carregar os projetos tecnicos.')
     } finally {
       isLoading.value = false
     }
@@ -60,8 +61,11 @@ export const useProjectsStore = defineStore('projects', () => {
       ])
       selectedProject.value = project
       deliverables.value = deliverablePage.items
-    } catch {
-      error.value = 'Nao foi possivel carregar o projeto selecionado.'
+    } catch (loadError) {
+      error.value = getApiErrorMessage(
+        loadError,
+        'Nao foi possivel carregar o projeto selecionado.',
+      )
     } finally {
       isLoading.value = false
     }
@@ -75,8 +79,8 @@ export const useProjectsStore = defineStore('projects', () => {
       const createdProject = await projectsService.create(input)
       await loadProjects(1)
       return createdProject
-    } catch {
-      error.value = 'Nao foi possivel criar o projeto tecnico.'
+    } catch (createError) {
+      error.value = getApiErrorMessage(createError, 'Nao foi possivel criar o projeto tecnico.')
       return null
     } finally {
       isLoading.value = false

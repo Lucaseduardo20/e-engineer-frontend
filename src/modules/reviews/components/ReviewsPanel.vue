@@ -4,6 +4,7 @@ import { apiClient } from '@/shared/http/api-client'
 import BaseStatusBadge from '@/shared/components/BaseStatusBadge.vue'
 import type { ReviewSummary } from '@/shared/types/api-contracts'
 import { reviewBadgeKind } from '@/shared/ui/status-badges'
+import { getApiErrorMessage } from '@/shared/http/api-error'
 
 const reviews = ref<ReviewSummary[]>([])
 const loading = ref(false)
@@ -15,8 +16,8 @@ onMounted(async () => {
 
   try {
     reviews.value = (await apiClient.reviews.list({ page: 1, pageSize: 5 })).items
-  } catch {
-    error.value = 'Nao foi possivel carregar as revisoes.'
+  } catch (loadError) {
+    error.value = getApiErrorMessage(loadError, 'Nao foi possivel carregar as revisoes.')
   } finally {
     loading.value = false
   }
