@@ -8,7 +8,9 @@ import type {
   Organization,
   Paginated,
   Project,
+  ReviewDetail,
   ReviewSummary,
+  ReviewStatus,
   User,
 } from '@/shared/types/api-contracts'
 import type { AuthToken, LoginCredentials } from '@/modules/auth/types/auth.types'
@@ -28,9 +30,21 @@ export type CreateDeliverableRequest = {
   assignees?: string[]
 }
 
-export type UpdateDeliverableRequest = Partial<
-  Omit<CreateDeliverableRequest, 'projectId'>
->
+export type UpdateDeliverableRequest = Partial<Omit<CreateDeliverableRequest, 'projectId'>>
+
+export interface CreateReviewRequest {
+  projectId: string
+  deliverableId?: string | null
+  documentId?: string | null
+  documentVersionId?: string | null
+  reviewers: string[]
+  dueDate?: string | null
+  comment?: string | null
+}
+
+export interface DecideReviewRequest {
+  comment?: string | null
+}
 
 async function unwrap<T>(request: Promise<{ data: ApiResponse<T> }>): Promise<T> {
   const response = await request
@@ -74,13 +88,32 @@ export const apiClient = {
     },
   },
   documents: {
-    list(params: PageParams = {}) {
+    list(params: PageParams & { projectId?: string; deliverableId?: string } = {}) {
       return unwrap<Paginated<DocumentSummary>>(httpClient.get('/documents', { params }))
     },
   },
   reviews: {
-    list(params: PageParams = {}) {
+    list(
+      params: PageParams & {
+        projectId?: string
+        deliverableId?: string
+        documentId?: string
+        status?: ReviewStatus
+      } = {},
+    ) {
       return unwrap<Paginated<ReviewSummary>>(httpClient.get('/reviews', { params }))
+    },
+    get(id: string) {
+      return unwrap<ReviewDetail>(httpClient.get(`/reviews/${id}`))
+    },
+    create(payload: CreateReviewRequest) {
+      return unwrap<ReviewDetail>(httpClient.post('/reviews', payload))
+    },
+    approve(id: string, payload: DecideReviewRequest = {}) {
+      return unwrap<ReviewDetail>(httpClient.post(`/reviews/${id}/approve`, payload))
+    },
+    reject(id: string, payload: DecideReviewRequest = {}) {
+      return unwrap<ReviewDetail>(httpClient.post(`/reviews/${id}/reject`, payload))
     },
   },
   knowledgeBase: {

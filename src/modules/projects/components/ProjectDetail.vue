@@ -3,6 +3,7 @@ import type { Deliverable, Project } from '@/shared/types/api-contracts'
 import BaseStatusBadge from '@/shared/components/BaseStatusBadge.vue'
 import { projectBadgeKind } from '@/shared/ui/status-badges'
 import DeliverablesBoard from './DeliverablesBoard.vue'
+import ReviewsPanel from '@/modules/reviews/components/ReviewsPanel.vue'
 
 defineProps<{
   project: Project
@@ -41,6 +42,8 @@ defineProps<{
     </v-card>
 
     <DeliverablesBoard :deliverables="deliverables" />
+
+    <ReviewsPanel :project-id="project.id" />
   </div>
 </template>
 

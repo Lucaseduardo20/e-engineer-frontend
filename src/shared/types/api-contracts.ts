@@ -73,15 +73,32 @@ export interface DocumentSummary {
   updatedAt: string
 }
 
+export type ReviewStatus = 'pending' | 'approved' | 'rejected' | 'overdue'
+
+export interface ReviewReviewer {
+  userId: string
+  role: string
+}
+
 export interface ReviewSummary {
   id: string
   projectId: string
   deliverableId?: string | null
-  status: string
+  documentId?: string | null
+  documentVersionId?: string | null
+  status: ReviewStatus
   requestedBy: string
+  reviewers: ReviewReviewer[]
   reviewedBy?: string | null
+  reviewedAt?: string | null
   dueDate?: string | null
   comment?: string | null
+  decisionComment?: string | null
+  updatedAt?: string
+}
+
+export interface ReviewDetail extends ReviewSummary {
+  createdAt?: string
 }
 
 export interface AuditLogEntry {
