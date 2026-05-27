@@ -6,9 +6,13 @@ import type { Project } from '@/shared/types/api-contracts'
 const query = ref('')
 const results = ref<Project[]>([])
 const loading = ref(false)
+const error = ref<string | null>(null)
+const hasSearched = ref(false)
 
 async function search() {
   loading.value = true
+  error.value = null
+  hasSearched.value = true
 
   try {
     const response = await apiClient.knowledgeBase.search({
@@ -17,6 +21,9 @@ async function search() {
       pageSize: 5,
     })
     results.value = response.items
+  } catch {
+    results.value = []
+    error.value = 'Nao foi possivel buscar referencias agora.'
   } finally {
     loading.value = false
   }
@@ -50,6 +57,9 @@ async function search() {
         >Buscar referencia</v-btn
       >
 
+      <v-alert v-if="error" type="error" variant="tonal" density="compact" class="mt-3">
+        {{ error }}
+      </v-alert>
       <v-list v-if="results.length" class="mt-3" lines="two">
         <v-list-item
           v-for="project in results"
@@ -64,6 +74,12 @@ async function search() {
           </template>
         </v-list-item>
       </v-list>
+      <v-empty-state
+        v-else-if="hasSearched && !loading && !error"
+        class="mt-3"
+        headline="Sem referencias"
+        text="Nenhum projeto anterior encontrado."
+      />
     </v-card-text>
   </v-card>
 </template>

@@ -68,7 +68,14 @@ async function handleCreateProject() {
       {{ projectsStore.error }}
     </v-alert>
 
-    <ProjectsList :projects="projectsStore.projects" :loading="projectsStore.isLoading" />
+    <ProjectsList
+      :projects="projectsStore.projects"
+      :loading="projectsStore.isLoading"
+      :page="projectsStore.page"
+      :page-size="projectsStore.pageSize"
+      :total="projectsStore.total"
+      @update:page="projectsStore.loadProjects"
+    />
 
     <v-dialog v-model="isCreateDialogOpen" max-width="520">
       <v-card>

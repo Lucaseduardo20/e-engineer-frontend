@@ -50,6 +50,17 @@ const emit = defineEmits<{
       hide-default-footer
       class="projects-list__table"
     >
+      <template #loading>
+        <v-skeleton-loader type="table-row@5" />
+      </template>
+
+      <template #no-data>
+        <v-empty-state
+          headline="Nenhum projeto tecnico"
+          text="A carteira ainda nao possui projetos para os filtros atuais."
+        />
+      </template>
+
       <template #item.name="{ item }">
         <div class="projects-list__project py-3">
           <span class="projects-list__project-icon">

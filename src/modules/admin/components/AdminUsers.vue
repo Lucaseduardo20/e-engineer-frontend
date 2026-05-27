@@ -4,9 +4,20 @@ import { apiClient } from '@/shared/http/api-client'
 import type { User } from '@/shared/types/api-contracts'
 
 const users = ref<User[]>([])
+const loading = ref(false)
+const error = ref<string | null>(null)
 
 onMounted(async () => {
-  users.value = await apiClient.organizations.users()
+  loading.value = true
+  error.value = null
+
+  try {
+    users.value = await apiClient.organizations.users()
+  } catch {
+    error.value = 'Nao foi possivel carregar a equipe.'
+  } finally {
+    loading.value = false
+  }
 })
 </script>
 
@@ -16,7 +27,11 @@ onMounted(async () => {
       <v-icon icon="$success" color="teal" size="19" />
       Equipe
     </v-card-title>
-    <v-list lines="two" bg-color="transparent">
+    <v-progress-linear v-if="loading" indeterminate color="teal" />
+    <v-alert v-if="error" type="error" variant="tonal" density="compact" class="ma-3">
+      {{ error }}
+    </v-alert>
+    <v-list v-else lines="two" bg-color="transparent">
       <v-list-item
         v-for="user in users"
         :key="user.id"
@@ -29,6 +44,7 @@ onMounted(async () => {
           }}</v-avatar>
         </template>
       </v-list-item>
+      <v-list-item v-if="!loading && users.length === 0" title="Nenhum usuario encontrado" />
     </v-list>
   </v-card>
 </template>

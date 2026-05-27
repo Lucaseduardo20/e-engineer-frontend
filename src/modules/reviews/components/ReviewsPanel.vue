@@ -7,11 +7,16 @@ import { reviewBadgeKind } from '@/shared/ui/status-badges'
 
 const reviews = ref<ReviewSummary[]>([])
 const loading = ref(false)
+const error = ref<string | null>(null)
 
 onMounted(async () => {
   loading.value = true
+  error.value = null
+
   try {
     reviews.value = (await apiClient.reviews.list({ page: 1, pageSize: 5 })).items
+  } catch {
+    error.value = 'Nao foi possivel carregar as revisoes.'
   } finally {
     loading.value = false
   }
@@ -24,7 +29,11 @@ onMounted(async () => {
       <v-icon icon="$search" color="amber" size="19" />
       Revisoes pendentes
     </v-card-title>
-    <v-list :loading="loading" lines="two" bg-color="transparent">
+    <v-progress-linear v-if="loading" indeterminate color="amber" />
+    <v-alert v-if="error" type="error" variant="tonal" density="compact" class="ma-3">
+      {{ error }}
+    </v-alert>
+    <v-list v-else lines="two" bg-color="transparent">
       <v-list-item
         v-for="review in reviews"
         :key="review.id"
@@ -35,6 +44,7 @@ onMounted(async () => {
           <BaseStatusBadge :kind="reviewBadgeKind(review.status)" size="x-small" />
         </template>
       </v-list-item>
+      <v-list-item v-if="!loading && reviews.length === 0" title="Sem revisoes pendentes" />
     </v-list>
   </v-card>
 </template>
