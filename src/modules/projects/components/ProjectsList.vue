@@ -46,6 +46,8 @@ const emit = defineEmits<{
       ]"
       :items="projects"
       :loading="loading"
+      density="comfortable"
+      hover
       item-value="id"
       hide-default-footer
       class="projects-list__table"
@@ -89,7 +91,7 @@ const emit = defineEmits<{
       </template>
 
       <template #item.actions="{ item }">
-        <v-btn :to="`/projects/${item.id}`" size="small" variant="tonal" color="teal">
+        <v-btn :to="`/projects/${item.id}`" size="small" variant="tonal" color="teal" rounded="sm">
           Abrir
         </v-btn>
       </template>
