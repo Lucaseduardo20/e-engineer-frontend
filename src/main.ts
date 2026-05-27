@@ -9,7 +9,10 @@ import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { aliases, mdi } from 'vuetify/iconsets/mdi-svg'
-import { configureUnauthorizedHandler } from './shared/http/http-client'
+import {
+  configureTokenRefreshHandler,
+  configureUnauthorizedHandler,
+} from './shared/http/http-client'
 import { useAuthStore } from './modules/auth/stores/auth.store'
 
 const app = createApp(App)
@@ -62,6 +65,11 @@ configureUnauthorizedHandler(() => {
       },
     })
   }
+})
+
+configureTokenRefreshHandler((token) => {
+  const authStore = useAuthStore(pinia)
+  authStore.replaceToken(token)
 })
 
 app.mount('#app')

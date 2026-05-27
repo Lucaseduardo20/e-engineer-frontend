@@ -83,6 +83,15 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem(AUTH_USER_STORAGE_KEY)
   }
 
+  function replaceToken(nextToken: string) {
+    if (!user.value) {
+      return
+    }
+
+    token.value = nextToken
+    localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, nextToken)
+  }
+
   function restoreSession() {
     if (hasRestoredSession.value) {
       return
@@ -116,6 +125,7 @@ export const useAuthStore = defineStore('auth', () => {
     userName,
     login,
     logout,
+    replaceToken,
     restoreSession,
     clearError,
   }

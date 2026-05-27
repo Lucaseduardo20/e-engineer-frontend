@@ -12,8 +12,12 @@ export const httpClient = axios.create({
 })
 
 let unauthorizedHandler: (() => void) | null = null
+let tokenRefreshHandler: ((token: string) => void) | null = null
 
 registerAuthInterceptor(httpClient, {
+  onTokenRefreshed: (token) => {
+    tokenRefreshHandler?.(token)
+  },
   onUnauthorized: () => {
     unauthorizedHandler?.()
   },
@@ -21,4 +25,8 @@ registerAuthInterceptor(httpClient, {
 
 export function configureUnauthorizedHandler(handler: () => void) {
   unauthorizedHandler = handler
+}
+
+export function configureTokenRefreshHandler(handler: (token: string) => void) {
+  tokenRefreshHandler = handler
 }
