@@ -18,9 +18,19 @@ defineProps<{
             <h1 class="text-h5">{{ project.name }}</h1>
             <p class="text-body-2 text-medium-emphasis mt-2">{{ project.description }}</p>
           </div>
-          <v-progress-circular :model-value="project.progress" color="teal" size="72" width="8">
-            {{ project.progress }}%
-          </v-progress-circular>
+          <div class="project-detail__actions">
+            <v-progress-circular :model-value="project.progress" color="teal" size="72" width="8">
+              {{ project.progress }}%
+            </v-progress-circular>
+            <v-btn
+              :to="`/projects/${project.id}/deliverables`"
+              color="teal"
+              variant="tonal"
+              prepend-icon="$calendar"
+            >
+              Gerenciar entregaveis
+            </v-btn>
+          </div>
         </div>
       </v-card-text>
     </v-card>
@@ -28,3 +38,18 @@ defineProps<{
     <DeliverablesBoard :deliverables="deliverables" />
   </div>
 </template>
+
+<style scoped>
+.project-detail__actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+@media (max-width: 720px) {
+  .project-detail__actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+</style>
