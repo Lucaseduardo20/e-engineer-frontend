@@ -1,27 +1,27 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { apiClient } from '@/shared/http/api-client'
+import { computed, onMounted } from 'vue'
+import { useReviewsStore } from '@/modules/reviews/stores/reviews.store'
 import BaseStatusBadge from '@/shared/components/BaseStatusBadge.vue'
-import type { ReviewSummary } from '@/shared/types/api-contracts'
 import { reviewBadgeKind } from '@/shared/ui/status-badges'
-import { getApiErrorMessage } from '@/shared/http/api-error'
 
-const reviews = ref<ReviewSummary[]>([])
-const loading = ref(false)
-const error = ref<string | null>(null)
+const props = defineProps<{
+  projectId?: string
+}>()
+
+const reviewsStore = useReviewsStore()
+const visibleReviews = computed(() => reviewsStore.reviews.slice(0, 5))
 
 onMounted(async () => {
-  loading.value = true
-  error.value = null
-
-  try {
-    reviews.value = (await apiClient.reviews.list({ page: 1, pageSize: 5 })).items
-  } catch (loadError) {
-    error.value = getApiErrorMessage(loadError, 'Nao foi possivel carregar as revisoes.')
-  } finally {
-    loading.value = false
-  }
+  await reviewsStore.loadLookups()
+  await reviewsStore.loadReviews(1, {
+    projectId: props.projectId,
+    status: 'pending',
+  })
 })
+
+function userName(userId: string) {
+  return reviewsStore.reviewers.find((user) => user.id === userId)?.fullName ?? userId.slice(0, 8)
+}
 </script>
 
 <template>
@@ -29,23 +29,28 @@ onMounted(async () => {
     <v-card-title class="side-panel__title">
       <v-icon icon="$search" color="amber" size="19" />
       Revisoes pendentes
+      <v-spacer />
+      <v-btn to="/reviews" size="small" variant="text" color="teal">Abrir</v-btn>
     </v-card-title>
-    <v-progress-linear v-if="loading" indeterminate color="amber" />
-    <v-alert v-if="error" type="error" variant="tonal" density="compact" class="ma-3">
-      {{ error }}
+    <v-progress-linear v-if="reviewsStore.isLoading" indeterminate color="amber" />
+    <v-alert v-if="reviewsStore.error" type="error" variant="tonal" density="compact" class="ma-3">
+      {{ reviewsStore.error }}
     </v-alert>
     <v-list v-else lines="two" bg-color="transparent">
       <v-list-item
-        v-for="review in reviews"
+        v-for="review in visibleReviews"
         :key="review.id"
         :title="review.comment || 'Revisao tecnica'"
-        :subtitle="`Solicitado por ${review.requestedBy}`"
+        :subtitle="`Revisor: ${review.reviewers.map((item) => userName(item.userId)).join(', ')}`"
       >
         <template #append>
           <BaseStatusBadge :kind="reviewBadgeKind(review.status)" size="x-small" />
         </template>
       </v-list-item>
-      <v-list-item v-if="!loading && reviews.length === 0" title="Sem revisoes pendentes" />
+      <v-list-item
+        v-if="!reviewsStore.isLoading && visibleReviews.length === 0"
+        title="Sem revisoes pendentes"
+      />
     </v-list>
   </v-card>
 </template>

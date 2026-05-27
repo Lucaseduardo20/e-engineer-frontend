@@ -79,14 +79,23 @@ const router = createRouter({
       },
     },
     {
-      path: '/documents',
+      path: '/reviews',
+      name: 'reviews',
+      component: () => import('@/modules/reviews/pages/ReviewsPage.vue'),
+      meta: {
+        title: 'Revisoes',
+        requiresAuth: true,
+      },
+    },
+    {
+          path: '/documents',
       name: 'documents',
       component: () => import('@/modules/documents/pages/DocumentsPage.vue'),
       meta: {
         title: 'Documentos',
         requiresAuth: true,
-      },
-    },
+      }
+    }
   ],
 })
 
