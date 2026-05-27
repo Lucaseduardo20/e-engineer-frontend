@@ -47,6 +47,8 @@ export interface CreateReviewRequest {
 
 export interface DecideReviewRequest {
   comment?: string | null
+}
+
 export interface CreateDocumentRequest {
   projectId: string
   deliverableId?: string | null
