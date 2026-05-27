@@ -5,6 +5,11 @@ import { projectsService } from '@/modules/projects/services/projects.service'
 import type { Deliverable, Project } from '@/shared/types/api-contracts'
 import type { CreateProjectRequest } from '@/shared/http/api'
 
+export type ProjectListFilters = {
+  name?: string
+  status?: Project['status']
+}
+
 export const useProjectsStore = defineStore('projects', () => {
   const projects = ref<Project[]>([])
   const selectedProject = ref<Project | null>(null)
@@ -12,6 +17,7 @@ export const useProjectsStore = defineStore('projects', () => {
   const total = ref(0)
   const page = ref(1)
   const pageSize = ref(10)
+  const filters = ref<ProjectListFilters>({})
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
@@ -19,13 +25,21 @@ export const useProjectsStore = defineStore('projects', () => {
     projects.value.filter((project) => project.status === 'active'),
   )
 
-  async function loadProjects(nextPage = page.value) {
+  async function loadProjects(nextPage = page.value, nextFilters = filters.value) {
     isLoading.value = true
     error.value = null
     page.value = nextPage
+    filters.value = {
+      name: nextFilters.name?.trim() || undefined,
+      status: nextFilters.status,
+    }
 
     try {
-      const response = await projectsService.list({ page: page.value, pageSize: pageSize.value })
+      const response = await projectsService.list({
+        page: page.value,
+        pageSize: pageSize.value,
+        ...filters.value,
+      })
       projects.value = response.items
       total.value = response.total
     } catch {
@@ -76,6 +90,7 @@ export const useProjectsStore = defineStore('projects', () => {
     total,
     page,
     pageSize,
+    filters,
     isLoading,
     error,
     activeProjects,

@@ -3,12 +3,15 @@ import { computed, onMounted, ref } from 'vue'
 import ProjectsList from '@/modules/projects/components/ProjectsList.vue'
 import { useProjectsStore } from '@/modules/projects/stores/projects.store'
 import BasePageHeader from '@/shared/components/BasePageHeader.vue'
+import type { Project } from '@/shared/types/api-contracts'
 
 const projectsStore = useProjectsStore()
 const isCreateDialogOpen = ref(false)
 const projectName = ref('')
 const projectType = ref('')
 const isCreating = ref(false)
+const searchTerm = ref('')
+const selectedStatus = ref<Project['status'] | null>(null)
 
 const projectTypes = [
   'reforma escolar',
@@ -20,6 +23,13 @@ const projectTypes = [
 const canCreateProject = computed(() =>
   Boolean(projectName.value.trim() && projectType.value.trim()),
 )
+const statusOptions: Array<{ title: string; value: Project['status'] }> = [
+  { title: 'Rascunho', value: 'draft' },
+  { title: 'Ativo', value: 'active' },
+  { title: 'Pausado', value: 'paused' },
+  { title: 'Concluido', value: 'completed' },
+  { title: 'Arquivado', value: 'archived' },
+]
 
 onMounted(() => {
   void projectsStore.loadProjects()
@@ -33,6 +43,19 @@ function resetCreateForm() {
 function openCreateDialog() {
   resetCreateForm()
   isCreateDialogOpen.value = true
+}
+
+function applyFilters() {
+  void projectsStore.loadProjects(1, {
+    name: searchTerm.value,
+    status: selectedStatus.value ?? undefined,
+  })
+}
+
+function clearFilters() {
+  searchTerm.value = ''
+  selectedStatus.value = null
+  applyFilters()
 }
 
 async function handleCreateProject() {
@@ -74,6 +97,37 @@ async function handleCreateProject() {
     <v-alert v-if="projectsStore.error" type="error" variant="tonal">
       {{ projectsStore.error }}
     </v-alert>
+
+    <v-sheet class="projects-page__filters" border rounded="lg">
+      <v-text-field
+        v-model="searchTerm"
+        label="Buscar por nome"
+        density="comfortable"
+        variant="outlined"
+        prepend-inner-icon="$search"
+        hide-details
+        clearable
+        @keyup.enter="applyFilters"
+        @click:clear="clearFilters"
+      />
+      <v-select
+        v-model="selectedStatus"
+        :items="statusOptions"
+        label="Status"
+        density="comfortable"
+        variant="outlined"
+        hide-details
+        clearable
+      />
+      <div class="projects-page__filter-actions">
+        <v-btn variant="outlined" :disabled="projectsStore.isLoading" @click="clearFilters">
+          Limpar
+        </v-btn>
+        <v-btn color="teal" :loading="projectsStore.isLoading" @click="applyFilters">
+          Filtrar
+        </v-btn>
+      </div>
+    </v-sheet>
 
     <ProjectsList
       :projects="projectsStore.projects"
@@ -134,5 +188,30 @@ async function handleCreateProject() {
 .projects-page {
   display: grid;
   gap: 1rem;
+}
+
+.projects-page__filters {
+  display: grid;
+  align-items: center;
+  gap: 0.75rem;
+  grid-template-columns: minmax(14rem, 1fr) minmax(12rem, 16rem) auto;
+  background: #ffffff;
+  padding: 0.875rem;
+}
+
+.projects-page__filter-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+@media (max-width: 860px) {
+  .projects-page__filters {
+    grid-template-columns: 1fr;
+  }
+
+  .projects-page__filter-actions {
+    justify-content: flex-start;
+  }
 }
 </style>

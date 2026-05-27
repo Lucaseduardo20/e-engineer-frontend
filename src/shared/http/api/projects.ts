@@ -19,6 +19,8 @@ export interface CreateProjectResponse {
 export interface ListProjectsParams {
   page?: number
   pageSize?: number
+  name?: string
+  status?: Project['status']
 }
 
 export class ProjectsService extends BaseApiService {
