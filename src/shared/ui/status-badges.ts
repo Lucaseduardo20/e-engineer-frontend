@@ -151,6 +151,10 @@ export function projectBadgeKind(status: string): StatusBadgeKind {
   return `project:${status}` as StatusBadgeKind
 }
 
+export function deliverableBadgeKind(status: string): StatusBadgeKind {
+  return `deliverable:${status}` as StatusBadgeKind
+}
+
 export function reviewBadgeKind(status: string): StatusBadgeKind {
   const normalized = status === 'pending' ? 'pending' : status
   return `review:${normalized}` as StatusBadgeKind

@@ -51,6 +51,33 @@ const router = createRouter({
         requiresAuth: true,
       },
     },
+    {
+      path: '/projects/:projectId/deliverables',
+      name: 'deliverables',
+      component: () => import('@/modules/deliverables/pages/DeliverablesPage.vue'),
+      meta: {
+        title: 'Entregaveis',
+        requiresAuth: true,
+      },
+    },
+    {
+      path: '/projects/:projectId/deliverables/new',
+      name: 'deliverable-create',
+      component: () => import('@/modules/deliverables/pages/DeliverablesPage.vue'),
+      meta: {
+        title: 'Novo entregavel',
+        requiresAuth: true,
+      },
+    },
+    {
+      path: '/projects/:projectId/deliverables/:deliverableId/edit',
+      name: 'deliverable-edit',
+      component: () => import('@/modules/deliverables/pages/DeliverablesPage.vue'),
+      meta: {
+        title: 'Editar entregavel',
+        requiresAuth: true,
+      },
+    },
   ],
 })
 

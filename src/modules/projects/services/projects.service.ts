@@ -1,3 +1,3 @@
-import { apiClient } from '@/shared/http/api-client'
+import { projectsService as sharedProjectsService } from '@/shared/http/api'
 
-export const projectsService = apiClient.projects
+export const projectsService = sharedProjectsService
