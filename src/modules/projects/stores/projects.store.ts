@@ -30,16 +30,23 @@ export const useProjectsStore = defineStore('projects', () => {
     isLoading.value = true
     error.value = null
     page.value = nextPage
-    filters.value = {
-      name: nextFilters.name?.trim() || undefined,
-      status: nextFilters.status,
+    const normalizedFilters: ProjectListFilters = {}
+
+    if (nextFilters.name?.trim()) {
+      normalizedFilters.name = nextFilters.name.trim()
     }
+
+    if (nextFilters.status) {
+      normalizedFilters.status = nextFilters.status
+    }
+
+    filters.value = normalizedFilters
 
     try {
       const response = await projectsService.list({
         page: page.value,
         pageSize: pageSize.value,
-        ...filters.value,
+        ...normalizedFilters,
       })
       projects.value = response.items
       total.value = response.total
