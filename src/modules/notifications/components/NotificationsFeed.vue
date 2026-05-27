@@ -2,11 +2,23 @@
 import { onMounted, ref } from 'vue'
 import { apiClient } from '@/shared/http/api-client'
 import type { AuditLogEntry } from '@/shared/types/api-contracts'
+import { getApiErrorMessage } from '@/shared/http/api-error'
 
 const notifications = ref<AuditLogEntry[]>([])
+const loading = ref(false)
+const error = ref<string | null>(null)
 
 onMounted(async () => {
-  notifications.value = (await apiClient.audit.list({ page: 1, pageSize: 6 })).items
+  loading.value = true
+  error.value = null
+
+  try {
+    notifications.value = (await apiClient.audit.list({ page: 1, pageSize: 6 })).items
+  } catch (loadError) {
+    error.value = getApiErrorMessage(loadError, 'Nao foi possivel carregar os eventos recentes.')
+  } finally {
+    loading.value = false
+  }
 })
 </script>
 
@@ -16,7 +28,11 @@ onMounted(async () => {
       <v-icon icon="$info" color="indigo" size="19" />
       Ultimos eventos
     </v-card-title>
-    <v-list lines="two" bg-color="transparent">
+    <v-progress-linear v-if="loading" indeterminate color="indigo" />
+    <v-alert v-if="error" type="error" variant="tonal" density="compact" class="ma-3">
+      {{ error }}
+    </v-alert>
+    <v-list v-else lines="two" bg-color="transparent">
       <v-list-item
         v-for="notification in notifications"
         :key="notification.id"
@@ -29,6 +45,7 @@ onMounted(async () => {
           </v-avatar>
         </template>
       </v-list-item>
+      <v-list-item v-if="!loading && notifications.length === 0" title="Sem eventos recentes" />
     </v-list>
   </v-card>
 </template>

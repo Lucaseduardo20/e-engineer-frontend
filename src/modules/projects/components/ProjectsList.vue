@@ -46,10 +46,23 @@ const emit = defineEmits<{
       ]"
       :items="projects"
       :loading="loading"
+      density="comfortable"
+      hover
       item-value="id"
       hide-default-footer
       class="projects-list__table"
     >
+      <template #loading>
+        <v-skeleton-loader type="table-row@5" />
+      </template>
+
+      <template #no-data>
+        <v-empty-state
+          headline="Nenhum projeto tecnico"
+          text="A carteira ainda nao possui projetos para os filtros atuais."
+        />
+      </template>
+
       <template #item.name="{ item }">
         <div class="projects-list__project py-3">
           <span class="projects-list__project-icon">
@@ -78,7 +91,7 @@ const emit = defineEmits<{
       </template>
 
       <template #item.actions="{ item }">
-        <v-btn :to="`/projects/${item.id}`" size="small" variant="tonal" color="teal">
+        <v-btn :to="`/projects/${item.id}`" size="small" variant="tonal" color="teal" rounded="sm">
           Abrir
         </v-btn>
       </template>

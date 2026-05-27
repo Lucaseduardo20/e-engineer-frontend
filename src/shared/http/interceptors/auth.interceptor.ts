@@ -1,14 +1,10 @@
-import type {
-  AxiosError,
-  AxiosInstance,
-  AxiosResponse,
-  InternalAxiosRequestConfig,
-} from 'axios'
+import type { AxiosError, AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import { AUTH_TOKEN_STORAGE_KEY } from '@/modules/auth/constants/auth-storage.constants'
 import type { ApiResponse } from '@/shared/types/api-contracts'
 
 type AuthInterceptorOptions = {
   getToken?: () => string | null
+  onTokenRefreshed?: (token: string) => void
   onUnauthorized?: () => void
 }
 
@@ -28,10 +24,9 @@ export function registerAuthInterceptor(
   let refreshRequest: Promise<string> | null = null
 
   async function refreshToken(token: string): Promise<string> {
-    const response = (await httpClient.post(
-      '/auth/refresh',
-      { token },
-    )) as AxiosResponse<ApiResponse<{ token: string }>>
+    const response = (await httpClient.post('/auth/refresh', { token })) as AxiosResponse<
+      ApiResponse<{ token: string }>
+    >
 
     return response.data.data.token
   }
@@ -80,6 +75,7 @@ export function registerAuthInterceptor(
 
         const nextToken = await refreshRequest
         localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, nextToken)
+        options.onTokenRefreshed?.(nextToken)
         originalRequest.headers.Authorization = `Bearer ${nextToken}`
 
         return httpClient.request(originalRequest)
