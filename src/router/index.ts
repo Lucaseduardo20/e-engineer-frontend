@@ -87,6 +87,15 @@ const router = createRouter({
         requiresAuth: true,
       },
     },
+    {
+          path: '/documents',
+      name: 'documents',
+      component: () => import('@/modules/documents/pages/DocumentsPage.vue'),
+      meta: {
+        title: 'Documentos',
+        requiresAuth: true,
+      }
+    }
   ],
 })
 

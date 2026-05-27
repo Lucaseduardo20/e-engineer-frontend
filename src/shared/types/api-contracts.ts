@@ -33,7 +33,23 @@ export interface Deliverable {
   description?: string
   dueDate?: string
   status: 'todo' | 'in_progress' | 'done' | 'blocked'
-  type: DeliverableType
+  type?:
+    | 'technical_survey'
+    | 'architectural_project'
+    | 'structural_project'
+    | 'electrical_project'
+    | 'hydraulic_project'
+    | 'drainage_project'
+    | 'paving_project'
+    | 'landscaping_project'
+    | 'lighting_project'
+    | 'descriptive_memorial'
+    | 'budget'
+    | 'schedule'
+    | 'art_rrt'
+    | 'photographic_report'
+    | 'technical_report'
+    | 'other'
   assignees: string[]
   attachments?: { url: string; name: string }[]
 }
@@ -68,9 +84,47 @@ export interface DocumentSummary {
   projectId: string
   deliverableId?: string | null
   title: string
+  description?: string | null
+  type: DocumentType
   officialRevision?: string | null
-  status: string
+  status: DocumentStatus
   updatedAt: string
+  latestVersion?: DocumentVersion | null
+  officialVersion?: DocumentVersion | null
+}
+
+export type DocumentStatus = 'draft' | 'in_review' | 'approved' | 'superseded'
+
+export type DocumentType =
+  | 'memorial_descritivo'
+  | 'projeto_estrutural'
+  | 'projeto_arquitetonico'
+  | 'projeto_eletrico'
+  | 'projeto_hidrossanitario'
+  | 'orcamento'
+  | 'cronograma'
+  | 'laudo'
+  | 'relatorio_fotografico'
+  | 'art_rrt'
+  | 'levantamento_topografico'
+  | 'especificacao_tecnica'
+  | 'outro'
+
+export interface DocumentVersion {
+  id: string
+  documentId: string
+  revision: string
+  fileName: string
+  filePath: string
+  uploadedBy: string
+  uploadedAt: string
+  isOfficial: boolean
+  status: DocumentStatus
+  notes?: string | null
+}
+
+export interface DocumentDetail extends DocumentSummary {
+  versions: DocumentVersion[]
 }
 
 export type ReviewStatus = 'pending' | 'approved' | 'rejected' | 'overdue'
