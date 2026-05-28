@@ -105,6 +105,15 @@ const router = createRouter({
         requiresAuth: true,
       },
     },
+    {
+      path: '/organizations',
+      name: 'organizations',
+      component: () => import('@/modules/organizations/pages/OrganizationsPage.vue'),
+      meta: {
+        title: 'Organizacao',
+        requiresAuth: true,
+      },
+    },
   ],
 })
 

@@ -1,24 +1,28 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { apiClient } from '@/shared/http/api-client'
-import type { Organization } from '@/shared/types/api-contracts'
+import { onMounted } from 'vue'
+import { useOrganizationsStore } from '@/modules/organizations/stores/organizations.store'
 
-const organization = ref<Organization | null>(null)
+const organizationsStore = useOrganizationsStore()
 
 onMounted(async () => {
-  organization.value = await apiClient.organizations.current()
+  if (!organizationsStore.currentOrganization) {
+    await organizationsStore.loadCurrentOrganization()
+  }
 })
 </script>
 
 <template>
   <v-select
-    :items="organization ? [organization] : []"
-    :model-value="organization?.id"
+    :items="
+      organizationsStore.currentOrganization ? [organizationsStore.currentOrganization] : []
+    "
+    :model-value="organizationsStore.currentOrganization?.id"
     item-title="name"
     item-value="id"
     label="Organizacao"
     density="compact"
     variant="outlined"
+    :loading="organizationsStore.isLoading"
     hide-details
   />
 </template>
