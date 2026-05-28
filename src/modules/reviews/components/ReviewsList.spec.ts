@@ -30,9 +30,9 @@ describe('ReviewsList', () => {
           BasePagination: PassthroughStub,
           ReviewCard: {
             props: ['review'],
-            emits: ['approve'],
+            emits: ['approve', 'open'],
             template:
-              '<button data-test="approve" @click="$emit(\'approve\', review)">{{ review.comment }}</button>',
+              '<div><button data-test="open" @click="$emit(\'open\', review)">{{ review.comment }}</button><button data-test="approve" @click="$emit(\'approve\', review)">aprovar</button></div>',
           },
           VCard: PassthroughStub,
           VCardTitle: PassthroughStub,
@@ -43,6 +43,8 @@ describe('ReviewsList', () => {
     })
 
     expect(wrapper.text()).toContain('Revisar memorial.')
+    await wrapper.find('[data-test="open"]').trigger('click')
+    expect(wrapper.emitted('open')?.[0]).toEqual([reviews[0]])
     await wrapper.find('[data-test="approve"]').trigger('click')
     expect(wrapper.emitted('approve')?.[0]).toEqual([reviews[0]])
   })

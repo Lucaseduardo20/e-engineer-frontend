@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Deliverable, Project } from '@/shared/types/api-contracts'
 import BaseStatusBadge from '@/shared/components/BaseStatusBadge.vue'
+import TraceableLinkButton from '@/shared/components/TraceableLinkButton.vue'
 import { projectBadgeKind } from '@/shared/ui/status-badges'
 import DeliverablesBoard from './DeliverablesBoard.vue'
 import ReviewsPanel from '@/modules/reviews/components/ReviewsPanel.vue'
@@ -44,6 +45,7 @@ function updateDeliverableStatus(deliverable: Deliverable, status: Deliverable['
             >
               Gerenciar entregaveis
             </v-btn>
+            <TraceableLinkButton :path="`/projects/${project.id}`" label="Link do projeto" />
           </div>
         </div>
       </v-card-text>

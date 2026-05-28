@@ -1,5 +1,5 @@
 import { httpClient } from '@/shared/http/http-client'
-import { toIsoDate, toTimestamp } from '@/shared/formatters/date.formatter'
+import { toIsoDate, toIsoString, toTimestamp } from '@/shared/formatters/date.formatter'
 import type {
   ApiResponse,
   AuditLogEntry,
@@ -12,6 +12,7 @@ import type {
   Organization,
   Paginated,
   Project,
+  ReviewComment,
   ReviewDetail,
   ReviewSummary,
   ReviewStatus,
@@ -50,6 +51,10 @@ export interface DecideReviewRequest {
   comment?: string | null
 }
 
+export interface CreateReviewCommentRequest {
+  body: string
+}
+
 export interface CreateDocumentRequest {
   projectId: string
   deliverableId?: string | null
@@ -86,6 +91,14 @@ function toWireDate(value: number | null | undefined) {
   }
 
   return toIsoDate(value) ?? undefined
+}
+
+function toWireIsoDate(value: number | null | undefined) {
+  if (value === null) {
+    return null
+  }
+
+  return toIsoString(value) ?? undefined
 }
 
 function mapPaginated<TInput, TOutput>(
@@ -155,6 +168,14 @@ function mapReviewDetail(review: ReviewDetail): ReviewDetail {
   return {
     ...mapReviewSummary(review),
     createdAt: toTimestamp(review.createdAt) ?? undefined,
+    comments: review.comments?.map(mapReviewComment) ?? [],
+  }
+}
+
+function mapReviewComment(comment: ReviewComment): ReviewComment {
+  return {
+    ...comment,
+    createdAt: toTimestamp(comment.createdAt) ?? Date.now(),
   }
 }
 
@@ -296,7 +317,7 @@ export const apiClient = {
       return unwrap<ReviewDetail>(
         httpClient.post('/reviews', {
           ...payload,
-          dueDate: toWireDate(payload.dueDate),
+          dueDate: toWireIsoDate(payload.dueDate),
         }),
       ).then(mapReviewDetail)
     },
@@ -308,6 +329,11 @@ export const apiClient = {
     reject(id: string, payload: DecideReviewRequest = {}) {
       return unwrap<ReviewDetail>(httpClient.post(`/reviews/${id}/reject`, payload)).then(
         mapReviewDetail,
+      )
+    },
+    comment(id: string, payload: CreateReviewCommentRequest) {
+      return unwrap<ReviewComment>(httpClient.post(`/reviews/${id}/comments`, payload)).then(
+        mapReviewComment,
       )
     },
   },

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import BaseStatusBadge from '@/shared/components/BaseStatusBadge.vue'
+import TraceableLinkButton from '@/shared/components/TraceableLinkButton.vue'
 import { formatDateTime, formatShortDate } from '@/shared/formatters/date.formatter'
 import type { DocumentSummary, User } from '@/shared/types/api-contracts'
 import { documentBadgeKind } from '@/shared/ui/status-badges'
@@ -122,6 +123,7 @@ function userName(userId?: string | null) {
       <v-btn size="small" variant="text" prepend-icon="$file" @click="emit('history', document)">
         Historico
       </v-btn>
+      <TraceableLinkButton :path="`/documents?documentId=${document.id}`" label="Link" />
       <v-btn
         size="small"
         color="red"

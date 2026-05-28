@@ -63,6 +63,21 @@ export const useReviewsStore = defineStore('reviews', () => {
     }
   }
 
+  async function loadReview(reviewId: string) {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      selectedReview.value = await apiClient.reviews.get(reviewId)
+      return selectedReview.value
+    } catch (loadError) {
+      error.value = getApiErrorMessage(loadError, 'Nao foi possivel carregar a revisao.')
+      return null
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   function resetFilters() {
     filters.value = {}
     page.value = 1
@@ -121,6 +136,21 @@ export const useReviewsStore = defineStore('reviews', () => {
     }
   }
 
+  async function addComment(reviewId: string, body: string) {
+    isSaving.value = true
+    error.value = null
+
+    try {
+      await apiClient.reviews.comment(reviewId, { body })
+      return await loadReview(reviewId)
+    } catch (commentError) {
+      error.value = getApiErrorMessage(commentError, 'Nao foi possivel registrar o comentario.')
+      return null
+    } finally {
+      isSaving.value = false
+    }
+  }
+
   async function approveReview(reviewId: string, payload: DecideReviewRequest = {}) {
     return decideReview(reviewId, 'approve', payload)
   }
@@ -169,10 +199,12 @@ export const useReviewsStore = defineStore('reviews', () => {
     error,
     pendingReviews,
     loadReviews,
+    loadReview,
     resetFilters,
     loadLookups,
     loadProjectLinks,
     createReview,
+    addComment,
     approveReview,
     rejectReview,
   }

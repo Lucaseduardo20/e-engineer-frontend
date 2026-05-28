@@ -41,6 +41,7 @@ const userInitials = computed(() => {
         .join('')
     : 'EE'
 })
+const canShowBack = computed(() => route.path !== '/dashboard')
 const userNotifications = computed(() => {
   const userId = authStore.user?.id
   const name = authStore.user?.fullName
@@ -126,19 +127,6 @@ function goBack() {
           />
         </template>
       </v-tooltip>
-      <v-tooltip text="Voltar">
-        <template #activator="{ props }">
-          <v-btn
-            v-bind="props"
-            icon="$prev"
-            variant="text"
-            color="teal"
-            size="small"
-            aria-label="Voltar"
-            @click="goBack"
-          />
-        </template>
-      </v-tooltip>
       <div class="app-shell__org"><OrgSwitcher /></div>
       <v-spacer />
       <v-menu max-width="420">
@@ -188,6 +176,16 @@ function goBack() {
 
     <v-main>
       <div class="app-shell__main">
+        <v-btn
+          v-if="canShowBack"
+          class="app-shell__back"
+          color="teal"
+          variant="tonal"
+          prepend-icon="$prev"
+          @click="goBack"
+        >
+          Voltar
+        </v-btn>
         <slot />
       </div>
     </v-main>
@@ -249,6 +247,13 @@ function goBack() {
   width: min(100%, 92rem);
   margin: 0 auto;
   padding: 1.5rem;
+}
+
+.app-shell__back {
+  justify-self: start;
+  margin-bottom: 0.85rem;
+  border: 1px solid #8ccbbd;
+  box-shadow: 0 8px 18px rgb(17 92 76 / 0.08);
 }
 
 @media (max-width: 720px) {

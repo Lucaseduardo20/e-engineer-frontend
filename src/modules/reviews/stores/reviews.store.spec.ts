@@ -11,7 +11,9 @@ vi.mock('@/shared/http/api-client', () => ({
     projects: { list: vi.fn() },
     reviews: {
       approve: vi.fn(),
+      comment: vi.fn(),
       create: vi.fn(),
+      get: vi.fn(),
       list: vi.fn(),
       reject: vi.fn(),
     },
@@ -90,5 +92,39 @@ describe('reviews store', () => {
     expect(apiClient.reviews.approve).toHaveBeenCalledWith('review-1', {
       comment: 'Aprovado.',
     })
+  })
+
+  it('loads a review detail and adds persistent comments', async () => {
+    vi.mocked(apiClient.reviews.get).mockResolvedValue({
+      id: 'review-1',
+      projectId: 'project-1',
+      status: 'pending',
+      requestedBy: 'user-1',
+      reviewers: [{ userId: 'user-2', role: 'reviewer' }],
+      comment: 'Revisar memorial.',
+      comments: [
+        {
+          id: 'comment-1',
+          reviewId: 'review-1',
+          authorUserId: 'user-2',
+          body: 'Ajustar nota tecnica.',
+          createdAt: 1717092000000,
+        },
+      ],
+    })
+    vi.mocked(apiClient.reviews.comment).mockResolvedValue({
+      id: 'comment-2',
+      reviewId: 'review-1',
+      authorUserId: 'user-1',
+      body: 'Corrigido.',
+      createdAt: 1717095600000,
+    })
+    const store = useReviewsStore()
+
+    await store.addComment('review-1', 'Corrigido.')
+
+    expect(apiClient.reviews.comment).toHaveBeenCalledWith('review-1', { body: 'Corrigido.' })
+    expect(apiClient.reviews.get).toHaveBeenCalledWith('review-1')
+    expect(store.selectedReview?.comments).toHaveLength(1)
   })
 })

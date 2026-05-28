@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import ReviewDetailDialog from '@/modules/reviews/components/ReviewDetailDialog.vue'
 import ReviewForm from '@/modules/reviews/components/ReviewForm.vue'
 import ReviewsList from '@/modules/reviews/components/ReviewsList.vue'
 import { useReviewsStore } from '@/modules/reviews/stores/reviews.store'
@@ -7,8 +9,11 @@ import BasePageHeader from '@/shared/components/BasePageHeader.vue'
 import type { ReviewStatus, ReviewSummary } from '@/shared/types/api-contracts'
 
 const reviewsStore = useReviewsStore()
+const route = useRoute()
+const router = useRouter()
 const isFormOpen = ref(false)
 const isFiltersOpen = ref(false)
+const isDetailOpen = ref(false)
 const pendingDecision = ref<{ review: ReviewSummary; decision: 'approve' | 'reject' } | null>(null)
 const decisionComment = ref('')
 const selectedProjectId = ref<string | null>(null)
@@ -44,10 +49,18 @@ const activeFiltersCount = computed(
     ].filter(Boolean).length,
 )
 
-onMounted(() => {
+onMounted(async () => {
   reviewsStore.resetFilters()
-  void Promise.all([reviewsStore.loadLookups(), reviewsStore.loadReviews(1, {})])
+  await Promise.all([reviewsStore.loadLookups(), reviewsStore.loadReviews(1, {})])
+  await openRouteReview()
 })
+
+watch(
+  () => route.params.reviewId,
+  () => {
+    void openRouteReview()
+  },
+)
 
 function applyFilters() {
   void reviewsStore.loadReviews(1, {
@@ -96,6 +109,38 @@ function openDecision(review: ReviewSummary, decision: 'approve' | 'reject') {
   pendingDecision.value = { review, decision }
 }
 
+async function openReview(review: ReviewSummary) {
+  await router.push(`/reviews/${review.id}`)
+}
+
+async function openRouteReview() {
+  const reviewId = typeof route.params.reviewId === 'string' ? route.params.reviewId : null
+
+  if (!reviewId) {
+    isDetailOpen.value = false
+    return
+  }
+
+  const review = await reviewsStore.loadReview(reviewId)
+  isDetailOpen.value = Boolean(review)
+}
+
+function updateDetailOpen(value: boolean) {
+  isDetailOpen.value = value
+
+  if (!value && route.name === 'review-detail') {
+    void router.push('/reviews')
+  }
+}
+
+async function handleComment(body: string) {
+  if (!reviewsStore.selectedReview) {
+    return
+  }
+
+  await reviewsStore.addComment(reviewsStore.selectedReview.id, body)
+}
+
 async function confirmDecision() {
   if (!pendingDecision.value) {
     return
@@ -110,6 +155,10 @@ async function confirmDecision() {
 
   if (updated) {
     pendingDecision.value = null
+
+    if (isDetailOpen.value) {
+      await reviewsStore.loadReview(review.id)
+    }
   }
 }
 </script>
@@ -218,6 +267,18 @@ async function confirmDecision() {
       :page-size="reviewsStore.pageSize"
       :total="reviewsStore.total"
       @update:page="reviewsStore.loadReviews"
+      @open="openReview"
+      @approve="openDecision($event, 'approve')"
+      @reject="openDecision($event, 'reject')"
+    />
+
+    <ReviewDetailDialog
+      :model-value="isDetailOpen"
+      :review="reviewsStore.selectedReview"
+      :users="reviewsStore.reviewers"
+      :saving="reviewsStore.isSaving"
+      @update:model-value="updateDetailOpen"
+      @comment="handleComment"
       @approve="openDecision($event, 'approve')"
       @reject="openDecision($event, 'reject')"
     />

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import DocumentUpload from '@/modules/documents/components/DocumentUpload.vue'
 import DocumentsList from '@/modules/documents/components/DocumentsList.vue'
 import { useDocumentsStore } from '@/modules/documents/stores/documents.store'
@@ -12,6 +13,8 @@ import type { DocumentStatus, DocumentSummary, DocumentType } from '@/shared/typ
 
 const documentsStore = useDocumentsStore()
 const projectsStore = useProjectsStore()
+const route = useRoute()
+const router = useRouter()
 
 const isFormOpen = ref(false)
 const isFiltersOpen = ref(false)
@@ -71,13 +74,21 @@ const activeFiltersCount = computed(
   () => [selectedProjectId.value, selectedStatus.value, selectedType.value].filter(Boolean).length,
 )
 
-onMounted(() => {
-  void Promise.all([
+onMounted(async () => {
+  await Promise.all([
     projectsStore.loadProjects(),
     documentsStore.loadDocuments(1, {}),
     documentsStore.loadUsers(),
   ])
+  await openDocumentFromRoute()
 })
+
+watch(
+  () => route.query.documentId,
+  () => {
+    void openDocumentFromRoute()
+  },
+)
 
 function openCreateForm() {
   editingDocument.value = null
@@ -110,6 +121,53 @@ async function openHistory(document: DocumentSummary) {
     documentsStore.loadDocument(document.id),
     documentsStore.loadAuditLogs(document.id),
   ])
+}
+
+async function openDocumentHistory(document: DocumentSummary) {
+  if (route.query.documentId !== document.id) {
+    await router.push({
+      path: '/documents',
+      query: { ...route.query, documentId: document.id },
+    })
+    return
+  }
+
+  await openHistory(document)
+}
+
+async function openDocumentFromRoute() {
+  const documentId = typeof route.query.documentId === 'string' ? route.query.documentId : null
+
+  if (!documentId) {
+    return
+  }
+
+  const listedDocument = documentsStore.documents.find((document) => document.id === documentId)
+
+  if (listedDocument) {
+    await openHistory(listedDocument)
+    return
+  }
+
+  await Promise.all([
+    documentsStore.loadDocument(documentId),
+    documentsStore.loadAuditLogs(documentId),
+  ])
+
+  historyDocument.value = documentsStore.selectedDocument
+}
+
+function closeHistory(value: boolean) {
+  if (value) {
+    return
+  }
+
+  historyDocument.value = null
+
+  if (route.query.documentId) {
+    const { documentId: _documentId, ...query } = route.query
+    void router.replace({ path: '/documents', query })
+  }
 }
 
 function applyFilters() {
@@ -363,7 +421,7 @@ async function confirmDelete() {
       @upload="openUploadForm"
       @edit="openEditForm"
       @assign="openReviewerForm"
-      @history="openHistory"
+      @history="openDocumentHistory"
       @delete="pendingDelete = $event"
     />
 
@@ -496,7 +554,7 @@ async function confirmDelete() {
     <v-dialog
       :model-value="Boolean(historyDocument)"
       max-width="760"
-      @update:model-value="historyDocument = null"
+      @update:model-value="closeHistory"
     >
       <v-card rounded="lg">
         <v-card-title>Historico de versoes</v-card-title>

@@ -23,6 +23,7 @@ withDefaults(
 
 const emit = defineEmits<{
   'update:page': [page: number]
+  open: [review: ReviewSummary]
   approve: [review: ReviewSummary]
   reject: [review: ReviewSummary]
 }>()
@@ -58,6 +59,7 @@ const emit = defineEmits<{
         :review="review"
         :users="users"
         :saving="saving"
+        @open="emit('open', $event)"
         @approve="emit('approve', $event)"
         @reject="emit('reject', $event)"
       />
@@ -93,7 +95,7 @@ const emit = defineEmits<{
 .reviews-list__eyebrow {
   color: #65736f;
   font-size: 0.72rem;
-  font-weight: 850;
+  font-weight: 680;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import BaseStatusBadge from '@/shared/components/BaseStatusBadge.vue'
+import TraceableLinkButton from '@/shared/components/TraceableLinkButton.vue'
 import { formatShortDate } from '@/shared/formatters/date.formatter'
 import type { ReviewSummary, User } from '@/shared/types/api-contracts'
 import { reviewBadgeKind } from '@/shared/ui/status-badges'
@@ -12,6 +13,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
+  open: [review: ReviewSummary]
   approve: [review: ReviewSummary]
   reject: [review: ReviewSummary]
 }>()
@@ -26,14 +28,24 @@ function userName(userId: string) {
 </script>
 
 <template>
-  <v-card class="review-card" variant="flat" rounded="lg">
+  <v-card class="review-card" variant="flat" rounded="lg" @click="emit('open', review)">
     <div class="review-card__head">
       <span class="review-card__icon">
         <v-icon icon="$search" size="20" />
       </span>
       <div class="review-card__title">
         <h3>{{ review.comment || 'Revisao tecnica' }}</h3>
-        <p>Projeto {{ review.projectId.slice(0, 8) }}</p>
+        <v-btn
+          class="review-card__project-link"
+          :to="`/projects/${review.projectId}`"
+          size="x-small"
+          variant="text"
+          color="teal"
+          density="compact"
+          @click.stop
+        >
+          Projeto {{ review.projectId.slice(0, 8) }}
+        </v-btn>
       </div>
       <BaseStatusBadge :kind="reviewBadgeKind(review.status)" />
     </div>
@@ -57,27 +69,43 @@ function userName(userId: string) {
       {{ review.decisionComment }}
     </p>
 
-    <div v-if="canDecide" class="review-card__actions">
+    <div class="review-card__actions">
       <v-btn
+        size="small"
+        color="teal"
+        variant="tonal"
+        prepend-icon="$search"
+        @click.stop="emit('open', review)"
+      >
+        Abrir
+      </v-btn>
+      <v-btn
+        v-if="canDecide"
         size="small"
         color="green"
         variant="tonal"
         prepend-icon="$complete"
         :loading="saving"
-        @click="emit('approve', review)"
+        @click.stop="emit('approve', review)"
       >
         Aprovar
       </v-btn>
       <v-btn
+        v-if="canDecide"
         size="small"
         color="red"
         variant="tonal"
         prepend-icon="$error"
         :loading="saving"
-        @click="emit('reject', review)"
+        @click.stop="emit('reject', review)"
       >
         Rejeitar
       </v-btn>
+      <TraceableLinkButton :path="`/reviews/${review.id}`" label="Copiar link da revisao" />
+      <TraceableLinkButton
+        :path="`/projects/${review.projectId}`"
+        label="Copiar link do projeto"
+      />
     </div>
   </v-card>
 </template>
@@ -90,6 +118,7 @@ function userName(userId: string) {
   background: #ffffff;
   padding: 1rem;
   box-shadow: 0 12px 28px rgb(15 45 38 / 0.05);
+  cursor: pointer;
 }
 
 .review-card__head {
@@ -114,7 +143,6 @@ function userName(userId: string) {
 }
 
 .review-card__title h3,
-.review-card__title p,
 .review-card__decision {
   margin: 0;
 }
@@ -123,17 +151,25 @@ function userName(userId: string) {
   overflow: hidden;
   color: #123c32;
   font-size: 1rem;
-  font-weight: 850;
+  font-weight: 680;
   letter-spacing: 0;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.review-card__title p,
 .review-card__meta,
 .review-card__decision {
   color: #63716d;
   font-size: 0.84rem;
+}
+
+.review-card__project-link {
+  min-width: 0;
+  margin-top: 0.15rem;
+  padding-inline: 0;
+  justify-content: flex-start;
+  color: #1d6f61;
+  font-size: 0.78rem;
 }
 
 .review-card__meta {

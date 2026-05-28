@@ -151,8 +151,17 @@ export interface ReviewSummary {
   updatedAt?: number
 }
 
+export interface ReviewComment {
+  id: string
+  reviewId: string
+  authorUserId: string
+  body: string
+  createdAt: number
+}
+
 export interface ReviewDetail extends ReviewSummary {
   createdAt?: number
+  comments?: ReviewComment[]
 }
 
 export interface AuditLogEntry {
