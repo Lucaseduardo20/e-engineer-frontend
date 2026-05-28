@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import BasePagination from '@/shared/components/BasePagination.vue'
 import BaseStatusBadge from '@/shared/components/BaseStatusBadge.vue'
-import type { Deliverable, DeliverableType } from '@/shared/types/api-contracts'
+import { formatShortDate } from '@/shared/formatters/date.formatter'
+import type { Deliverable, DeliverableType, User } from '@/shared/types/api-contracts'
 import { deliverableBadgeKind } from '@/shared/ui/status-badges'
 
 const props = withDefaults(
@@ -13,6 +14,7 @@ const props = withDefaults(
     pageSize?: number
     total?: number
     status?: Deliverable['status'] | null
+    users?: User[]
   }>(),
   {
     loading: false,
@@ -20,6 +22,7 @@ const props = withDefaults(
     pageSize: 12,
     total: 0,
     status: null,
+    users: () => [],
   },
 )
 
@@ -34,6 +37,7 @@ const statusModel = computed({
   get: () => props.status,
   set: (value) => emit('update:status', value),
 })
+const isFiltersOpen = ref(false)
 
 const statusOptions: Array<{ title: string; value: Deliverable['status'] }> = [
   { title: 'A produzir', value: 'todo' },
@@ -61,8 +65,12 @@ const typeLabels: Record<DeliverableType, string> = {
   other: 'Outro',
 }
 
-function typeLabel(type: DeliverableType) {
-  return typeLabels[type] ?? 'Entregavel tecnico'
+function typeLabel(type?: DeliverableType) {
+  return type ? typeLabels[type] : 'Entregavel tecnico'
+}
+
+function userName(userId: string) {
+  return props.users.find((user) => user.id === userId)?.fullName ?? userId
 }
 </script>
 
@@ -74,19 +82,32 @@ function typeLabel(type: DeliverableType) {
         <span>Pacote tecnico</span>
       </div>
       <div class="deliverables-list__actions">
+        <v-btn
+          variant="tonal"
+          color="teal"
+          prepend-icon="$search"
+          @click="isFiltersOpen = !isFiltersOpen"
+        >
+          Filtros
+        </v-btn>
+        <v-btn color="teal" prepend-icon="$plus" @click="emit('create')">Novo entregavel</v-btn>
+      </div>
+    </v-card-title>
+
+    <v-expand-transition>
+      <div v-if="isFiltersOpen" class="deliverables-list__filters">
         <v-select
           v-model="statusModel"
           :items="statusOptions"
           label="Status"
-          density="compact"
+          density="comfortable"
           variant="outlined"
           hide-details
           clearable
           class="deliverables-list__filter"
         />
-        <v-btn color="teal" prepend-icon="$plus" @click="emit('create')">Novo entregavel</v-btn>
       </div>
-    </v-card-title>
+    </v-expand-transition>
 
     <v-data-table
       :headers="[
@@ -122,8 +143,17 @@ function typeLabel(type: DeliverableType) {
           </span>
           <div>
             <strong>{{ item.title }}</strong>
-            <div class="text-body-2 text-medium-emphasis">
-              {{ item.assignees.join(', ') || 'Sem responsavel definido' }}
+            <div class="deliverables-list__assignees">
+              <v-chip
+                v-for="assignee in item.assignees"
+                :key="assignee"
+                size="x-small"
+                variant="tonal"
+                color="teal"
+              >
+                {{ userName(assignee) }}
+              </v-chip>
+              <span v-if="item.assignees.length === 0">Sem responsavel definido</span>
             </div>
             <div v-if="item.description" class="text-caption text-medium-emphasis">
               {{ item.description }}
@@ -141,11 +171,18 @@ function typeLabel(type: DeliverableType) {
       </template>
 
       <template #item.dueDate="{ item }">
-        <span>{{ item.dueDate || 'Sem prazo' }}</span>
+        <span>{{ item.dueDate ? formatShortDate(item.dueDate) : 'Sem prazo' }}</span>
       </template>
 
       <template #item.actions="{ item }">
-        <v-btn size="small" variant="tonal" color="teal" rounded="sm" @click="emit('edit', item)">
+        <v-btn
+          size="small"
+          variant="tonal"
+          color="teal"
+          rounded="sm"
+          prepend-icon="$edit"
+          @click="emit('edit', item)"
+        >
           Editar
         </v-btn>
       </template>
@@ -192,6 +229,11 @@ function typeLabel(type: DeliverableType) {
   gap: 0.75rem;
 }
 
+.deliverables-list__filters {
+  border-bottom: 1px solid #d8e1de;
+  padding: 0.875rem 1.125rem;
+}
+
 .deliverables-list__filter {
   width: 12rem;
 }
@@ -217,6 +259,15 @@ function typeLabel(type: DeliverableType) {
   color: #34443f;
   font-size: 0.86rem;
   font-weight: 700;
+}
+
+.deliverables-list__assignees {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.2rem;
+  color: #63716d;
+  font-size: 0.82rem;
 }
 
 @media (max-width: 820px) {

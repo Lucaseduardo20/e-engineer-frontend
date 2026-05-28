@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue'
+import { dateInputToTimestamp } from '@/shared/formatters/date.formatter'
 import type { Deliverable, DocumentSummary, Project, User } from '@/shared/types/api-contracts'
 
 const props = withDefaults(
@@ -23,7 +24,7 @@ const emit = defineEmits<{
       deliverableId?: string | null
       documentId?: string | null
       reviewers: string[]
-      dueDate?: string | null
+      dueDate?: number | null
       comment?: string | null
     },
   ]
@@ -77,7 +78,7 @@ function submit() {
     deliverableId: form.deliverableId,
     documentId: form.documentId,
     reviewers: form.reviewers,
-    dueDate: form.dueDate || null,
+    dueDate: dateInputToTimestamp(form.dueDate),
     comment: form.comment.trim() || null,
   })
 }

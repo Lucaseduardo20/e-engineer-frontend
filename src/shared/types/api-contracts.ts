@@ -20,8 +20,8 @@ export interface Project {
   description?: string
   status: 'draft' | 'active' | 'paused' | 'completed' | 'archived'
   organizationId: string
-  startDate?: string
-  endDate?: string
+  startDate?: number
+  endDate?: number
   progress: number
   metrics?: Record<string, number>
 }
@@ -31,7 +31,7 @@ export interface Deliverable {
   projectId: string
   title: string
   description?: string
-  dueDate?: string
+  dueDate?: number
   status: 'todo' | 'in_progress' | 'done' | 'blocked'
   type?:
     | 'technical_survey'
@@ -88,7 +88,7 @@ export interface DocumentSummary {
   type: DocumentType
   officialRevision?: string | null
   status: DocumentStatus
-  updatedAt: string
+  updatedAt: number
   latestVersion?: DocumentVersion | null
   officialVersion?: DocumentVersion | null
 }
@@ -117,7 +117,7 @@ export interface DocumentVersion {
   fileName: string
   filePath: string
   uploadedBy: string
-  uploadedAt: string
+  uploadedAt: number
   isOfficial: boolean
   status: DocumentStatus
   notes?: string | null
@@ -144,15 +144,15 @@ export interface ReviewSummary {
   requestedBy: string
   reviewers: ReviewReviewer[]
   reviewedBy?: string | null
-  reviewedAt?: string | null
-  dueDate?: string | null
+  reviewedAt?: number | null
+  dueDate?: number | null
   comment?: string | null
   decisionComment?: string | null
-  updatedAt?: string
+  updatedAt?: number
 }
 
 export interface ReviewDetail extends ReviewSummary {
-  createdAt?: string
+  createdAt?: number
 }
 
 export interface AuditLogEntry {
@@ -162,7 +162,7 @@ export interface AuditLogEntry {
   entityType: string
   entityId?: string | null
   description: string
-  occurredAt: string
+  occurredAt: number
 }
 
 export interface ApiResponse<T> {

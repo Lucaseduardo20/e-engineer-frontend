@@ -19,7 +19,7 @@ describe('DocumentsList', () => {
         title: 'Laudo de fundacao',
         type: 'laudo',
         status: 'approved',
-        updatedAt: '2026-05-27T00:00:00.000Z',
+        updatedAt: 1779840000000,
       },
     ]
 
@@ -29,8 +29,8 @@ describe('DocumentsList', () => {
         stubs: {
           BasePagination: PassthroughStub,
           DocumentCard: {
-            props: ['document'],
-            emits: ['upload'],
+            props: ['document', 'users'],
+            emits: ['upload', 'assign', 'history'],
             template:
               '<button data-test="upload" @click="$emit(\'upload\', document)">{{ document.title }}</button>',
           },

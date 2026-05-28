@@ -7,11 +7,13 @@ import {
   type UploadDocumentVersionRequest,
 } from '@/shared/http/api-client'
 import type {
+  AuditLogEntry,
   Deliverable,
   DocumentDetail,
   DocumentStatus,
   DocumentSummary,
   DocumentType,
+  User,
 } from '@/shared/types/api-contracts'
 import { getApiErrorMessage } from '@/shared/http/api-error'
 
@@ -26,6 +28,8 @@ export const useDocumentsStore = defineStore('documents', () => {
   const documents = ref<DocumentSummary[]>([])
   const selectedDocument = ref<DocumentDetail | null>(null)
   const availableDeliverables = ref<Deliverable[]>([])
+  const reviewers = ref<User[]>([])
+  const auditLogs = ref<AuditLogEntry[]>([])
   const total = ref(0)
   const page = ref(1)
   const pageSize = ref(10)
@@ -85,6 +89,25 @@ export const useDocumentsStore = defineStore('documents', () => {
       availableDeliverables.value = response.items
     } catch {
       availableDeliverables.value = []
+    }
+  }
+
+  async function loadUsers() {
+    try {
+      reviewers.value = await apiClient.organizations.users()
+    } catch (loadError) {
+      error.value = getApiErrorMessage(loadError, 'Nao foi possivel carregar os revisores.')
+    }
+  }
+
+  async function loadAuditLogs(documentId?: string) {
+    try {
+      const response = await apiClient.audit.list({ page: 1, pageSize: 50 })
+      auditLogs.value = documentId
+        ? response.items.filter((entry) => entry.entityId === documentId)
+        : response.items
+    } catch {
+      auditLogs.value = []
     }
   }
 
@@ -165,6 +188,8 @@ export const useDocumentsStore = defineStore('documents', () => {
     documents,
     selectedDocument,
     availableDeliverables,
+    reviewers,
+    auditLogs,
     total,
     page,
     pageSize,
@@ -176,6 +201,8 @@ export const useDocumentsStore = defineStore('documents', () => {
     loadDocuments,
     loadDocument,
     loadDeliverablesForProject,
+    loadUsers,
+    loadAuditLogs,
     createDocument,
     updateDocument,
     uploadVersion,

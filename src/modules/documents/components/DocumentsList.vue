@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import BasePagination from '@/shared/components/BasePagination.vue'
 import DocumentCard from '@/modules/documents/components/DocumentCard.vue'
-import type { DocumentSummary } from '@/shared/types/api-contracts'
+import type { DocumentSummary, User } from '@/shared/types/api-contracts'
 
 withDefaults(
   defineProps<{
@@ -10,11 +10,13 @@ withDefaults(
     page?: number
     pageSize?: number
     total?: number
+    users?: User[]
   }>(),
   {
     page: 1,
     pageSize: 20,
     total: 0,
+    users: () => [],
   },
 )
 
@@ -22,6 +24,8 @@ const emit = defineEmits<{
   'update:page': [page: number]
   upload: [document: DocumentSummary]
   edit: [document: DocumentSummary]
+  assign: [document: DocumentSummary]
+  history: [document: DocumentSummary]
   delete: [document: DocumentSummary]
 }>()
 </script>
@@ -54,8 +58,11 @@ const emit = defineEmits<{
         v-for="document in documents"
         :key="document.id"
         :document="document"
+        :users="users"
         @upload="emit('upload', $event)"
         @edit="emit('edit', $event)"
+        @assign="emit('assign', $event)"
+        @history="emit('history', $event)"
         @delete="emit('delete', $event)"
       />
     </div>

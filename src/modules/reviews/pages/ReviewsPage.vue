@@ -8,6 +8,7 @@ import type { ReviewStatus, ReviewSummary } from '@/shared/types/api-contracts'
 
 const reviewsStore = useReviewsStore()
 const isFormOpen = ref(false)
+const isFiltersOpen = ref(false)
 const pendingDecision = ref<{ review: ReviewSummary; decision: 'approve' | 'reject' } | null>(null)
 const decisionComment = ref('')
 const selectedProjectId = ref<string | null>(null)
@@ -33,9 +34,19 @@ const deliverableOptions = computed(() =>
 const documentOptions = computed(() =>
   reviewsStore.documents.map((document) => ({ title: document.title, value: document.id })),
 )
+const activeFiltersCount = computed(
+  () =>
+    [
+      selectedProjectId.value,
+      selectedDeliverableId.value,
+      selectedDocumentId.value,
+      selectedStatus.value,
+    ].filter(Boolean).length,
+)
 
 onMounted(() => {
-  void Promise.all([reviewsStore.loadLookups(), reviewsStore.loadReviews()])
+  reviewsStore.resetFilters()
+  void Promise.all([reviewsStore.loadLookups(), reviewsStore.loadReviews(1, {})])
 })
 
 function applyFilters() {
@@ -52,8 +63,7 @@ function clearFilters() {
   selectedDeliverableId.value = null
   selectedDocumentId.value = null
   selectedStatus.value = null
-  reviewsStore.deliverables = []
-  reviewsStore.documents = []
+  reviewsStore.resetFilters()
   applyFilters()
 }
 
@@ -71,7 +81,7 @@ async function handleCreate(payload: {
   deliverableId?: string | null
   documentId?: string | null
   reviewers: string[]
-  dueDate?: string | null
+  dueDate?: number | null
   comment?: string | null
 }) {
   const created = await reviewsStore.createReview(payload)
@@ -121,54 +131,81 @@ async function confirmDecision() {
       {{ reviewsStore.error }}
     </v-alert>
 
-    <v-sheet class="reviews-page__filters" border rounded="lg">
-      <v-select
-        v-model="selectedProjectId"
-        :items="projectOptions"
-        label="Projeto"
-        density="comfortable"
-        variant="outlined"
-        hide-details
-        clearable
-        @update:model-value="handleFilterProjectChange"
-      />
-      <v-select
-        v-model="selectedDeliverableId"
-        :items="deliverableOptions"
-        label="Entregavel"
-        density="comfortable"
-        variant="outlined"
-        hide-details
-        clearable
-        :disabled="!selectedProjectId"
-      />
-      <v-select
-        v-model="selectedDocumentId"
-        :items="documentOptions"
-        label="Documento"
-        density="comfortable"
-        variant="outlined"
-        hide-details
-        clearable
-        :disabled="!selectedProjectId"
-      />
-      <v-select
-        v-model="selectedStatus"
-        :items="statusOptions"
-        label="Status"
-        density="comfortable"
-        variant="outlined"
-        hide-details
-        clearable
-      />
-      <div class="reviews-page__filter-actions">
-        <v-btn variant="outlined" :disabled="reviewsStore.isLoading" @click="clearFilters">
+    <v-sheet class="reviews-page__filter-shell" border rounded="lg">
+      <div class="reviews-page__filter-bar">
+        <v-btn
+          variant="tonal"
+          color="teal"
+          prepend-icon="$search"
+          @click="isFiltersOpen = !isFiltersOpen"
+        >
+          Filtros
+        </v-btn>
+        <v-chip v-if="activeFiltersCount" color="teal" variant="tonal" size="small">
+          {{ activeFiltersCount }} ativo(s)
+        </v-chip>
+        <v-spacer />
+        <v-btn
+          v-if="activeFiltersCount"
+          variant="text"
+          :disabled="reviewsStore.isLoading"
+          @click="clearFilters"
+        >
           Limpar
         </v-btn>
-        <v-btn color="teal" :loading="reviewsStore.isLoading" @click="applyFilters">
-          Filtrar
-        </v-btn>
       </div>
+
+      <v-expand-transition>
+        <div v-if="isFiltersOpen" class="reviews-page__filters">
+          <v-select
+            v-model="selectedProjectId"
+            :items="projectOptions"
+            label="Projeto"
+            density="comfortable"
+            variant="outlined"
+            hide-details
+            clearable
+            @update:model-value="handleFilterProjectChange"
+          />
+          <v-select
+            v-model="selectedDeliverableId"
+            :items="deliverableOptions"
+            label="Entregavel"
+            density="comfortable"
+            variant="outlined"
+            hide-details
+            clearable
+            :disabled="!selectedProjectId"
+          />
+          <v-select
+            v-model="selectedDocumentId"
+            :items="documentOptions"
+            label="Documento"
+            density="comfortable"
+            variant="outlined"
+            hide-details
+            clearable
+            :disabled="!selectedProjectId"
+          />
+          <v-select
+            v-model="selectedStatus"
+            :items="statusOptions"
+            label="Status"
+            density="comfortable"
+            variant="outlined"
+            hide-details
+            clearable
+          />
+          <div class="reviews-page__filter-actions">
+            <v-btn variant="outlined" :disabled="reviewsStore.isLoading" @click="clearFilters">
+              Limpar
+            </v-btn>
+            <v-btn color="teal" :loading="reviewsStore.isLoading" @click="applyFilters">
+              Filtrar
+            </v-btn>
+          </div>
+        </div>
+      </v-expand-transition>
     </v-sheet>
 
     <ReviewsList
@@ -231,6 +268,18 @@ async function confirmDecision() {
   gap: 1rem;
 }
 
+.reviews-page__filter-shell {
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.reviews-page__filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+}
+
 .reviews-page__filters {
   display: grid;
   align-items: center;
@@ -238,7 +287,7 @@ async function confirmDecision() {
   grid-template-columns:
     minmax(12rem, 1fr) minmax(10rem, 14rem) minmax(10rem, 14rem)
     minmax(10rem, 12rem) auto;
-  background: #ffffff;
+  border-top: 1px solid #d8e1de;
   padding: 0.875rem;
 }
 

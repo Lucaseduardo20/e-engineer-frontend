@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { computed, reactive, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { apiClient } from '@/shared/http/api-client'
+import { getApiErrorMessage } from '@/shared/http/api-error'
+import { dateInputToTimestamp, toDateInputValue } from '@/shared/formatters/date.formatter'
 import type { CreateDeliverableRequest } from '@/shared/http/api-client'
-import type { Deliverable, DeliverableType } from '@/shared/types/api-contracts'
+import type { Deliverable, DeliverableType, User } from '@/shared/types/api-contracts'
 
 const props = withDefaults(
   defineProps<{
@@ -54,9 +57,22 @@ const form = reactive({
   dueDate: '',
   assignees: [] as string[],
 })
+const users = ref<User[]>([])
+const isLoadingUsers = ref(false)
+const usersError = ref<string | null>(null)
 
 const title = computed(() => (props.deliverable ? 'Editar entregavel' : 'Novo entregavel'))
 const canSubmit = computed(() => Boolean(form.title.trim() && form.type))
+const assigneeOptions = computed(() =>
+  users.value.map((user) => ({
+    title: `${user.fullName} (${user.email})`,
+    value: user.id,
+  })),
+)
+
+onMounted(() => {
+  void loadUsers()
+})
 
 watch(
   () => props.deliverable,
@@ -65,11 +81,25 @@ watch(
     form.description = deliverable?.description ?? ''
     form.type = deliverable?.type ?? 'technical_report'
     form.status = deliverable?.status ?? 'todo'
-    form.dueDate = deliverable?.dueDate ?? ''
+    form.dueDate = toDateInputValue(deliverable?.dueDate)
     form.assignees = deliverable?.assignees ? [...deliverable.assignees] : []
   },
   { immediate: true },
 )
+
+async function loadUsers() {
+  isLoadingUsers.value = true
+  usersError.value = null
+
+  try {
+    users.value = await apiClient.organizations.users()
+  } catch (error) {
+    users.value = []
+    usersError.value = getApiErrorMessage(error, 'Nao foi possivel carregar responsaveis.')
+  } finally {
+    isLoadingUsers.value = false
+  }
+}
 
 function submit() {
   if (!canSubmit.value) {
@@ -82,7 +112,7 @@ function submit() {
     description: form.description.trim() || null,
     type: form.type,
     status: form.status,
-    dueDate: form.dueDate || null,
+    dueDate: dateInputToTimestamp(form.dueDate),
     assignees: form.assignees.map((assignee) => assignee.trim()).filter(Boolean),
   })
 }
@@ -147,14 +177,17 @@ function submit() {
             variant="outlined"
             :disabled="loading"
           />
-          <v-combobox
+          <v-select
             v-model="form.assignees"
+            :items="assigneeOptions"
             label="Responsaveis"
             variant="outlined"
             multiple
             chips
             closable-chips
-            :disabled="loading"
+            :loading="isLoadingUsers"
+            :disabled="loading || isLoadingUsers"
+            :error-messages="usersError ? [usersError] : []"
           />
         </div>
       </v-card-text>

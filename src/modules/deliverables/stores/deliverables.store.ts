@@ -6,7 +6,7 @@ import {
   type UpdateDeliverableRequest,
 } from '@/shared/http/api-client'
 import { getApiErrorMessage } from '@/shared/http/api-error'
-import type { Deliverable } from '@/shared/types/api-contracts'
+import type { Deliverable, User } from '@/shared/types/api-contracts'
 
 export type DeliverableListFilters = {
   status?: Deliverable['status']
@@ -15,6 +15,7 @@ export type DeliverableListFilters = {
 export const useDeliverablesStore = defineStore('deliverables', () => {
   const deliverables = ref<Deliverable[]>([])
   const selectedDeliverable = ref<Deliverable | null>(null)
+  const users = ref<User[]>([])
   const total = ref(0)
   const page = ref(1)
   const pageSize = ref(12)
@@ -68,6 +69,14 @@ export const useDeliverablesStore = defineStore('deliverables', () => {
     }
   }
 
+  async function loadUsers() {
+    try {
+      users.value = await apiClient.organizations.users()
+    } catch {
+      users.value = []
+    }
+  }
+
   async function createDeliverable(input: CreateDeliverableRequest) {
     isSaving.value = true
     error.value = null
@@ -109,6 +118,7 @@ export const useDeliverablesStore = defineStore('deliverables', () => {
   return {
     deliverables,
     selectedDeliverable,
+    users,
     total,
     page,
     pageSize,
@@ -119,6 +129,7 @@ export const useDeliverablesStore = defineStore('deliverables', () => {
     openDeliverables,
     loadDeliverables,
     loadDeliverable,
+    loadUsers,
     createDeliverable,
     updateDeliverable,
     clearSelected,

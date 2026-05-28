@@ -11,6 +11,7 @@ vi.mock('@/shared/http/api-client', () => ({
       list: vi.fn(),
       update: vi.fn(),
     },
+    organizations: { users: vi.fn() },
   },
 }))
 

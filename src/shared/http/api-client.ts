@@ -1,4 +1,5 @@
 import { httpClient } from '@/shared/http/http-client'
+import { toIsoString, toTimestamp } from '@/shared/formatters/date.formatter'
 import type {
   ApiResponse,
   AuditLogEntry,
@@ -27,7 +28,7 @@ export type CreateDeliverableRequest = {
   projectId: string
   title: string
   description?: string | null
-  dueDate?: string | null
+  dueDate?: number | null
   status?: Deliverable['status']
   type: DeliverableType
   assignees?: string[]
@@ -41,7 +42,7 @@ export interface CreateReviewRequest {
   documentId?: string | null
   documentVersionId?: string | null
   reviewers: string[]
-  dueDate?: string | null
+  dueDate?: number | null
   comment?: string | null
 }
 
@@ -79,6 +80,91 @@ async function unwrap<T>(request: Promise<{ data: ApiResponse<T> }>): Promise<T>
   return response.data.data
 }
 
+function toWireDate(value: number | null | undefined) {
+  if (value === null) {
+    return null
+  }
+
+  return toIsoString(value) ?? undefined
+}
+
+function mapPaginated<TInput, TOutput>(
+  response: Paginated<TInput>,
+  mapper: (item: TInput) => TOutput,
+): Paginated<TOutput> {
+  return {
+    ...response,
+    items: response.items.map(mapper),
+  }
+}
+
+function mapProject(project: Project): Project {
+  return {
+    ...project,
+    startDate: toTimestamp(project.startDate) ?? undefined,
+    endDate: toTimestamp(project.endDate) ?? undefined,
+  }
+}
+
+function mapDeliverable(deliverable: Deliverable): Deliverable {
+  return {
+    ...deliverable,
+    dueDate: toTimestamp(deliverable.dueDate) ?? undefined,
+  }
+}
+
+function mapDocumentVersion(
+  version: DocumentSummary['latestVersion'],
+): DocumentSummary['latestVersion'] {
+  if (!version) {
+    return version
+  }
+
+  return {
+    ...version,
+    uploadedAt: toTimestamp(version.uploadedAt) ?? Date.now(),
+  }
+}
+
+function mapDocumentSummary(document: DocumentSummary): DocumentSummary {
+  return {
+    ...document,
+    updatedAt: toTimestamp(document.updatedAt) ?? Date.now(),
+    latestVersion: mapDocumentVersion(document.latestVersion),
+    officialVersion: mapDocumentVersion(document.officialVersion),
+  }
+}
+
+function mapDocumentDetail(document: DocumentDetail): DocumentDetail {
+  return {
+    ...mapDocumentSummary(document),
+    versions: document.versions.map((version) => mapDocumentVersion(version)!),
+  }
+}
+
+function mapReviewSummary(review: ReviewSummary): ReviewSummary {
+  return {
+    ...review,
+    reviewedAt: toTimestamp(review.reviewedAt) ?? null,
+    dueDate: toTimestamp(review.dueDate) ?? null,
+    updatedAt: toTimestamp(review.updatedAt) ?? undefined,
+  }
+}
+
+function mapReviewDetail(review: ReviewDetail): ReviewDetail {
+  return {
+    ...mapReviewSummary(review),
+    createdAt: toTimestamp(review.createdAt) ?? undefined,
+  }
+}
+
+function mapAuditLogEntry(entry: AuditLogEntry): AuditLogEntry {
+  return {
+    ...entry,
+    occurredAt: toTimestamp(entry.occurredAt) ?? Date.now(),
+  }
+}
+
 export const apiClient = {
   auth: {
     login(credentials: LoginCredentials) {
@@ -94,29 +180,43 @@ export const apiClient = {
     },
   },
   projects: {
-    list(params: PageParams = {}) {
-      return unwrap<Paginated<Project>>(httpClient.get('/projects', { params }))
+    async list(params: PageParams = {}) {
+      const response = await unwrap<Paginated<Project>>(httpClient.get('/projects', { params }))
+      return mapPaginated(response, mapProject)
     },
-    detail(id: string) {
-      return unwrap<Project>(httpClient.get(`/projects/${id}`))
+    async detail(id: string) {
+      return mapProject(await unwrap<Project>(httpClient.get(`/projects/${id}`)))
     },
   },
   deliverables: {
-    list(params: PageParams & { projectId?: string; status?: Deliverable['status'] } = {}) {
-      return unwrap<Paginated<Deliverable>>(httpClient.get('/deliverables', { params }))
+    async list(params: PageParams & { projectId?: string; status?: Deliverable['status'] } = {}) {
+      const response = await unwrap<Paginated<Deliverable>>(
+        httpClient.get('/deliverables', { params }),
+      )
+      return mapPaginated(response, mapDeliverable)
     },
-    get(id: string) {
-      return unwrap<Deliverable>(httpClient.get(`/deliverables/${id}`))
+    async get(id: string) {
+      return mapDeliverable(await unwrap<Deliverable>(httpClient.get(`/deliverables/${id}`)))
     },
     create(payload: CreateDeliverableRequest) {
-      return unwrap<Deliverable>(httpClient.post('/deliverables', payload))
+      return unwrap<Deliverable>(
+        httpClient.post('/deliverables', {
+          ...payload,
+          dueDate: toWireDate(payload.dueDate),
+        }),
+      ).then(mapDeliverable)
     },
     update(id: string, payload: UpdateDeliverableRequest) {
-      return unwrap<Deliverable>(httpClient.patch(`/deliverables/${id}`, payload))
+      return unwrap<Deliverable>(
+        httpClient.patch(`/deliverables/${id}`, {
+          ...payload,
+          dueDate: toWireDate(payload.dueDate),
+        }),
+      ).then(mapDeliverable)
     },
   },
   documents: {
-    list(
+    async list(
       params: PageParams & {
         projectId?: string
         deliverableId?: string
@@ -124,16 +224,21 @@ export const apiClient = {
         type?: DocumentType
       } = {},
     ) {
-      return unwrap<Paginated<DocumentSummary>>(httpClient.get('/documents', { params }))
+      const response = await unwrap<Paginated<DocumentSummary>>(
+        httpClient.get('/documents', { params }),
+      )
+      return mapPaginated(response, mapDocumentSummary)
     },
-    get(id: string) {
-      return unwrap<DocumentDetail>(httpClient.get(`/documents/${id}`))
+    async get(id: string) {
+      return mapDocumentDetail(await unwrap<DocumentDetail>(httpClient.get(`/documents/${id}`)))
     },
     create(payload: CreateDocumentRequest) {
-      return unwrap<DocumentDetail>(httpClient.post('/documents', payload))
+      return unwrap<DocumentDetail>(httpClient.post('/documents', payload)).then(mapDocumentDetail)
     },
     update(id: string, payload: UpdateDocumentRequest) {
-      return unwrap<DocumentDetail>(httpClient.patch(`/documents/${id}`, payload))
+      return unwrap<DocumentDetail>(httpClient.patch(`/documents/${id}`, payload)).then(
+        mapDocumentDetail,
+      )
     },
     delete(id: string) {
       return unwrap<{ deleted: true }>(httpClient.delete(`/documents/${id}`))
@@ -162,11 +267,11 @@ export const apiClient = {
         httpClient.post(`/documents/${id}/versions`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         }),
-      )
+      ).then(mapDocumentDetail)
     },
   },
   reviews: {
-    list(
+    async list(
       params: PageParams & {
         projectId?: string
         deliverableId?: string
@@ -174,19 +279,31 @@ export const apiClient = {
         status?: ReviewStatus
       } = {},
     ) {
-      return unwrap<Paginated<ReviewSummary>>(httpClient.get('/reviews', { params }))
+      const response = await unwrap<Paginated<ReviewSummary>>(
+        httpClient.get('/reviews', { params }),
+      )
+      return mapPaginated(response, mapReviewSummary)
     },
-    get(id: string) {
-      return unwrap<ReviewDetail>(httpClient.get(`/reviews/${id}`))
+    async get(id: string) {
+      return mapReviewDetail(await unwrap<ReviewDetail>(httpClient.get(`/reviews/${id}`)))
     },
     create(payload: CreateReviewRequest) {
-      return unwrap<ReviewDetail>(httpClient.post('/reviews', payload))
+      return unwrap<ReviewDetail>(
+        httpClient.post('/reviews', {
+          ...payload,
+          dueDate: toWireDate(payload.dueDate),
+        }),
+      ).then(mapReviewDetail)
     },
     approve(id: string, payload: DecideReviewRequest = {}) {
-      return unwrap<ReviewDetail>(httpClient.post(`/reviews/${id}/approve`, payload))
+      return unwrap<ReviewDetail>(httpClient.post(`/reviews/${id}/approve`, payload)).then(
+        mapReviewDetail,
+      )
     },
     reject(id: string, payload: DecideReviewRequest = {}) {
-      return unwrap<ReviewDetail>(httpClient.post(`/reviews/${id}/reject`, payload))
+      return unwrap<ReviewDetail>(httpClient.post(`/reviews/${id}/reject`, payload)).then(
+        mapReviewDetail,
+      )
     },
   },
   knowledgeBase: {
@@ -195,8 +312,9 @@ export const apiClient = {
     },
   },
   audit: {
-    list(params: PageParams = {}) {
-      return unwrap<Paginated<AuditLogEntry>>(httpClient.get('/audit', { params }))
+    async list(params: PageParams = {}) {
+      const response = await unwrap<Paginated<AuditLogEntry>>(httpClient.get('/audit', { params }))
+      return mapPaginated(response, mapAuditLogEntry)
     },
   },
 }

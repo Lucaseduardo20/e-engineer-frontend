@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useReviewsStore } from '@/modules/reviews/stores/reviews.store'
 import BaseStatusBadge from '@/shared/components/BaseStatusBadge.vue'
 import { reviewBadgeKind } from '@/shared/ui/status-badges'
@@ -11,13 +11,24 @@ const props = defineProps<{
 const reviewsStore = useReviewsStore()
 const visibleReviews = computed(() => reviewsStore.reviews.slice(0, 5))
 
-onMounted(async () => {
+async function loadPendingReviews() {
   await reviewsStore.loadLookups()
+
   await reviewsStore.loadReviews(1, {
-    projectId: props.projectId,
+    projectId: props.projectId || undefined,
     status: 'pending',
   })
-})
+}
+
+
+onMounted(loadPendingReviews)
+
+watch(
+  () => props.projectId,
+  async () => {
+    await loadPendingReviews()
+  }
+)
 
 function userName(userId: string) {
   return reviewsStore.reviewers.find((user) => user.id === userId)?.fullName ?? userId.slice(0, 8)
@@ -37,20 +48,13 @@ function userName(userId: string) {
       {{ reviewsStore.error }}
     </v-alert>
     <v-list v-else lines="two" bg-color="transparent">
-      <v-list-item
-        v-for="review in visibleReviews"
-        :key="review.id"
-        :title="review.comment || 'Revisao tecnica'"
-        :subtitle="`Revisor: ${review.reviewers.map((item) => userName(item.userId)).join(', ')}`"
-      >
+      <v-list-item v-for="review in visibleReviews" :key="review.id" :title="review.comment || 'Revisao tecnica'"
+        :subtitle="`Revisor: ${review.reviewers.map((item) => userName(item.userId)).join(', ')}`">
         <template #append>
           <BaseStatusBadge :kind="reviewBadgeKind(review.status)" size="x-small" />
         </template>
       </v-list-item>
-      <v-list-item
-        v-if="!reviewsStore.isLoading && visibleReviews.length === 0"
-        title="Sem revisoes pendentes"
-      />
+      <v-list-item v-if="!reviewsStore.isLoading && visibleReviews.length === 0" title="Sem revisoes pendentes" />
     </v-list>
   </v-card>
 </template>

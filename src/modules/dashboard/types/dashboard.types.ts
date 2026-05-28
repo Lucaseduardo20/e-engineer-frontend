@@ -15,7 +15,7 @@ export type RecentProject = {
   statusLabel: string
   statusTone: StatusTone
   responsibleEngineer: string
-  dueDate: string
+  dueDate: number
   progress: number
 }
 
@@ -24,7 +24,7 @@ export type PendingReview = {
   documentName: string
   projectName: string
   reviewerName: string
-  dueDate: string
+  dueDate: number
   statusLabel: string
   statusTone: StatusTone
 }
@@ -33,6 +33,6 @@ export type ActivityLogItem = {
   id: string
   title: string
   description: string
-  occurredAt: string
+  occurredAt: number
   tone: StatusTone
 }

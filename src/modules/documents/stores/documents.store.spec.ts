@@ -16,6 +16,8 @@ vi.mock('@/shared/http/api-client', () => ({
       update: vi.fn(),
       uploadVersion: vi.fn(),
     },
+    organizations: { users: vi.fn() },
+    audit: { list: vi.fn() },
   },
 }))
 
@@ -34,7 +36,7 @@ describe('documents store', () => {
           title: 'Laudo tecnico',
           type: 'laudo',
           status: 'approved',
-          updatedAt: '2026-05-27T00:00:00.000Z',
+          updatedAt: 1779840000000,
         },
       ],
       total: 1,
@@ -62,7 +64,7 @@ describe('documents store', () => {
       title: 'Memorial',
       type: 'memorial_descritivo',
       status: 'draft',
-      updatedAt: '2026-05-27T00:00:00.000Z',
+      updatedAt: 1779840000000,
       versions: [],
     })
     vi.mocked(apiClient.documents.uploadVersion).mockResolvedValue({
@@ -71,7 +73,7 @@ describe('documents store', () => {
       title: 'Memorial',
       type: 'memorial_descritivo',
       status: 'approved',
-      updatedAt: '2026-05-27T00:00:00.000Z',
+      updatedAt: 1779840000000,
       versions: [],
     })
     vi.mocked(apiClient.documents.list).mockResolvedValue({

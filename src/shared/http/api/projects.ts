@@ -1,4 +1,5 @@
 import { BaseApiService } from '@/shared/http/api/base'
+import { toTimestamp } from '@/shared/formatters/date.formatter'
 import type { Paginated, Project } from '@/shared/types/api-contracts'
 
 export type ProjectDTO = Project
@@ -29,11 +30,14 @@ export class ProjectsService extends BaseApiService {
   }
 
   list(params: ListProjectsParams = {}): Promise<Paginated<ProjectDTO>> {
-    return this.get<Paginated<ProjectDTO>>('', { params })
+    return this.get<Paginated<ProjectDTO>>('', { params }).then((response) => ({
+      ...response,
+      items: response.items.map(mapProject),
+    }))
   }
 
   getById(id: string): Promise<ProjectDTO> {
-    return this.get<ProjectDTO>(`/${id}`)
+    return this.get<ProjectDTO>(`/${id}`).then(mapProject)
   }
 
   create(request: CreateProjectRequest): Promise<CreateProjectResponse> {
@@ -42,3 +46,11 @@ export class ProjectsService extends BaseApiService {
 }
 
 export const projectsService = new ProjectsService()
+
+function mapProject(project: ProjectDTO): ProjectDTO {
+  return {
+    ...project,
+    startDate: toTimestamp(project.startDate) ?? undefined,
+    endDate: toTimestamp(project.endDate) ?? undefined,
+  }
+}

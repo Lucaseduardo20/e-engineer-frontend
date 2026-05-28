@@ -47,6 +47,7 @@ async function loadPage() {
   await Promise.all([
     projectsStore.loadProjectDetail(projectId.value),
     deliverablesStore.loadDeliverables(projectId.value),
+    deliverablesStore.loadUsers(),
   ])
 
   if (isEditRoute.value && deliverableId.value) {
@@ -103,7 +104,10 @@ async function saveDeliverable(payload: CreateDeliverableRequest) {
       {{ deliverablesStore.error }}
     </v-alert>
 
-    <div class="deliverables-page__content" :class="{ 'deliverables-page__content--form': showForm }">
+    <div
+      class="deliverables-page__content"
+      :class="{ 'deliverables-page__content--form': showForm }"
+    >
       <DeliverableForm
         v-if="showForm"
         :project-id="projectId"
@@ -120,6 +124,7 @@ async function saveDeliverable(payload: CreateDeliverableRequest) {
         :page-size="deliverablesStore.pageSize"
         :total="deliverablesStore.total"
         :status="selectedStatus"
+        :users="deliverablesStore.users"
         @create="goToCreate"
         @edit="goToEdit"
         @update:page="deliverablesStore.loadDeliverables(projectId, $event)"

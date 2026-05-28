@@ -6,17 +6,20 @@ import type {
   DocumentSummary,
   DocumentType,
   Project,
+  User,
 } from '@/shared/types/api-contracts'
 
 const props = withDefaults(
   defineProps<{
     projects: Project[]
     deliverables?: Deliverable[]
+    users?: User[]
     document?: DocumentSummary | null
     saving?: boolean
   }>(),
   {
     deliverables: () => [],
+    users: () => [],
     document: null,
   },
 )
@@ -34,6 +37,7 @@ const emit = defineEmits<{
       revision?: string
       isOfficial: boolean
       notes?: string | null
+      reviewerId?: string | null
     },
   ]
   'project-change': [projectId: string]
@@ -72,6 +76,7 @@ const form = reactive({
   revision: '',
   isOfficial: false,
   notes: '',
+  reviewerId: null as string | null,
 })
 const selectedFile = ref<File | null>(null)
 
@@ -82,6 +87,12 @@ const deliverableOptions = computed(() =>
   props.deliverables.map((deliverable) => ({
     title: deliverable.title,
     value: deliverable.id,
+  })),
+)
+const reviewerOptions = computed(() =>
+  props.users.map((user) => ({
+    title: `${user.fullName} (${user.email})`,
+    value: user.id,
   })),
 )
 const isEditing = computed(() => Boolean(props.document))
@@ -101,6 +112,7 @@ watch(
     form.revision = ''
     form.isOfficial = document?.status === 'approved'
     form.notes = ''
+    form.reviewerId = null
     selectedFile.value = null
 
     if (form.projectId) {
@@ -134,6 +146,7 @@ function submit() {
     revision: form.revision.trim() || undefined,
     isOfficial: form.isOfficial,
     notes: form.notes.trim() || null,
+    reviewerId: form.reviewerId,
   })
 }
 </script>
@@ -209,6 +222,15 @@ function submit() {
         prepend-icon=""
         prepend-inner-icon="$upload"
         show-size
+        :disabled="saving"
+      />
+      <v-select
+        v-model="form.reviewerId"
+        :items="reviewerOptions"
+        label="Responsavel pela revisao"
+        variant="outlined"
+        density="comfortable"
+        clearable
         :disabled="saving"
       />
       <div class="document-upload__pair">

@@ -1,7 +1,15 @@
 import { mount } from '@vue/test-utils'
 import { defineComponent, h } from 'vue'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import DeliverableForm from './DeliverableForm.vue'
+
+vi.mock('@/shared/http/api-client', () => ({
+  apiClient: {
+    organizations: {
+      users: vi.fn().mockResolvedValue([]),
+    },
+  },
+}))
 
 const PassthroughStub = defineComponent({
   setup(_, { slots }) {
@@ -24,7 +32,6 @@ describe('DeliverableForm', () => {
           VCardActions: PassthroughStub,
           VCardText: PassthroughStub,
           VCardTitle: PassthroughStub,
-          VCombobox: PassthroughStub,
           VDivider: PassthroughStub,
           VForm: {
             template: '<form @submit="$emit(`submit`, $event)"><slot /></form>',

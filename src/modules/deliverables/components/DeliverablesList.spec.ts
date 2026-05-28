@@ -42,7 +42,7 @@ describe('DeliverablesList', () => {
         description: 'Compatibilizado com memorial',
         status: 'in_progress',
         type: 'architectural_project',
-        dueDate: '2026-06-12',
+        dueDate: 1781222400000,
         assignees: ['Lucas Eduardo'],
       },
     ]
@@ -57,6 +57,9 @@ describe('DeliverablesList', () => {
           VDataTable: DataTableStub,
           VIcon: PassthroughStub,
           VSelect: PassthroughStub,
+          VChip: PassthroughStub,
+          VExpandTransition: PassthroughStub,
+          ExpandTransition: PassthroughStub,
           BasePagination: PassthroughStub,
           BaseStatusBadge: {
             template: '<span>Em producao</span>',

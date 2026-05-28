@@ -63,6 +63,13 @@ export const useReviewsStore = defineStore('reviews', () => {
     }
   }
 
+  function resetFilters() {
+    filters.value = {}
+    page.value = 1
+    deliverables.value = []
+    documents.value = []
+  }
+
   async function loadLookups() {
     try {
       const [projectPage, users] = await Promise.all([
@@ -162,6 +169,7 @@ export const useReviewsStore = defineStore('reviews', () => {
     error,
     pendingReviews,
     loadReviews,
+    resetFilters,
     loadLookups,
     loadProjectLinks,
     createReview,

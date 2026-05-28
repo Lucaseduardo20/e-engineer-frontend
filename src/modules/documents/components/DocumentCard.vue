@@ -1,17 +1,20 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import BaseStatusBadge from '@/shared/components/BaseStatusBadge.vue'
-import { formatShortDate } from '@/shared/formatters/date.formatter'
-import type { DocumentSummary } from '@/shared/types/api-contracts'
+import { formatDateTime, formatShortDate } from '@/shared/formatters/date.formatter'
+import type { DocumentSummary, User } from '@/shared/types/api-contracts'
 import { documentBadgeKind } from '@/shared/ui/status-badges'
 
 const props = defineProps<{
   document: DocumentSummary
+  users?: User[]
 }>()
 
 const emit = defineEmits<{
   upload: [document: DocumentSummary]
   edit: [document: DocumentSummary]
+  assign: [document: DocumentSummary]
+  history: [document: DocumentSummary]
   delete: [document: DocumentSummary]
 }>()
 
@@ -34,6 +37,18 @@ const documentTypeLabels: Record<string, string> = {
 const revisionLabel = computed(
   () => props.document.officialRevision ?? props.document.latestVersion?.revision ?? 'Sem versao',
 )
+const latestVersion = computed(
+  () => props.document.latestVersion ?? props.document.officialVersion ?? null,
+)
+const downloadUrl = computed(() => latestVersion.value?.filePath ?? '')
+
+function userName(userId?: string | null) {
+  if (!userId) {
+    return 'Sem autor'
+  }
+
+  return props.users?.find((user) => user.id === userId)?.fullName ?? userId.slice(0, 8)
+}
 </script>
 
 <template>
@@ -63,12 +78,32 @@ const revisionLabel = computed(
         {{ revisionLabel }}
       </span>
       <span>
-        <v-icon icon="$file" size="15" />
-        Projeto {{ document.projectId.slice(0, 8) }}
+        <v-icon icon="$success" size="15" />
+        {{ userName(latestVersion?.uploadedBy) }}
+      </span>
+      <span v-if="latestVersion">
+        <v-icon icon="$search" size="15" />
+        {{ formatDateTime(latestVersion.uploadedAt) }}
       </span>
     </div>
 
+    <div v-if="latestVersion?.notes" class="document-card__note">
+      {{ latestVersion.notes }}
+    </div>
+
     <div class="document-card__actions">
+      <v-btn
+        size="small"
+        color="teal"
+        variant="flat"
+        prepend-icon="$file"
+        :href="downloadUrl"
+        target="_blank"
+        rel="noopener"
+        :disabled="!downloadUrl"
+      >
+        Baixar
+      </v-btn>
       <v-btn
         size="small"
         color="teal"
@@ -80,6 +115,12 @@ const revisionLabel = computed(
       </v-btn>
       <v-btn size="small" variant="text" prepend-icon="$edit" @click="emit('edit', document)">
         Editar
+      </v-btn>
+      <v-btn size="small" variant="text" prepend-icon="$success" @click="emit('assign', document)">
+        Revisor
+      </v-btn>
+      <v-btn size="small" variant="text" prepend-icon="$file" @click="emit('history', document)">
+        Historico
       </v-btn>
       <v-btn
         size="small"
@@ -127,7 +168,8 @@ const revisionLabel = computed(
 
 .document-card__title h3,
 .document-card__title p,
-.document-card__description {
+.document-card__description,
+.document-card__note {
   margin: 0;
 }
 
@@ -148,8 +190,17 @@ const revisionLabel = computed(
   font-size: 0.84rem;
 }
 
-.document-card__description {
+.document-card__description,
+.document-card__note {
   line-height: 1.45;
+}
+
+.document-card__note {
+  border-left: 3px solid #8ccbbd;
+  background: #f5fbf9;
+  color: #34443f;
+  font-size: 0.84rem;
+  padding: 0.625rem 0.75rem;
 }
 
 .document-card__meta {

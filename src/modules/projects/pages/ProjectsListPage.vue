@@ -7,6 +7,7 @@ import type { Project } from '@/shared/types/api-contracts'
 
 const projectsStore = useProjectsStore()
 const isCreateDialogOpen = ref(false)
+const isFiltersOpen = ref(false)
 const projectName = ref('')
 const projectType = ref('')
 const isCreating = ref(false)
@@ -22,6 +23,9 @@ const projectTypes = [
 ]
 const canCreateProject = computed(() =>
   Boolean(projectName.value.trim() && projectType.value.trim()),
+)
+const activeFiltersCount = computed(
+  () => [searchTerm.value.trim(), selectedStatus.value].filter(Boolean).length,
 )
 const statusOptions: Array<{ title: string; value: Project['status'] }> = [
   { title: 'Rascunho', value: 'draft' },
@@ -98,35 +102,62 @@ async function handleCreateProject() {
       {{ projectsStore.error }}
     </v-alert>
 
-    <v-sheet class="projects-page__filters" border rounded="lg">
-      <v-text-field
-        v-model="searchTerm"
-        label="Buscar por nome"
-        density="comfortable"
-        variant="outlined"
-        prepend-inner-icon="$search"
-        hide-details
-        clearable
-        @keyup.enter="applyFilters"
-        @click:clear="clearFilters"
-      />
-      <v-select
-        v-model="selectedStatus"
-        :items="statusOptions"
-        label="Status"
-        density="comfortable"
-        variant="outlined"
-        hide-details
-        clearable
-      />
-      <div class="projects-page__filter-actions">
-        <v-btn variant="outlined" :disabled="projectsStore.isLoading" @click="clearFilters">
+    <v-sheet class="projects-page__filter-shell" border rounded="lg">
+      <div class="projects-page__filter-bar">
+        <v-btn
+          variant="tonal"
+          color="teal"
+          prepend-icon="$search"
+          @click="isFiltersOpen = !isFiltersOpen"
+        >
+          Filtros
+        </v-btn>
+        <v-chip v-if="activeFiltersCount" color="teal" variant="tonal" size="small">
+          {{ activeFiltersCount }} ativo(s)
+        </v-chip>
+        <v-spacer />
+        <v-btn
+          v-if="activeFiltersCount"
+          variant="text"
+          :disabled="projectsStore.isLoading"
+          @click="clearFilters"
+        >
           Limpar
         </v-btn>
-        <v-btn color="teal" :loading="projectsStore.isLoading" @click="applyFilters">
-          Filtrar
-        </v-btn>
       </div>
+
+      <v-expand-transition>
+        <div v-if="isFiltersOpen" class="projects-page__filters">
+          <v-text-field
+            v-model="searchTerm"
+            label="Buscar por nome"
+            density="comfortable"
+            variant="outlined"
+            prepend-inner-icon="$search"
+            hide-details
+            clearable
+            @keyup.enter="applyFilters"
+            @click:clear="clearFilters"
+          />
+          <v-select
+            v-model="selectedStatus"
+            :items="statusOptions"
+            label="Status"
+            density="comfortable"
+            variant="outlined"
+            hide-details
+            clearable
+          />
+          <div class="projects-page__filter-actions">
+            <v-btn variant="outlined" :disabled="projectsStore.isLoading" @click="clearFilters">
+              Limpar
+            </v-btn>
+            <v-btn color="teal" :loading="projectsStore.isLoading" @click="applyFilters">
+              Filtrar
+            </v-btn>
+          </div>
+        </div>
+      </v-expand-transition>
     </v-sheet>
 
     <ProjectsList
@@ -190,12 +221,24 @@ async function handleCreateProject() {
   gap: 1rem;
 }
 
+.projects-page__filter-shell {
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.projects-page__filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+}
+
 .projects-page__filters {
   display: grid;
   align-items: center;
   gap: 0.75rem;
   grid-template-columns: minmax(14rem, 1fr) minmax(12rem, 16rem) auto;
-  background: #ffffff;
+  border-top: 1px solid #d8e1de;
   padding: 0.875rem;
 }
 
