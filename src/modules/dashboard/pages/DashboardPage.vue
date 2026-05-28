@@ -24,9 +24,9 @@ const metrics = computed(() => [
     label: 'Progresso medio',
     value: projectsStore.projects.length
       ? `${Math.round(
-        projectsStore.projects.reduce((total, project) => total + project.progress, 0) /
-        projectsStore.projects.length,
-      )}%`
+          projectsStore.projects.reduce((total, project) => total + project.progress, 0) /
+            projectsStore.projects.length,
+        )}%`
       : '0%',
     hint: 'Baseado na carteira atual',
     icon: '$loading',
@@ -60,7 +60,7 @@ onMounted(() => {
       </div>
       <div class="d-flex ga-2">
         <v-btn variant="outlined" prepend-icon="$file">Exportar resumo</v-btn>
-        <v-btn color="teal" to="/projects" prepend-icon="$plus">Novo projeto</v-btn>
+        <v-btn color="teal" to="/projects?new=1" prepend-icon="$plus">Novo projeto</v-btn>
       </div>
     </div>
 
@@ -76,8 +76,14 @@ onMounted(() => {
 
     <v-row class="mt-1">
       <v-col cols="12" lg="8">
-        <ProjectsList :projects="projectsStore.projects" :loading="projectsStore.isLoading" :page="projectsStore.page"
-          :page-size="projectsStore.pageSize" :total="projectsStore.total" @update:page="projectsStore.loadProjects" />
+        <ProjectsList
+          :projects="projectsStore.projects"
+          :loading="projectsStore.isLoading"
+          :page="projectsStore.page"
+          :page-size="projectsStore.pageSize"
+          :total="projectsStore.total"
+          @update:page="projectsStore.loadProjects"
+        />
       </v-col>
       <v-col cols="12" lg="4" class="d-grid ga-4">
         <NotificationsFeed />
@@ -121,8 +127,8 @@ onMounted(() => {
 }
 
 .dashboard-page__header h1 {
-  font-size: clamp(1.8rem, 4vw, 2.35rem);
-  font-weight: 850;
+  font-size: clamp(1.65rem, 3.4vw, 2.15rem);
+  font-weight: 740;
   letter-spacing: 0;
 }
 
@@ -136,8 +142,8 @@ onMounted(() => {
   margin-bottom: 0.25rem;
   color: #bdebdc;
   font-size: 0.75rem;
-  font-weight: 850;
-  letter-spacing: 0.08em;
+  font-weight: 700;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 

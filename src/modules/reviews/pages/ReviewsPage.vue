@@ -134,12 +134,13 @@ async function confirmDecision() {
     <v-sheet class="reviews-page__filter-shell" border rounded="lg">
       <div class="reviews-page__filter-bar">
         <v-btn
+          size="small"
           variant="tonal"
           color="teal"
           prepend-icon="$search"
           @click="isFiltersOpen = !isFiltersOpen"
         >
-          Filtros
+          Filtros da tabela
         </v-btn>
         <v-chip v-if="activeFiltersCount" color="teal" variant="tonal" size="small">
           {{ activeFiltersCount }} ativo(s)

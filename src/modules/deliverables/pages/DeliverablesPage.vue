@@ -84,6 +84,14 @@ async function saveDeliverable(payload: CreateDeliverableRequest) {
     closeForm()
   }
 }
+
+async function updateDeliverableStatus(deliverable: Deliverable, status: Deliverable['status']) {
+  if (deliverable.status === status) {
+    return
+  }
+
+  await deliverablesStore.updateDeliverable(deliverable.id, projectId.value, { status })
+}
 </script>
 
 <template>
@@ -127,6 +135,7 @@ async function saveDeliverable(payload: CreateDeliverableRequest) {
         :users="deliverablesStore.users"
         @create="goToCreate"
         @edit="goToEdit"
+        @update:item-status="updateDeliverableStatus"
         @update:page="deliverablesStore.loadDeliverables(projectId, $event)"
         @update:status="selectedStatus = $event"
       />

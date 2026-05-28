@@ -111,13 +111,13 @@ function userName(userId?: string | null) {
         prepend-icon="$upload"
         @click="emit('upload', document)"
       >
-        Versao
+        Nova versao
       </v-btn>
       <v-btn size="small" variant="text" prepend-icon="$edit" @click="emit('edit', document)">
         Editar
       </v-btn>
       <v-btn size="small" variant="text" prepend-icon="$success" @click="emit('assign', document)">
-        Revisor
+        Revisores
       </v-btn>
       <v-btn size="small" variant="text" prepend-icon="$file" @click="emit('history', document)">
         Historico

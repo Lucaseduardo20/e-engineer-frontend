@@ -10,6 +10,12 @@ const PassthroughStub = defineComponent({
   },
 })
 
+const SelectStub = defineComponent({
+  setup(_, { slots }) {
+    return () => h('div', [slots.selection?.(), slots.default?.()])
+  },
+})
+
 const DataTableStub = defineComponent({
   props: {
     items: {
@@ -56,7 +62,7 @@ describe('DeliverablesList', () => {
           VCardTitle: PassthroughStub,
           VDataTable: DataTableStub,
           VIcon: PassthroughStub,
-          VSelect: PassthroughStub,
+          VSelect: SelectStub,
           VChip: PassthroughStub,
           VExpandTransition: PassthroughStub,
           ExpandTransition: PassthroughStub,

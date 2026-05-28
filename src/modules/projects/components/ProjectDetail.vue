@@ -9,6 +9,14 @@ defineProps<{
   project: Project
   deliverables: Deliverable[]
 }>()
+
+const emit = defineEmits<{
+  'update:deliverable-status': [deliverable: Deliverable, status: Deliverable['status']]
+}>()
+
+function updateDeliverableStatus(deliverable: Deliverable, status: Deliverable['status']) {
+  emit('update:deliverable-status', deliverable, status)
+}
 </script>
 
 <template>
@@ -41,7 +49,7 @@ defineProps<{
       </v-card-text>
     </v-card>
 
-    <DeliverablesBoard :deliverables="deliverables" />
+    <DeliverablesBoard :deliverables="deliverables" @update:status="updateDeliverableStatus" />
 
     <ReviewsPanel :project-id="project.id" />
   </div>

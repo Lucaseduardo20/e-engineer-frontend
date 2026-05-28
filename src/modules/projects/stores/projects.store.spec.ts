@@ -17,6 +17,9 @@ vi.mock('@/shared/http/api-client', () => ({
     deliverables: {
       list: vi.fn(),
     },
+    projects: {
+      updateStatus: vi.fn(),
+    },
   },
 }))
 

@@ -94,6 +94,32 @@ export const useProjectsStore = defineStore('projects', () => {
     }
   }
 
+  async function updateProjectStatus(projectId: string, status: Project['status']) {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const updated = await apiClient.projects.updateStatus(projectId, status)
+      projects.value = projects.value.map((project) =>
+        project.id === projectId ? { ...project, ...updated } : project,
+      )
+
+      if (selectedProject.value?.id === projectId) {
+        selectedProject.value = { ...selectedProject.value, ...updated }
+      }
+
+      return updated
+    } catch (updateError) {
+      error.value = getApiErrorMessage(
+        updateError,
+        'Nao foi possivel atualizar o status do projeto.',
+      )
+      return null
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   return {
     projects,
     selectedProject,
@@ -108,5 +134,6 @@ export const useProjectsStore = defineStore('projects', () => {
     loadProjects,
     loadProjectDetail,
     createProject,
+    updateProjectStatus,
   }
 })

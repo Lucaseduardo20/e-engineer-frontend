@@ -29,6 +29,7 @@ const props = withDefaults(
 const emit = defineEmits<{
   create: []
   edit: [deliverable: Deliverable]
+  'update:item-status': [deliverable: Deliverable, status: Deliverable['status']]
   'update:page': [page: number]
   'update:status': [status: Deliverable['status'] | null]
 }>()
@@ -83,12 +84,13 @@ function userName(userId: string) {
       </div>
       <div class="deliverables-list__actions">
         <v-btn
+          size="small"
           variant="tonal"
           color="teal"
           prepend-icon="$search"
           @click="isFiltersOpen = !isFiltersOpen"
         >
-          Filtros
+          Filtros da tabela
         </v-btn>
         <v-btn color="teal" prepend-icon="$plus" @click="emit('create')">Novo entregavel</v-btn>
       </div>
@@ -167,7 +169,19 @@ function userName(userId: string) {
       </template>
 
       <template #item.status="{ item }">
-        <BaseStatusBadge :kind="deliverableBadgeKind(item.status)" />
+        <v-select
+          :model-value="item.status"
+          :items="statusOptions"
+          density="compact"
+          variant="outlined"
+          hide-details
+          class="deliverables-list__status-select"
+          @update:model-value="emit('update:item-status', item, $event)"
+        >
+          <template #selection>
+            <BaseStatusBadge :kind="deliverableBadgeKind(item.status)" />
+          </template>
+        </v-select>
       </template>
 
       <template #item.dueDate="{ item }">
@@ -236,6 +250,10 @@ function userName(userId: string) {
 
 .deliverables-list__filter {
   width: 12rem;
+}
+
+.deliverables-list__status-select {
+  width: 10.75rem;
 }
 
 .deliverables-list__item {

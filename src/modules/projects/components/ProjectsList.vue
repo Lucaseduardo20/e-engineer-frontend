@@ -21,7 +21,16 @@ withDefaults(
 
 const emit = defineEmits<{
   'update:page': [page: number]
+  'update:status': [project: Project, status: Project['status']]
 }>()
+
+const statusOptions: Array<{ title: string; value: Project['status'] }> = [
+  { title: 'Rascunho', value: 'draft' },
+  { title: 'Ativo', value: 'active' },
+  { title: 'Pausado', value: 'paused' },
+  { title: 'Concluido', value: 'completed' },
+  { title: 'Arquivado', value: 'archived' },
+]
 </script>
 
 <template>
@@ -80,7 +89,19 @@ const emit = defineEmits<{
       </template>
 
       <template #item.status="{ item }">
-        <BaseStatusBadge :kind="projectBadgeKind(item.status)" />
+        <v-select
+          :model-value="item.status"
+          :items="statusOptions"
+          density="compact"
+          variant="outlined"
+          hide-details
+          class="projects-list__status-select"
+          @update:model-value="emit('update:status', item, $event)"
+        >
+          <template #selection>
+            <BaseStatusBadge :kind="projectBadgeKind(item.status)" />
+          </template>
+        </v-select>
       </template>
 
       <template #item.progress="{ item }">
@@ -171,5 +192,9 @@ const emit = defineEmits<{
   color: #51615d;
   font-size: 0.8rem;
   font-weight: 750;
+}
+
+.projects-list__status-select {
+  width: 10.5rem;
 }
 </style>

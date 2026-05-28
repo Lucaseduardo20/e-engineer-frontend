@@ -45,6 +45,10 @@ a:focus-visible {
   min-height: 100vh;
 }
 
+strong {
+  font-weight: 680;
+}
+
 .v-field {
   background: #fbfdfc;
   color: #22332e;
@@ -68,9 +72,14 @@ a:focus-visible {
 }
 
 .v-btn {
-  font-weight: 760;
+  font-weight: 640;
   letter-spacing: 0;
   text-transform: none;
+}
+
+.v-card-title {
+  font-weight: 680;
+  letter-spacing: 0;
 }
 
 .v-btn:not(.v-btn--disabled):hover {

@@ -1,5 +1,5 @@
 import { httpClient } from '@/shared/http/http-client'
-import { toIsoString, toTimestamp } from '@/shared/formatters/date.formatter'
+import { toIsoDate, toTimestamp } from '@/shared/formatters/date.formatter'
 import type {
   ApiResponse,
   AuditLogEntry,
@@ -85,7 +85,7 @@ function toWireDate(value: number | null | undefined) {
     return null
   }
 
-  return toIsoString(value) ?? undefined
+  return toIsoDate(value) ?? undefined
 }
 
 function mapPaginated<TInput, TOutput>(
@@ -186,6 +186,11 @@ export const apiClient = {
     },
     async detail(id: string) {
       return mapProject(await unwrap<Project>(httpClient.get(`/projects/${id}`)))
+    },
+    async updateStatus(id: string, status: Project['status']) {
+      return mapProject(
+        await unwrap<Project>(httpClient.patch(`/projects/${id}/status`, { status })),
+      )
     },
   },
   deliverables: {

@@ -3,6 +3,8 @@ import { onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import ProjectDetail from '@/modules/projects/components/ProjectDetail.vue'
 import { useProjectsStore } from '@/modules/projects/stores/projects.store'
+import { apiClient } from '@/shared/http/api-client'
+import type { Deliverable } from '@/shared/types/api-contracts'
 
 const route = useRoute()
 const projectsStore = useProjectsStore()
@@ -10,6 +12,15 @@ const projectsStore = useProjectsStore()
 onMounted(() => {
   void projectsStore.loadProjectDetail(String(route.params.id))
 })
+
+async function updateDeliverableStatus(deliverable: Deliverable, status: Deliverable['status']) {
+  if (deliverable.status === status) {
+    return
+  }
+
+  await apiClient.deliverables.update(deliverable.id, { status })
+  await projectsStore.loadProjectDetail(String(route.params.id))
+}
 </script>
 
 <template>
@@ -28,6 +39,7 @@ onMounted(() => {
       v-else-if="projectsStore.selectedProject"
       :project="projectsStore.selectedProject"
       :deliverables="projectsStore.deliverables"
+      @update:deliverable-status="updateDeliverableStatus"
     />
   </v-container>
 </template>

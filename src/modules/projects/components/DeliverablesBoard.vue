@@ -8,6 +8,10 @@ const props = defineProps<{
   deliverables: Deliverable[]
 }>()
 
+const emit = defineEmits<{
+  'update:status': [deliverable: Deliverable, status: Deliverable['status']]
+}>()
+
 const columns: Array<{ status: Deliverable['status']; title: string; color: string }> = [
   { status: 'todo', title: 'A produzir', color: 'blue-grey' },
   { status: 'in_progress', title: 'Em producao', color: 'blue' },
@@ -15,6 +19,7 @@ const columns: Array<{ status: Deliverable['status']; title: string; color: stri
   { status: 'done', title: 'Concluidos', color: 'green' },
 ]
 const users = ref<User[]>([])
+const draggedDeliverable = ref<Deliverable | null>(null)
 
 onMounted(async () => {
   try {
@@ -31,11 +36,34 @@ function byStatus(status: Deliverable['status']) {
 function userName(userId: string) {
   return users.value.find((user) => user.id === userId)?.fullName ?? userId
 }
+
+function startDrag(deliverable: Deliverable) {
+  draggedDeliverable.value = deliverable
+}
+
+function dropOn(status: Deliverable['status']) {
+  if (!draggedDeliverable.value || draggedDeliverable.value.status === status) {
+    draggedDeliverable.value = null
+    return
+  }
+
+  emit('update:status', draggedDeliverable.value, status)
+  draggedDeliverable.value = null
+}
 </script>
 
 <template>
   <div class="deliverables-board">
-    <v-card v-for="column in columns" :key="column.status" variant="flat" border rounded="lg">
+    <v-card
+      v-for="column in columns"
+      :key="column.status"
+      variant="flat"
+      border
+      rounded="lg"
+      class="deliverables-board__column"
+      @dragover.prevent
+      @drop="dropOn(column.status)"
+    >
       <v-card-title class="d-flex align-center justify-space-between text-subtitle-1">
         <span>{{ column.title }}</span>
         <v-chip :color="column.color" size="small" variant="tonal">{{
@@ -51,6 +79,8 @@ function userName(userId: string) {
           rounded="sm"
           class="deliverables-board__card"
           draggable="true"
+          @dragstart="startDrag(deliverable)"
+          @dragend="draggedDeliverable = null"
         >
           <div class="deliverables-board__card-head">
             <v-icon icon="$command" size="16" />
@@ -81,6 +111,14 @@ function userName(userId: string) {
               Editar
             </v-btn>
           </div>
+          <v-select
+            :model-value="deliverable.status"
+            :items="columns.map((item) => ({ title: item.title, value: item.status }))"
+            density="compact"
+            variant="outlined"
+            hide-details
+            @update:model-value="emit('update:status', deliverable, $event)"
+          />
         </v-sheet>
 
         <v-empty-state
@@ -98,6 +136,10 @@ function userName(userId: string) {
   display: grid;
   gap: 1rem;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.deliverables-board__column {
+  min-height: 100%;
 }
 
 .deliverables-board__card {

@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import ProjectsList from '@/modules/projects/components/ProjectsList.vue'
 import { useProjectsStore } from '@/modules/projects/stores/projects.store'
 import BasePageHeader from '@/shared/components/BasePageHeader.vue'
 import type { Project } from '@/shared/types/api-contracts'
 
 const projectsStore = useProjectsStore()
+const route = useRoute()
+const router = useRouter()
 const isCreateDialogOpen = ref(false)
 const isFiltersOpen = ref(false)
 const projectName = ref('')
@@ -37,7 +40,20 @@ const statusOptions: Array<{ title: string; value: Project['status'] }> = [
 
 onMounted(() => {
   void projectsStore.loadProjects()
+
+  if (route.query.new === '1') {
+    openCreateDialog()
+  }
 })
+
+watch(
+  () => route.query.new,
+  (value) => {
+    if (value === '1') {
+      openCreateDialog()
+    }
+  },
+)
 
 function resetCreateForm() {
   projectName.value = ''
@@ -47,6 +63,16 @@ function resetCreateForm() {
 function openCreateDialog() {
   resetCreateForm()
   isCreateDialogOpen.value = true
+}
+
+function closeCreateDialog() {
+  isCreateDialogOpen.value = false
+
+  if (route.query.new) {
+    const query = { ...route.query }
+    delete query.new
+    void router.replace({ query })
+  }
 }
 
 function applyFilters() {
@@ -76,12 +102,20 @@ async function handleCreateProject() {
     })
 
     if (project) {
-      isCreateDialogOpen.value = false
+      closeCreateDialog()
       resetCreateForm()
     }
   } finally {
     isCreating.value = false
   }
+}
+
+async function updateProjectStatus(project: Project, status: Project['status']) {
+  if (project.status === status) {
+    return
+  }
+
+  await projectsStore.updateProjectStatus(project.id, status)
 }
 </script>
 
@@ -105,12 +139,13 @@ async function handleCreateProject() {
     <v-sheet class="projects-page__filter-shell" border rounded="lg">
       <div class="projects-page__filter-bar">
         <v-btn
+          size="small"
           variant="tonal"
           color="teal"
           prepend-icon="$search"
           @click="isFiltersOpen = !isFiltersOpen"
         >
-          Filtros
+          Filtros da tabela
         </v-btn>
         <v-chip v-if="activeFiltersCount" color="teal" variant="tonal" size="small">
           {{ activeFiltersCount }} ativo(s)
@@ -167,6 +202,7 @@ async function handleCreateProject() {
       :page-size="projectsStore.pageSize"
       :total="projectsStore.total"
       @update:page="projectsStore.loadProjects"
+      @update:status="updateProjectStatus"
     />
 
     <v-dialog v-model="isCreateDialogOpen" max-width="560">
@@ -198,9 +234,7 @@ async function handleCreateProject() {
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" :disabled="isCreating" @click="isCreateDialogOpen = false">
-            Cancelar
-          </v-btn>
+          <v-btn variant="text" :disabled="isCreating" @click="closeCreateDialog"> Cancelar </v-btn>
           <v-btn
             color="teal"
             :disabled="!canCreateProject"

@@ -46,6 +46,16 @@ export function toIsoString(value: TimestampInput): string | null {
   return timestamp ? new Date(timestamp).toISOString() : null
 }
 
+export function toIsoDate(value: TimestampInput): string | null {
+  const timestamp = toTimestamp(value)
+
+  if (!timestamp) {
+    return null
+  }
+
+  return toDateInputValue(timestamp)
+}
+
 export function formatShortDate(value: TimestampInput): string {
   const timestamp = toTimestamp(value)
 

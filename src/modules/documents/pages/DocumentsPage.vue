@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import DocumentUpload from '@/modules/documents/components/DocumentUpload.vue'
 import DocumentsList from '@/modules/documents/components/DocumentsList.vue'
 import { useDocumentsStore } from '@/modules/documents/stores/documents.store'
@@ -16,11 +16,24 @@ const projectsStore = useProjectsStore()
 const isFormOpen = ref(false)
 const isFiltersOpen = ref(false)
 const editingDocument = ref<DocumentSummary | null>(null)
+const versionDocument = ref<DocumentSummary | null>(null)
+const reviewerDocument = ref<DocumentSummary | null>(null)
 const pendingDelete = ref<DocumentSummary | null>(null)
 const historyDocument = ref<DocumentSummary | null>(null)
 const selectedProjectId = ref<string | null>(null)
 const selectedStatus = ref<DocumentStatus | null>(null)
 const selectedType = ref<DocumentType | null>(null)
+const versionForm = reactive({
+  file: null as File | null,
+  revision: '',
+  status: 'draft' as DocumentStatus,
+  isOfficial: false,
+  notes: '',
+})
+const reviewerForm = reactive({
+  reviewerId: null as string | null,
+  comment: '',
+})
 
 const statusOptions: Array<{ title: string; value: DocumentStatus }> = [
   { title: 'Minuta', value: 'draft' },
@@ -47,6 +60,12 @@ const typeOptions: Array<{ title: string; value: DocumentType }> = [
 const projectOptions = computed(() =>
   projectsStore.projects.map((project) => ({ title: project.name, value: project.id })),
 )
+const reviewerOptions = computed(() =>
+  documentsStore.reviewers.map((user) => ({
+    title: `${user.fullName} (${user.email})`,
+    value: user.id,
+  })),
+)
 const officialCount = computed(() => documentsStore.officialDocuments.length)
 const activeFiltersCount = computed(
   () => [selectedProjectId.value, selectedStatus.value, selectedType.value].filter(Boolean).length,
@@ -66,13 +85,23 @@ function openCreateForm() {
 }
 
 function openUploadForm(document: DocumentSummary) {
-  editingDocument.value = document
-  isFormOpen.value = true
+  versionDocument.value = document
+  versionForm.file = null
+  versionForm.revision = ''
+  versionForm.status = document.status
+  versionForm.isOfficial = document.status === 'approved'
+  versionForm.notes = ''
 }
 
 function openEditForm(document: DocumentSummary) {
   editingDocument.value = document
   isFormOpen.value = true
+}
+
+function openReviewerForm(document: DocumentSummary) {
+  reviewerDocument.value = document
+  reviewerForm.reviewerId = null
+  reviewerForm.comment = `Revisao tecnica do documento ${document.title}`
 }
 
 async function openHistory(document: DocumentSummary) {
@@ -165,6 +194,47 @@ async function handleSubmit(payload: {
   }
 }
 
+async function uploadStandaloneVersion() {
+  if (!versionDocument.value || !versionForm.file) {
+    return
+  }
+
+  const updated = await documentsStore.uploadVersion(versionDocument.value.id, {
+    file: versionForm.file,
+    revision: versionForm.revision,
+    isOfficial: versionForm.isOfficial,
+    status: versionForm.status,
+    notes: versionForm.notes.trim() || null,
+  })
+
+  if (updated) {
+    versionDocument.value = null
+  }
+}
+
+async function createDocumentReview() {
+  if (!reviewerDocument.value || !reviewerForm.reviewerId) {
+    return
+  }
+
+  documentsStore.error = null
+
+  try {
+    await apiClient.reviews.create({
+      projectId: reviewerDocument.value.projectId,
+      deliverableId: reviewerDocument.value.deliverableId,
+      documentId: reviewerDocument.value.id,
+      reviewers: [reviewerForm.reviewerId],
+      comment:
+        reviewerForm.comment.trim() ||
+        `Revisao tecnica do documento ${reviewerDocument.value.title}`,
+    })
+    reviewerDocument.value = null
+  } catch (error) {
+    documentsStore.error = getApiErrorMessage(error, 'Nao foi possivel vincular o revisor.')
+  }
+}
+
 async function confirmDelete() {
   if (!pendingDelete.value) {
     return
@@ -219,12 +289,13 @@ async function confirmDelete() {
     <v-sheet class="documents-page__filter-shell" border rounded="lg">
       <div class="documents-page__filter-bar">
         <v-btn
+          size="small"
           variant="tonal"
           color="teal"
           prepend-icon="$search"
           @click="isFiltersOpen = !isFiltersOpen"
         >
-          Filtros
+          Filtros da tabela
         </v-btn>
         <v-chip v-if="activeFiltersCount" color="teal" variant="tonal" size="small">
           {{ activeFiltersCount }} ativo(s)
@@ -291,7 +362,7 @@ async function confirmDelete() {
       @update:page="documentsStore.loadDocuments"
       @upload="openUploadForm"
       @edit="openEditForm"
-      @assign="openEditForm"
+      @assign="openReviewerForm"
       @history="openHistory"
       @delete="pendingDelete = $event"
     />
@@ -306,6 +377,120 @@ async function confirmDelete() {
         @project-change="handleProjectChange"
         @submit="handleSubmit"
       />
+    </v-dialog>
+
+    <v-dialog
+      :model-value="Boolean(versionDocument)"
+      max-width="620"
+      @update:model-value="versionDocument = null"
+    >
+      <v-card rounded="lg">
+        <v-card-title>Nova versao</v-card-title>
+        <v-card-text class="documents-page__modal-form">
+          <v-file-input
+            v-model="versionForm.file"
+            label="Arquivo"
+            variant="outlined"
+            density="comfortable"
+            prepend-icon=""
+            prepend-inner-icon="$upload"
+            show-size
+            :disabled="documentsStore.isSaving"
+          />
+          <div class="documents-page__modal-pair">
+            <v-text-field
+              v-model="versionForm.revision"
+              label="Revisao"
+              variant="outlined"
+              density="comfortable"
+              :disabled="documentsStore.isSaving"
+            />
+            <v-select
+              v-model="versionForm.status"
+              :items="statusOptions"
+              label="Status da versao"
+              variant="outlined"
+              density="comfortable"
+              :disabled="documentsStore.isSaving"
+            />
+          </div>
+          <v-switch
+            v-model="versionForm.isOfficial"
+            color="teal"
+            label="Marcar como versao oficial"
+            hide-details
+            :disabled="documentsStore.isSaving"
+          />
+          <v-textarea
+            v-model="versionForm.notes"
+            label="Notas da versao"
+            rows="3"
+            variant="outlined"
+            density="comfortable"
+            :disabled="documentsStore.isSaving"
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" :disabled="documentsStore.isSaving" @click="versionDocument = null">
+            Cancelar
+          </v-btn>
+          <v-btn
+            color="teal"
+            :loading="documentsStore.isSaving"
+            :disabled="!versionForm.file"
+            @click="uploadStandaloneVersion"
+          >
+            Enviar versao
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog
+      :model-value="Boolean(reviewerDocument)"
+      max-width="560"
+      @update:model-value="reviewerDocument = null"
+    >
+      <v-card rounded="lg">
+        <v-card-title>Gerenciar revisores</v-card-title>
+        <v-card-text class="documents-page__modal-form">
+          <v-select
+            v-model="reviewerForm.reviewerId"
+            :items="reviewerOptions"
+            label="Revisor responsavel"
+            variant="outlined"
+            density="comfortable"
+            :disabled="documentsStore.isSaving"
+          />
+          <v-textarea
+            v-model="reviewerForm.comment"
+            label="Registro da revisao"
+            rows="3"
+            variant="outlined"
+            density="comfortable"
+            :disabled="documentsStore.isSaving"
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            variant="text"
+            :disabled="documentsStore.isSaving"
+            @click="reviewerDocument = null"
+          >
+            Cancelar
+          </v-btn>
+          <v-btn
+            color="teal"
+            :loading="documentsStore.isSaving"
+            :disabled="!reviewerForm.reviewerId"
+            @click="createDocumentReview"
+          >
+            Solicitar revisao
+          </v-btn>
+        </v-card-actions>
+      </v-card>
     </v-dialog>
 
     <v-dialog
@@ -454,6 +639,17 @@ async function confirmDelete() {
   gap: 1rem;
 }
 
+.documents-page__modal-form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.documents-page__modal-pair {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .documents-page__version-note {
   color: #63716d;
   font-size: 0.82rem;
@@ -479,6 +675,10 @@ async function confirmDelete() {
 
   .documents-page__filter-actions {
     justify-content: flex-start;
+  }
+
+  .documents-page__modal-pair {
+    grid-template-columns: 1fr;
   }
 }
 </style>
