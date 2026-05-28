@@ -4,6 +4,8 @@ export interface User {
   email: string
   avatarUrl?: string | null
   roles: string[]
+  isPlatformAdmin?: boolean
+  impersonatedBy?: string | null
   organizationId?: string
 }
 
@@ -11,6 +13,7 @@ export interface Organization {
   id: string
   name: string
   slug: string
+  logoUrl?: string | null
   parentId?: string | null
 }
 
@@ -162,6 +165,26 @@ export interface ReviewComment {
 export interface ReviewDetail extends ReviewSummary {
   createdAt?: number
   comments?: ReviewComment[]
+}
+
+export type PriorityTargetType = 'project' | 'deliverable' | 'review' | 'document'
+export type PriorityLevel = 'normal' | 'high' | 'urgent'
+export type PriorityRequestStatus = 'requested' | 'applied' | 'rejected'
+
+export interface PriorityRequest {
+  id: string
+  organizationId: string
+  targetType: PriorityTargetType
+  targetId: string
+  requestedBy: string
+  requestedForUserId?: string | null
+  priority: PriorityLevel
+  reason?: string | null
+  status: PriorityRequestStatus
+  decidedBy?: string | null
+  decidedAt?: number | null
+  createdAt: number
+  updatedAt: number
 }
 
 export interface AuditLogEntry {

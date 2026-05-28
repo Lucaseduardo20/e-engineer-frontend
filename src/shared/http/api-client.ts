@@ -11,6 +11,9 @@ import type {
   DocumentType,
   Organization,
   Paginated,
+  PriorityLevel,
+  PriorityRequest,
+  PriorityTargetType,
   Project,
   ReviewComment,
   ReviewDetail,
@@ -53,6 +56,45 @@ export interface DecideReviewRequest {
 
 export interface CreateReviewCommentRequest {
   body: string
+}
+
+export interface SwitchTenantRequest {
+  organizationId: string
+}
+
+export interface ImpersonateUserRequest {
+  userId: string
+  organizationId: string
+}
+
+export interface CreateOrganizationMemberRequest {
+  fullName: string
+  email: string
+  password: string
+  role: string
+  avatarUrl?: string | null
+}
+
+export type UpdateOrganizationMemberRequest = Partial<CreateOrganizationMemberRequest>
+
+export interface CloneOrganizationMemberRequest {
+  fullName: string
+  email: string
+  password: string
+}
+
+export interface UpdateOrganizationProfileRequest {
+  name?: string
+  legalName?: string | null
+  logoUrl?: string | null
+}
+
+export interface CreatePriorityRequestRequest {
+  targetType: PriorityTargetType
+  targetId: string
+  requestedForUserId?: string | null
+  priority: PriorityLevel
+  reason?: string | null
 }
 
 export interface CreateDocumentRequest {
@@ -186,18 +228,81 @@ function mapAuditLogEntry(entry: AuditLogEntry): AuditLogEntry {
   }
 }
 
+function mapPriorityRequest(priorityRequest: PriorityRequest): PriorityRequest {
+  return {
+    ...priorityRequest,
+    decidedAt: toTimestamp(priorityRequest.decidedAt) ?? null,
+    createdAt: toTimestamp(priorityRequest.createdAt) ?? Date.now(),
+    updatedAt: toTimestamp(priorityRequest.updatedAt) ?? Date.now(),
+  }
+}
+
 export const apiClient = {
   auth: {
     login(credentials: LoginCredentials) {
       return unwrap<AuthToken>(httpClient.post('/auth/login', credentials))
     },
+    switchTenant(payload: SwitchTenantRequest) {
+      return unwrap<AuthToken>(httpClient.post('/auth/switch-tenant', payload))
+    },
+    impersonate(payload: ImpersonateUserRequest) {
+      return unwrap<AuthToken>(httpClient.post('/auth/impersonate', payload))
+    },
   },
   organizations: {
+    list() {
+      return unwrap<Organization[]>(httpClient.get('/organizations'))
+    },
     current() {
       return unwrap<Organization>(httpClient.get('/organizations/current'))
     },
+    updateCurrent(payload: UpdateOrganizationProfileRequest) {
+      return unwrap<Organization>(httpClient.patch('/organizations/current', payload))
+    },
+    uploadLogo(file: File) {
+      const formData = new FormData()
+      formData.append('file', file)
+      return unwrap<Organization>(httpClient.post('/organizations/current/logo', formData))
+    },
     users() {
       return unwrap<User[]>(httpClient.get('/organizations/current/users'))
+    },
+    createUser(payload: CreateOrganizationMemberRequest) {
+      return unwrap<User>(httpClient.post('/organizations/current/users', payload))
+    },
+    updateUser(userId: string, payload: UpdateOrganizationMemberRequest) {
+      return unwrap<User>(httpClient.patch(`/organizations/current/users/${userId}`, payload))
+    },
+    uploadUserAvatar(userId: string, file: File) {
+      const formData = new FormData()
+      formData.append('file', file)
+      return unwrap<User>(
+        httpClient.post(`/organizations/current/users/${userId}/avatar`, formData),
+      )
+    },
+    cloneUser(userId: string, payload: CloneOrganizationMemberRequest) {
+      return unwrap<User>(httpClient.post(`/organizations/current/users/${userId}/clone`, payload))
+    },
+  },
+  priorityRequests: {
+    async list() {
+      const response = await unwrap<PriorityRequest[]>(httpClient.get('/priority-requests'))
+      return response.map(mapPriorityRequest)
+    },
+    create(payload: CreatePriorityRequestRequest) {
+      return unwrap<PriorityRequest>(httpClient.post('/priority-requests', payload)).then(
+        mapPriorityRequest,
+      )
+    },
+    apply(id: string) {
+      return unwrap<PriorityRequest>(httpClient.post(`/priority-requests/${id}/apply`)).then(
+        mapPriorityRequest,
+      )
+    },
+    reject(id: string) {
+      return unwrap<PriorityRequest>(httpClient.post(`/priority-requests/${id}/reject`)).then(
+        mapPriorityRequest,
+      )
     },
   },
   projects: {

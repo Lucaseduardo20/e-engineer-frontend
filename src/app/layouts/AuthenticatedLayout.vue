@@ -5,6 +5,8 @@ import OrgSwitcher from '@/modules/organizations/components/OrgSwitcher.vue'
 import { useAuthStore } from '@/modules/auth/stores/auth.store'
 import { useUiStore } from '@/modules/ui/stores/ui.store'
 import { apiClient } from '@/shared/http/api-client'
+import { permissions } from '@/shared/auth/rbac'
+import type { Permission } from '@/shared/auth/rbac'
 import { formatDateTime } from '@/shared/formatters/date.formatter'
 import type { AuditLogEntry } from '@/shared/types/api-contracts'
 
@@ -12,15 +14,31 @@ type NavigationItem = {
   label: string
   path: string
   icon: string
+  permission: Permission
 }
 
 const navigationItems: NavigationItem[] = [
-  { label: 'Dashboard', path: '/dashboard', icon: '$info' },
-  { label: 'Projetos', path: '/projects', icon: '$file' },
-  { label: 'Documentos', path: '/documents', icon: '$upload' },
-  { label: 'Revisoes', path: '/reviews', icon: '$search' },
-  { label: 'Base de Conhecimento', path: '/knowledge-base', icon: '$command' },
-  { label: 'Equipe', path: '/team', icon: '$success' },
+  { label: 'Dashboard', path: '/dashboard', icon: '$info', permission: permissions.dashboard.read },
+  { label: 'Projetos', path: '/projects', icon: '$file', permission: permissions.projects.read },
+  {
+    label: 'Documentos',
+    path: '/documents',
+    icon: '$upload',
+    permission: permissions.documents.read,
+  },
+  { label: 'Revisoes', path: '/reviews', icon: '$search', permission: permissions.reviews.read },
+  {
+    label: 'Base de Conhecimento',
+    path: '/knowledge-base',
+    icon: '$command',
+    permission: permissions.projects.read,
+  },
+  {
+    label: 'Organizacao',
+    path: '/organizations',
+    icon: '$success',
+    permission: permissions.organization.read,
+  },
 ]
 
 const route = useRoute()
@@ -32,6 +50,17 @@ const isLoadingNotifications = ref(false)
 
 const userName = computed(() => authStore.user?.fullName ?? 'Usuario')
 const userEmail = computed(() => authStore.user?.email ?? 'Sessao ativa')
+const sessionLabel = computed(() => {
+  if (authStore.isImpersonating) {
+    return 'Incorporando usuario'
+  }
+
+  if (authStore.isPlatformAdmin) {
+    return 'Super-admin'
+  }
+
+  return null
+})
 const userInitials = computed(() => {
   const words = userName.value.trim().split(/\s+/).filter(Boolean)
   return words.length
@@ -42,6 +71,9 @@ const userInitials = computed(() => {
     : 'EE'
 })
 const canShowBack = computed(() => route.path !== '/dashboard')
+const visibleNavigationItems = computed(() =>
+  navigationItems.filter((item) => authStore.can(item.permission)),
+)
 const userNotifications = computed(() => {
   const userId = authStore.user?.id
   const name = authStore.user?.fullName
@@ -102,7 +134,7 @@ function goBack() {
 
       <v-list nav density="comfortable" aria-label="Navegacao principal">
         <v-list-item
-          v-for="item in navigationItems"
+          v-for="item in visibleNavigationItems"
           :key="item.path"
           :to="item.path"
           :active="route.path === item.path"
@@ -129,6 +161,15 @@ function goBack() {
       </v-tooltip>
       <div class="app-shell__org"><OrgSwitcher /></div>
       <v-spacer />
+      <v-chip
+        v-if="sessionLabel"
+        class="app-shell__session-chip"
+        color="warning"
+        variant="tonal"
+        size="small"
+      >
+        {{ sessionLabel }}
+      </v-chip>
       <v-menu max-width="420">
         <template #activator="{ props }">
           <v-btn
@@ -236,6 +277,10 @@ function goBack() {
 
 .app-shell__notifications {
   border: 1px solid #d7e4df;
+}
+
+.app-shell__session-chip {
+  margin-right: 0.75rem;
 }
 
 .app-shell__account-copy {

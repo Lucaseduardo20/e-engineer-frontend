@@ -90,7 +90,9 @@ function submitComment() {
           </div>
           <div>
             <span>Atualizacao</span>
-            <strong>{{ review.updatedAt ? formatDateTime(review.updatedAt) : 'Sem registro' }}</strong>
+            <strong>{{
+              review.updatedAt ? formatDateTime(review.updatedAt) : 'Sem registro'
+            }}</strong>
           </div>
           <div>
             <span>Decisor</span>
@@ -115,16 +117,21 @@ function submitComment() {
             <div>
               <dt>Projeto</dt>
               <dd>
-                <v-btn
-                  :to="`/projects/${review.projectId}`"
-                  color="teal"
-                  variant="text"
-                  size="small"
-                  density="compact"
-                  class="review-detail__entity-link"
-                >
-                  {{ review.projectId }}
-                </v-btn>
+                <v-tooltip text="Abrir a tela do projeto relacionado">
+                  <template #activator="{ props: tooltipProps }">
+                    <v-btn
+                      v-bind="tooltipProps"
+                      :to="`/projects/${review.projectId}`"
+                      color="teal"
+                      variant="tonal"
+                      size="small"
+                      density="compact"
+                      class="review-detail__entity-link review-detail__entity-link--project"
+                    >
+                      Ir para o projeto · {{ review.projectId }}
+                    </v-btn>
+                  </template>
+                </v-tooltip>
               </dd>
             </div>
             <div v-if="review.deliverableId">
@@ -133,7 +140,23 @@ function submitComment() {
             </div>
             <div v-if="review.documentId">
               <dt>Documento</dt>
-              <dd>{{ review.documentId }}</dd>
+              <dd>
+                <v-tooltip text="Abrir a tela do documento relacionado">
+                  <template #activator="{ props: tooltipProps }">
+                    <v-btn
+                      v-bind="tooltipProps"
+                      :to="`/documents?documentId=${review.documentId}`"
+                      color="indigo"
+                      variant="tonal"
+                      size="small"
+                      density="compact"
+                      class="review-detail__entity-link review-detail__entity-link--document"
+                    >
+                      Ir para o documento · {{ review.documentId }}
+                    </v-btn>
+                  </template>
+                </v-tooltip>
+              </dd>
             </div>
             <div v-if="review.documentVersionId">
               <dt>Versao do documento</dt>
@@ -288,10 +311,18 @@ dd {
 
 .review-detail__entity-link {
   min-width: 0;
-  padding-inline: 0;
   justify-content: flex-start;
   overflow-wrap: anywhere;
   text-transform: none;
+  white-space: normal;
+}
+
+.review-detail__entity-link--project {
+  background: #e6f6ef;
+}
+
+.review-detail__entity-link--document {
+  background: #eef2ff;
 }
 
 .review-detail__links,

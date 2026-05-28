@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { setupAuthGuards } from '@/router/guards/auth.guard'
+import { permissions } from '@/shared/auth/rbac'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -31,6 +32,7 @@ const router = createRouter({
       meta: {
         title: 'Dashboard',
         requiresAuth: true,
+        requiredPermissions: [permissions.dashboard.read],
       },
     },
     {
@@ -40,6 +42,7 @@ const router = createRouter({
       meta: {
         title: 'Projetos',
         requiresAuth: true,
+        requiredPermissions: [permissions.projects.read],
       },
     },
     {
@@ -49,6 +52,7 @@ const router = createRouter({
       meta: {
         title: 'Projeto',
         requiresAuth: true,
+        requiredPermissions: [permissions.projects.read],
       },
     },
     {
@@ -58,6 +62,7 @@ const router = createRouter({
       meta: {
         title: 'Entregaveis',
         requiresAuth: true,
+        requiredPermissions: [permissions.deliverables.read],
       },
     },
     {
@@ -67,6 +72,7 @@ const router = createRouter({
       meta: {
         title: 'Novo entregavel',
         requiresAuth: true,
+        requiredPermissions: [permissions.deliverables.read],
       },
     },
     {
@@ -76,6 +82,7 @@ const router = createRouter({
       meta: {
         title: 'Editar entregavel',
         requiresAuth: true,
+        requiredPermissions: [permissions.deliverables.read],
       },
     },
     {
@@ -85,6 +92,7 @@ const router = createRouter({
       meta: {
         title: 'Revisoes',
         requiresAuth: true,
+        requiredPermissions: [permissions.reviews.read],
       },
     },
     {
@@ -94,6 +102,7 @@ const router = createRouter({
       meta: {
         title: 'Revisao',
         requiresAuth: true,
+        requiredPermissions: [permissions.reviews.read],
       },
     },
     {
@@ -103,6 +112,7 @@ const router = createRouter({
       meta: {
         title: 'Documentos',
         requiresAuth: true,
+        requiredPermissions: [permissions.documents.read],
       },
     },
     {
@@ -112,6 +122,7 @@ const router = createRouter({
       meta: {
         title: 'Organizacao',
         requiresAuth: true,
+        requiredPermissions: [permissions.organization.read],
       },
     },
   ],

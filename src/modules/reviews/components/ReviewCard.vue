@@ -35,17 +35,40 @@ function userName(userId: string) {
       </span>
       <div class="review-card__title">
         <h3>{{ review.comment || 'Revisao tecnica' }}</h3>
-        <v-btn
-          class="review-card__project-link"
-          :to="`/projects/${review.projectId}`"
-          size="x-small"
-          variant="text"
-          color="teal"
-          density="compact"
-          @click.stop
-        >
-          Projeto {{ review.projectId.slice(0, 8) }}
-        </v-btn>
+        <div class="review-card__entity-links">
+          <v-tooltip text="Abrir projeto desta revisao">
+            <template #activator="{ props: tooltipProps }">
+              <v-btn
+                v-bind="tooltipProps"
+                class="review-card__entity-link review-card__entity-link--project"
+                :to="`/projects/${review.projectId}`"
+                size="x-small"
+                variant="tonal"
+                color="teal"
+                density="compact"
+                @click.stop
+              >
+                Ir para projeto · {{ review.projectId.slice(0, 8) }}
+              </v-btn>
+            </template>
+          </v-tooltip>
+          <v-tooltip v-if="review.documentId" text="Abrir documento desta revisao">
+            <template #activator="{ props: tooltipProps }">
+              <v-btn
+                v-bind="tooltipProps"
+                class="review-card__entity-link review-card__entity-link--document"
+                :to="`/documents?documentId=${review.documentId}`"
+                size="x-small"
+                variant="tonal"
+                color="indigo"
+                density="compact"
+                @click.stop
+              >
+                Ir para documento · {{ review.documentId.slice(0, 8) }}
+              </v-btn>
+            </template>
+          </v-tooltip>
+        </div>
       </div>
       <BaseStatusBadge :kind="reviewBadgeKind(review.status)" />
     </div>
@@ -55,7 +78,7 @@ function userName(userId: string) {
         <v-icon icon="$calendar" size="15" />
         {{ review.dueDate ? formatShortDate(review.dueDate) : 'Sem prazo' }}
       </span>
-      <span>
+      <span :class="{ 'review-card__meta--muted': !review.documentId }">
         <v-icon icon="$file" size="15" />
         {{ review.documentId ? `Documento ${review.documentId.slice(0, 8)}` : 'Sem documento' }}
       </span>
@@ -102,10 +125,7 @@ function userName(userId: string) {
         Rejeitar
       </v-btn>
       <TraceableLinkButton :path="`/reviews/${review.id}`" label="Copiar link da revisao" />
-      <TraceableLinkButton
-        :path="`/projects/${review.projectId}`"
-        label="Copiar link do projeto"
-      />
+      <TraceableLinkButton :path="`/projects/${review.projectId}`" label="Copiar link do projeto" />
     </div>
   </v-card>
 </template>
@@ -163,13 +183,28 @@ function userName(userId: string) {
   font-size: 0.84rem;
 }
 
-.review-card__project-link {
+.review-card__entity-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.review-card__entity-link {
   min-width: 0;
-  margin-top: 0.15rem;
-  padding-inline: 0;
-  justify-content: flex-start;
-  color: #1d6f61;
-  font-size: 0.78rem;
+  border-radius: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.review-card__entity-link--project {
+  background: #e6f6ef;
+}
+
+.review-card__entity-link--document {
+  background: #eef2ff;
 }
 
 .review-card__meta {
@@ -182,6 +217,10 @@ function userName(userId: string) {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
+}
+
+.review-card__meta--muted {
+  color: #98a2b3;
 }
 
 .review-card__actions {
