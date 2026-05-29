@@ -207,3 +207,16 @@ export interface ApiError {
   message: string
   details?: unknown
 }
+
+export type {
+  CreateKnowledgeItemDto,
+  KnowledgeAttachment,
+  KnowledgeItem,
+  KnowledgeItemDetail,
+  KnowledgeItemStatus,
+  KnowledgeItemType,
+  KnowledgeRelation,
+  LinkKnowledgeItemDto,
+  PromoteProjectToKnowledgeDto,
+  UpdateKnowledgeItemDto,
+} from '@/modules/knowledge-base/types/knowledge.types'

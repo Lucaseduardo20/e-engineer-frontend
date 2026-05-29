@@ -29,6 +29,14 @@ export const permissions = {
     request: 'priority.request',
     apply: 'priority.apply',
   },
+  knowledge: {
+    read: 'knowledge.read',
+    create: 'knowledge.create',
+    update: 'knowledge.update',
+    publish: 'knowledge.publish',
+    archive: 'knowledge.archive',
+    link: 'knowledge.link',
+  },
   platform: {
     tenantsRead: 'platform.tenants.read',
     tenantSwitch: 'platform.tenant.switch',
@@ -51,6 +59,12 @@ export type Permission =
   | 'organization.members.clone'
   | 'priority.request'
   | 'priority.apply'
+  | 'knowledge.read'
+  | 'knowledge.create'
+  | 'knowledge.update'
+  | 'knowledge.publish'
+  | 'knowledge.archive'
+  | 'knowledge.link'
   | 'platform.tenants.read'
   | 'platform.tenant.switch'
   | 'platform.impersonate'
@@ -72,6 +86,12 @@ const rolePermissions: Record<string, Permission[]> = {
     permissions.organization.membersRead,
     permissions.priority.request,
     permissions.priority.apply,
+    permissions.knowledge.read,
+    permissions.knowledge.create,
+    permissions.knowledge.update,
+    permissions.knowledge.publish,
+    permissions.knowledge.archive,
+    permissions.knowledge.link,
   ],
   project_manager: [
     permissions.dashboard.read,
@@ -82,6 +102,11 @@ const rolePermissions: Record<string, Permission[]> = {
     permissions.organization.read,
     permissions.organization.membersRead,
     permissions.priority.request,
+    permissions.knowledge.read,
+    permissions.knowledge.create,
+    permissions.knowledge.update,
+    permissions.knowledge.publish,
+    permissions.knowledge.link,
   ],
   estimator: [
     permissions.dashboard.read,
@@ -91,6 +116,9 @@ const rolePermissions: Record<string, Permission[]> = {
     permissions.organization.read,
     permissions.organization.membersRead,
     permissions.priority.request,
+    permissions.knowledge.read,
+    permissions.knowledge.create,
+    permissions.knowledge.update,
   ],
   finance: [
     permissions.dashboard.read,
@@ -100,6 +128,7 @@ const rolePermissions: Record<string, Permission[]> = {
     permissions.organization.read,
     permissions.organization.membersRead,
     permissions.priority.request,
+    permissions.knowledge.read,
   ],
   member: [
     permissions.dashboard.read,
@@ -108,6 +137,8 @@ const rolePermissions: Record<string, Permission[]> = {
     permissions.documents.read,
     permissions.reviews.read,
     permissions.priority.request,
+    permissions.knowledge.read,
+    permissions.knowledge.create,
   ],
 }
 

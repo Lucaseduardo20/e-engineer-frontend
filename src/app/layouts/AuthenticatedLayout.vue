@@ -31,7 +31,7 @@ const navigationItems: NavigationItem[] = [
     label: 'Base de Conhecimento',
     path: '/knowledge-base',
     icon: '$command',
-    permission: permissions.projects.read,
+    permission: permissions.knowledge.read,
   },
   {
     label: 'Organizacao',

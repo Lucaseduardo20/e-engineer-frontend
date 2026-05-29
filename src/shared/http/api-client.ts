@@ -9,17 +9,27 @@ import type {
   DocumentSummary,
   DocumentStatus,
   DocumentType,
+  CreateKnowledgeItemDto,
+  KnowledgeAttachment,
+  KnowledgeItem,
+  KnowledgeItemDetail,
+  KnowledgeItemStatus,
+  KnowledgeItemType,
+  KnowledgeRelation,
+  LinkKnowledgeItemDto,
   Organization,
   Paginated,
   PriorityLevel,
   PriorityRequest,
   PriorityTargetType,
+  PromoteProjectToKnowledgeDto,
   Project,
   ReviewComment,
   ReviewDetail,
   ReviewSummary,
   ReviewStatus,
   User,
+  UpdateKnowledgeItemDto,
 } from '@/shared/types/api-contracts'
 import type { AuthToken, LoginCredentials } from '@/modules/auth/types/auth.types'
 
@@ -237,6 +247,38 @@ function mapPriorityRequest(priorityRequest: PriorityRequest): PriorityRequest {
   }
 }
 
+function mapKnowledgeItem(item: KnowledgeItem): KnowledgeItem {
+  return {
+    ...item,
+    publishedAt: toTimestamp(item.publishedAt) ?? null,
+    archivedAt: toTimestamp(item.archivedAt) ?? null,
+    createdAt: toTimestamp(item.createdAt) ?? Date.now(),
+    updatedAt: toTimestamp(item.updatedAt) ?? Date.now(),
+  }
+}
+
+function mapKnowledgeRelation(relation: KnowledgeRelation): KnowledgeRelation {
+  return {
+    ...relation,
+    createdAt: toTimestamp(relation.createdAt) ?? Date.now(),
+  }
+}
+
+function mapKnowledgeAttachment(attachment: KnowledgeAttachment): KnowledgeAttachment {
+  return {
+    ...attachment,
+    createdAt: toTimestamp(attachment.createdAt) ?? Date.now(),
+  }
+}
+
+function mapKnowledgeItemDetail(item: KnowledgeItemDetail): KnowledgeItemDetail {
+  return {
+    ...mapKnowledgeItem(item),
+    relations: item.relations?.map(mapKnowledgeRelation) ?? [],
+    attachments: item.attachments?.map(mapKnowledgeAttachment) ?? [],
+  }
+}
+
 export const apiClient = {
   auth: {
     login(credentials: LoginCredentials) {
@@ -443,8 +485,65 @@ export const apiClient = {
     },
   },
   knowledgeBase: {
-    search(params: PageParams & { q?: string } = {}) {
-      return unwrap<Paginated<Project>>(httpClient.get('/knowledge-base/search', { params }))
+    async list(
+      params: PageParams & {
+        type?: KnowledgeItemType
+        status?: KnowledgeItemStatus
+        tags?: string[]
+      } = {},
+    ) {
+      const response = await unwrap<Paginated<KnowledgeItem>>(
+        httpClient.get('/knowledge-base', { params }),
+      )
+      return mapPaginated(response, mapKnowledgeItem)
+    },
+    async search(
+      params: PageParams & {
+        q?: string
+        type?: KnowledgeItemType
+        status?: KnowledgeItemStatus
+        tags?: string[]
+      } = {},
+    ) {
+      const response = await unwrap<Paginated<KnowledgeItem>>(
+        httpClient.get('/knowledge-base/search', { params }),
+      )
+      return mapPaginated(response, mapKnowledgeItem)
+    },
+    get(id: string) {
+      return unwrap<KnowledgeItemDetail>(httpClient.get(`/knowledge-base/${id}`)).then(
+        mapKnowledgeItemDetail,
+      )
+    },
+    create(payload: CreateKnowledgeItemDto) {
+      return unwrap<KnowledgeItem>(httpClient.post('/knowledge-base', payload)).then(
+        mapKnowledgeItem,
+      )
+    },
+    update(id: string, payload: UpdateKnowledgeItemDto) {
+      return unwrap<KnowledgeItem>(httpClient.patch(`/knowledge-base/${id}`, payload)).then(
+        mapKnowledgeItem,
+      )
+    },
+    publish(id: string) {
+      return unwrap<KnowledgeItem>(httpClient.post(`/knowledge-base/${id}/publish`)).then(
+        mapKnowledgeItem,
+      )
+    },
+    archive(id: string) {
+      return unwrap<KnowledgeItem>(httpClient.post(`/knowledge-base/${id}/archive`)).then(
+        mapKnowledgeItem,
+      )
+    },
+    link(id: string, payload: LinkKnowledgeItemDto) {
+      return unwrap<KnowledgeRelation>(
+        httpClient.post(`/knowledge-base/${id}/relations`, payload),
+      ).then(mapKnowledgeRelation)
+    },
+    promoteProject(projectId: string, payload: PromoteProjectToKnowledgeDto) {
+      return unwrap<KnowledgeItem>(
+        httpClient.post(`/projects/${projectId}/promote-to-knowledge`, payload),
+      ).then(mapKnowledgeItem)
     },
   },
   audit: {

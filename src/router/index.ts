@@ -116,6 +116,26 @@ const router = createRouter({
       },
     },
     {
+      path: '/knowledge-base',
+      name: 'knowledge-base',
+      component: () => import('@/modules/knowledge-base/pages/KnowledgeBaseListPage.vue'),
+      meta: {
+        title: 'Base de Conhecimento',
+        requiresAuth: true,
+        requiredPermissions: [permissions.knowledge.read],
+      },
+    },
+    {
+      path: '/knowledge-base/:id',
+      name: 'knowledge-base-detail',
+      component: () => import('@/modules/knowledge-base/pages/KnowledgeBaseDetailPage.vue'),
+      meta: {
+        title: 'Detalhe do Item',
+        requiresAuth: true,
+        requiredPermissions: [permissions.knowledge.read],
+      },
+    },
+    {
       path: '/organizations',
       name: 'organizations',
       component: () => import('@/modules/organizations/pages/OrganizationsPage.vue'),
