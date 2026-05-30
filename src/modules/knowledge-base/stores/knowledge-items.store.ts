@@ -103,7 +103,7 @@ export const useKnowledgeItemsStore = defineStore('knowledgeItems', () => {
       await listItems(page.value)
       return updated
     } catch (updateError) {
-      error.value = getApiErrorMessage(updateError, 'Nao foi possivel atualizar o item.')
+      error.value = getApiErrorMessage(updateError, 'Nao foi possivel atualizar o item de conhecimento.')
       return null
     } finally {
       isSaving.value = false
@@ -116,6 +116,10 @@ export const useKnowledgeItemsStore = defineStore('knowledgeItems', () => {
 
   async function archiveItem(id: string) {
     return changeStatus(id, 'archive')
+  }
+
+  async function deprecateItem(id: string) {
+    return changeStatus(id, 'deprecate')
   }
 
   async function linkItem(id: string, payload: LinkKnowledgeItemDto) {
@@ -141,7 +145,7 @@ export const useKnowledgeItemsStore = defineStore('knowledgeItems', () => {
     filters.includeArchived = false
   }
 
-  async function changeStatus(id: string, action: 'publish' | 'archive') {
+  async function changeStatus(id: string, action: 'publish' | 'archive' | 'deprecate') {
     isSaving.value = true
     error.value = null
 
@@ -149,7 +153,9 @@ export const useKnowledgeItemsStore = defineStore('knowledgeItems', () => {
       const updated =
         action === 'publish'
           ? await apiClient.knowledgeBase.publish(id)
-          : await apiClient.knowledgeBase.archive(id)
+          : action === 'archive'
+            ? await apiClient.knowledgeBase.archive(id)
+            : await apiClient.knowledgeBase.deprecate(id)
       await getItemDetail(id)
       await listItems(page.value)
       return updated
@@ -191,6 +197,7 @@ export const useKnowledgeItemsStore = defineStore('knowledgeItems', () => {
     updateItem,
     publishItem,
     archiveItem,
+    deprecateItem,
     linkItem,
     resetFilters,
   }

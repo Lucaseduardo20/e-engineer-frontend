@@ -11,12 +11,16 @@ import {
 const props = defineProps<{
   modelValue?: KnowledgeItem | null
   loading?: boolean
+  mode?: 'create' | 'edit'
+  status?: 'draft' | 'published' | 'archived' | 'deprecated'
 }>()
 
 const emit = defineEmits<{
   submit: [payload: CreateKnowledgeItemDto]
   cancel: []
 }>()
+
+const formMode = computed(() => props.mode ?? 'create')
 
 const creationTypes: KnowledgeItemType[] = [
   'technical_standard',
@@ -49,32 +53,16 @@ const form = reactive({
 
 const validationError = reactive({ message: '' })
 
-const typeOptions = creationTypes.map((value) => ({
-  value,
-  title: knowledgeTypeLabels[value],
-}))
+const typeOptions = creationTypes.map((value) => ({ value, title: knowledgeTypeLabels[value] }))
+
+const submitLabel = computed(() => (formMode.value === 'edit' ? 'Salvar alteracoes' : 'Criar item'))
 
 const typeHint = computed(() => {
-  if (form.type === 'technical_standard') {
-    return 'Use para registrar regras e criterios tecnicos reutilizaveis.'
-  }
-
-  if (form.type === 'document_model') {
-    return 'Use para registrar modelos de memorial, relatorio, planilha ou cronograma.'
-  }
-
-  if (form.type === 'project_reference') {
-    return 'Use para registrar projetos antigos que servem de base para novos projetos.'
-  }
-
-  if (form.type === 'lesson_learned') {
-    return 'Use para registrar erros, retrabalhos e aprendizados importantes.'
-  }
-
-  if (form.type === 'review_checklist') {
-    return 'Use para registrar conferencias tecnicas antes de aprovar ou entregar.'
-  }
-
+  if (form.type === 'technical_standard') return 'Use para registrar regras e criterios tecnicos reutilizaveis.'
+  if (form.type === 'document_model') return 'Use para registrar modelos de memorial, relatorio, planilha ou cronograma.'
+  if (form.type === 'project_reference') return 'Use para registrar projetos antigos que servem de base para novos projetos.'
+  if (form.type === 'lesson_learned') return 'Use para registrar erros, retrabalhos e aprendizados importantes.'
+  if (form.type === 'review_checklist') return 'Use para registrar conferencias tecnicas antes de aprovar ou entregar.'
   return 'Use para registrar como organizar e entregar pacotes tecnicos finais.'
 })
 
@@ -93,8 +81,7 @@ watch(
 
     form.summary = typeof summary === 'string' ? summary : ''
     form.whenToUse = sections.find((section) => section.title === 'Quando usar')?.body ?? ''
-    form.notes =
-      sections.find((section) => section.title === 'Cuidados e observacoes')?.body ?? ''
+    form.notes = sections.find((section) => section.title === 'Cuidados e observacoes')?.body ?? ''
   },
   { immediate: true },
 )
@@ -142,61 +129,44 @@ function buildContent(): Record<string, unknown> {
 <template>
   <v-form class="knowledge-form" @submit.prevent="submit">
     <v-alert type="info" variant="tonal" class="mb-3">
-      Crie um item para registrar padroes, modelos, referencias ou aprendizados reutilizaveis pela organizacao.
-      Este item sera criado como rascunho.
+      <template v-if="formMode === 'create'">
+        Crie um item para registrar padroes, modelos, referencias ou aprendizados reutilizaveis pela organizacao.
+        Este item sera criado como rascunho.
+      </template>
+      <template v-else>
+        Atualize este conhecimento para manter os padroes, referencias e aprendizados da organizacao confiaveis.
+      </template>
     </v-alert>
 
-    <v-alert v-if="validationError.message" type="warning" variant="tonal" class="mb-3">
-      {{ validationError.message }}
+    <v-alert v-if="status === 'published' && formMode === 'edit'" type="warning" variant="tonal" class="mb-3">
+      Este item ja esta publicado. Alteracoes feitas aqui impactam o conhecimento oficial da organizacao.
     </v-alert>
+
+    <v-alert v-if="status === 'deprecated' && formMode === 'edit'" type="warning" variant="outlined" class="mb-3">
+      Este item esta obsoleto. Alteracoes nao tornam o item recomendado novamente.
+    </v-alert>
+
+    <v-alert v-if="validationError.message" type="warning" variant="tonal" class="mb-3">{{ validationError.message }}</v-alert>
 
     <v-text-field v-model="form.title" label="Titulo" variant="outlined" />
     <v-select v-model="form.type" :items="typeOptions" label="Tipo" variant="outlined" />
 
-    <v-alert type="info" variant="outlined" density="compact" class="mb-3">
-      {{ typeHint }}
-    </v-alert>
+    <v-alert type="info" variant="outlined" density="compact" class="mb-3">{{ typeHint }}</v-alert>
 
     <v-textarea v-model="form.description" label="Descricao" variant="outlined" rows="3" />
-    <v-textarea
-      v-model="form.summary"
-      label="Conteudo principal / resumo"
-      variant="outlined"
-      rows="3"
-    />
+    <v-textarea v-model="form.summary" label="Conteudo principal / resumo" variant="outlined" rows="3" />
     <v-textarea v-model="form.whenToUse" label="Quando usar (opcional)" variant="outlined" rows="2" />
-    <v-textarea
-      v-model="form.notes"
-      label="Cuidados e observacoes (opcional)"
-      variant="outlined"
-      rows="2"
-    />
-    <v-text-field
-      v-model="form.tagsText"
-      label="Tags (separadas por virgula)"
-      hint="Exemplo: reforma-escolar, memorial, prefeitura-sp"
-      persistent-hint
-      variant="outlined"
-    />
+    <v-textarea v-model="form.notes" label="Cuidados e observacoes (opcional)" variant="outlined" rows="2" />
+    <v-text-field v-model="form.tagsText" label="Tags (separadas por virgula)" hint="Exemplo: reforma-escolar, memorial, prefeitura-sp" persistent-hint variant="outlined" />
 
     <div class="knowledge-form__actions">
       <v-btn variant="text" @click="emit('cancel')">Cancelar</v-btn>
-      <v-btn color="teal" type="submit" :loading="loading" prepend-icon="$success">
-        Criar item
-      </v-btn>
+      <v-btn color="teal" type="submit" :loading="loading" prepend-icon="$success">{{ submitLabel }}</v-btn>
     </div>
   </v-form>
 </template>
 
 <style scoped>
-.knowledge-form {
-  display: grid;
-  gap: 0.75rem;
-}
-
-.knowledge-form__actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-}
+.knowledge-form { display: grid; gap: 0.75rem; }
+.knowledge-form__actions { display: flex; justify-content: flex-end; gap: 0.75rem; }
 </style>

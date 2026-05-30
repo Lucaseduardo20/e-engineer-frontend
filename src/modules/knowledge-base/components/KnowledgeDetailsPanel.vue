@@ -206,12 +206,22 @@ const contentHasAnyData = computed(
 
         <v-sheet class="knowledge-detail__section mt-4">
           <h2>Relacoes</h2>
-          <p class="muted">Projetos relacionados</p>
-          <p class="placeholder">Ainda nenhum projeto vinculado a este item.</p>
-          <p class="muted mt-2">Documentos relacionados</p>
-          <p class="placeholder">Ainda nenhum documento vinculado a este item.</p>
-          <p class="muted mt-2">Revisoes relacionadas</p>
-          <p class="placeholder">Ainda nenhuma revisao vinculada a este item.</p>
+          <v-list v-if="item.relations.length" density="compact">
+            <v-list-item v-for="relation in item.relations" :key="relation.id">
+              <v-list-item-title>
+                {{ relation.relationType }} · {{ relation.targetType }}
+              </v-list-item-title>
+              <v-list-item-subtitle>{{ relation.targetId }}</v-list-item-subtitle>
+            </v-list-item>
+          </v-list>
+          <template v-else>
+            <p class="muted">Projetos relacionados</p>
+            <p class="placeholder">Ainda nenhum projeto vinculado a este item.</p>
+            <p class="muted mt-2">Documentos relacionados</p>
+            <p class="placeholder">Ainda nenhum documento vinculado a este item.</p>
+            <p class="muted mt-2">Revisoes relacionadas</p>
+            <p class="placeholder">Ainda nenhuma revisao vinculada a este item.</p>
+          </template>
         </v-sheet>
 
         <v-sheet class="knowledge-detail__section mt-4">

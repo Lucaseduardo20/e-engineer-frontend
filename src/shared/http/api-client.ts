@@ -536,6 +536,11 @@ export const apiClient = {
         mapKnowledgeItem,
       )
     },
+    deprecate(id: string) {
+      return unwrap<KnowledgeItem>(httpClient.post(`/knowledge-base/${id}/deprecate`)).then(
+        mapKnowledgeItem,
+      )
+    },
     link(id: string, payload: LinkKnowledgeItemDto) {
       return unwrap<KnowledgeRelation>(
         httpClient.post(`/knowledge-base/${id}/relations`, payload),
