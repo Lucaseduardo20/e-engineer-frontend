@@ -175,3 +175,162 @@ nvm use 22
 - `npm run type-check`: passou com Node 22.13.1.
 - `npm run build`: passou com Node 22.13.1.
 - `npm run test:unit -- tests/e2e/sprint0.spec.ts`: passou com acesso liberado a `localhost`.
+
+## 2026-05-27 - Sprint 2 Deliverables
+
+### Implementado
+
+- Criado modulo `src/modules/deliverables` com pagina, lista, formulario e store Pinia.
+- API client ganhou `deliverables.list`, `deliverables.get`, `deliverables.create` e `deliverables.update`, consumindo envelopes `{ data }`.
+- Rotas por projeto adicionadas: `/projects/:projectId/deliverables`, `/projects/:projectId/deliverables/new` e `/projects/:projectId/deliverables/:deliverableId/edit`.
+- Detalhe de projeto ganhou acao para gerenciar entregaveis.
+- Contrato frontend de `Deliverable` passou a incluir `type` com tipos do dominio de engenharia civil.
+- Testes unitarios cobrem store, lista, formulario e compatibilidade do store de projetos.
+- Teste E2E de integracao foi ampliado para cobrir criacao, listagem e edicao de entregavel via API.
+
+### Validacoes
+
+- `npm run type-check`: passou com Node 22.
+- `npm run test:unit`: passou com Node 22.
+- `npm run test:e2e`: passou com backend local em `http://127.0.0.1:3000` e frontend em `http://127.0.0.1:5174`.
+- `npm run build`: passou com Node 22.
+
+## 2026-05-27 - Sprint 2 Documents
+
+### Implementado
+
+- Criado modulo `src/modules/documents` com pagina, lista, card, formulario de documento/upload e store Pinia.
+- API client ganhou `documents.list`, `documents.get`, `documents.create`, `documents.update`, `documents.delete` e `documents.uploadVersion`, consumindo envelopes `{ data }`.
+- Rota protegida `/documents` adicionada ao router, aproveitando o item ja presente no AppShell.
+- UI de documentos recebeu filtros por projeto/status/tipo, indicadores de acervo/oficiais, cadastro de documento tecnico, upload de versao, edicao e exclusao.
+- Contratos frontend passaram a modelar `DocumentStatus`, `DocumentType`, `DocumentVersion`, `DocumentSummary` e `DocumentDetail`.
+- Teste E2E de documentos foi adicionado em `tests/e2e/documents.spec.ts` para cobrir listagem, criacao, upload e exclusao quando backend/frontend estiverem rodando.
+
+### Validacoes
+
+- `npm run type-check`: passou com Node 22.
+- `npm run test:unit -- --maxWorkers=1 src/modules/documents`: passou com Node 22.
+- `npm run build`: passou com Node 22.
+
+## 2026-05-27 - Sprint 2 Reviews
+
+### Implementado
+
+- Criado modulo `src/modules/reviews` com pagina, lista, card, formulario e store Pinia.
+- API client ganhou `reviews.list`, `reviews.get`, `reviews.create`, `reviews.approve` e `reviews.reject`, consumindo envelopes `{ data }`.
+- Rota protegida `/reviews` adicionada ao router.
+- `ReviewsPanel` passou a usar a store real de revisoes e pode receber `projectId`; o detalhe de projeto agora exibe o painel filtrado pelo projeto.
+- UI de revisoes recebeu filtros por projeto/entregavel/documento/status, criacao de solicitacao e acoes de aprovar/rejeitar com confirmacao.
+- Contratos frontend passaram a modelar `ReviewStatus`, `ReviewReviewer`, `ReviewSummary` e `ReviewDetail`.
+- Teste E2E de revisoes foi adicionado em `tests/e2e/reviews.spec.ts` para cobrir criacao, listagem, aprovacao e rejeicao quando backend/frontend estiverem rodando.
+
+### Validacoes
+
+- `npm run type-check`: passou com Node 22.
+- `npm run test:unit -- --maxWorkers=1 src/modules/reviews`: passou com Node 22.
+- `npm run build`: passou com Node 22.
+
+## 2026-05-28 - Revisoes interativas e links rastreaveis
+
+### Implementado
+
+- Tarefa: tornar revisoes mais completas, com modal detalhada, discussao persistente, links compartilhaveis e botao de voltar menos confundivel.
+- Mudancas: `src/shared/types/api-contracts.ts`, `src/shared/http/api-client.ts`, `src/shared/components/TraceableLinkButton.vue`, `src/app/layouts/AuthenticatedLayout.vue`, `src/router/index.ts`, `src/modules/reviews/stores/reviews.store.ts`, `src/modules/reviews/components/ReviewCard.vue`, `src/modules/reviews/components/ReviewsList.vue`, `src/modules/reviews/components/ReviewDetailDialog.vue`, `src/modules/reviews/pages/ReviewsPage.vue`, `src/modules/reviews/components/ReviewsList.spec.ts`, `src/modules/reviews/stores/reviews.store.spec.ts`, `src/modules/documents/components/DocumentCard.vue`, `src/modules/documents/pages/DocumentsPage.vue`, `src/modules/projects/components/ProjectDetail.vue`.
+- Decisao tomada: a rota `/reviews/:reviewId` abre a mesma tela de revisoes com uma modal de detalhe, mantendo a lista como contexto e permitindo compartilhar link direto da revisao.
+- Decisao tomada: comentarios de revisao usam `apiClient.reviews.comment()` e recarregam o detalhe persistido; o campo de prazo da criacao envia ISO string para alinhar com a API.
+- Decisao tomada: `TraceableLinkButton` foi criado como componente compartilhado para copiar links de revisao, projeto e documento; documentos tambem aceitam `?documentId=` para abrir o historico direto.
+- Decisao tomada: o botao Voltar saiu da app bar e virou uma acao textual no topo do conteudo, separada visualmente do toggle do menu.
+- Alternativas consideradas: abrir uma pagina separada de revisao foi evitado para preservar navegacao e filtros atuais; usar apenas query string para revisao foi evitado porque `/reviews/:reviewId` e mais legivel para compartilhamento.
+
+### Validacoes
+
+- `npm run type-check`: passou com Node 22.13.1.
+- `npm run test:unit -- --run src/modules/reviews src/modules/documents src/modules/projects`: passou com 8 arquivos e 13 testes.
+- `npm run build`: passou com Node 22.13.1.
+- `npm run test:e2e`: falhou no sandbox por `EPERM` ao acessar `localhost`; reexecutado fora do sandbox e passou com 3 arquivos e 3 testes.
+
+## 2026-05-28 - Links sutis em cards e revisoes
+
+### Implementado
+
+- Tarefa: tornar o link do projeto clicavel dentro das revisoes e deixar os botoes de copiar link menos chamativos.
+- Mudancas: `src/shared/components/TraceableLinkButton.vue`, `src/modules/reviews/components/ReviewCard.vue`, `src/modules/reviews/components/ReviewDetailDialog.vue`.
+- Decisao tomada: `TraceableLinkButton` virou um botao de icone com tooltip e feedback visual de copiado, mantendo o mesmo contrato de props para os usos existentes em documentos/projetos.
+- Decisao tomada: cards de revisao agora mostram o projeto como acao navegavel para `/projects/:projectId` e tambem expõem links discretos para copiar a URL da revisao e do projeto.
+- Alternativas consideradas: manter botoes textuais foi evitado porque competia visualmente com acoes primarias como abrir/aprovar/rejeitar.
+
+### Validacoes
+
+- `npm run type-check`: passou com Node 22.13.1.
+- `npm run test:unit -- --run src/modules/reviews src/modules/documents src/modules/projects`: passou com 8 arquivos e 13 testes.
+
+## 2026-05-28 - ORG-003/004 Organizations management page
+
+### Implementado
+
+- Tarefa: criar pagina de Organizations e testes para gestao inicial da organizacao autenticada.
+- Mudancas: `src/modules/organizations/stores/organizations.store.ts`, `src/modules/organizations/stores/organizations.store.spec.ts`, `src/modules/organizations/pages/OrganizationsPage.vue`, `src/modules/organizations/pages/OrganizationsPage.spec.ts`, `src/modules/organizations/components/OrgSwitcher.vue`, `src/app/layouts/AuthenticatedLayout.vue`, `src/router/index.ts`, `tests/e2e/organizations.spec.ts`.
+- Decisao tomada: a pagina `/organizations` e read-only neste corte, consumindo `GET /organizations/current` e `GET /organizations/current/users`, para evitar introduzir mutacoes de tenant, convite ou roles sem contrato e autorizacao aprovados.
+- Decisao tomada: `OrgSwitcher` passou a usar a store Pinia de organizations, evitando carregamento duplicado e centralizando erro/loading.
+- Alternativas consideradas: criar fluxo de edicao/convite foi adiado porque impacta seguranca, tenancy e contrato publico.
+
+### Validacoes
+
+- `npm run type-check`: passou com Node 22.13.1.
+- `npm run test:unit -- --run src/modules/organizations`: passou com 2 arquivos e 3 testes.
+- `npm run test:unit -- --run --maxWorkers=1`: passou com 19 arquivos e 35 testes.
+- `npm run build`: passou com Node 22.13.1.
+- `npm run test:e2e`: passou fora do sandbox com 4 arquivos e 4 testes.
+
+## 2026-05-28 - RBAC de sessao no frontend
+
+### Implementado
+
+- Tarefa: preparar o frontend para consumir RBAC centralizado, super-admin, troca de tenant e incorporacao.
+- Mudancas: `src/shared/types/api-contracts.ts`, `src/shared/http/api-client.ts`, `src/modules/auth/stores/auth.store.ts`, `src/modules/auth/stores/auth.store.spec.ts`, `src/app/layouts/AuthenticatedLayout.vue`.
+- Decisao tomada: `User` passa a aceitar `isPlatformAdmin` e `impersonatedBy`; a store expõe `isPlatformAdmin`, `isImpersonating` e `replaceSession()` para troca de tenant/incorporacao.
+- Decisao tomada: o app shell mostra um chip discreto quando a sessao e super-admin ou incorporada, sem ainda criar a UI operacional completa de plataforma.
+- Alternativas consideradas: criar telas completas de colaborador/super-admin neste corte foi evitado para manter primeiro a fundacao segura no backend.
+
+### Validacoes
+
+- `npm run type-check`: passou com Node 22.13.1.
+- `npm run test:unit -- --run src/modules/auth src/modules/organizations`: passou com 4 arquivos e 9 testes.
+- `npm run test:unit -- --run --maxWorkers=1`: passou com 19 arquivos e 36 testes.
+- `npm run build`: passou com Node 22.13.1.
+
+## 2026-05-28 - Gestao fluida de organizacao e colaboradores
+
+### Implementado
+
+- Tarefa: transformar `/organizations` em tela operacional para identidade do tenant, colaboradores, prioridade e sessoes super-admin.
+- Mudancas: `src/modules/organizations/pages/OrganizationsPage.vue`, `src/modules/organizations/pages/OrganizationsPage.spec.ts`, `src/modules/organizations/stores/organizations.store.ts`, `src/shared/http/api-client.ts`, `src/shared/types/api-contracts.ts`.
+- Decisao tomada: a tela usa abas para reduzir carga cognitiva: Perfil, Colaboradores, Prioridades e Super-admin. Dialogs curtos cuidam de criar/editar/clonar colaborador.
+- Decisao tomada: uploads de logo/avatar usam `FormData` e atualizam a store local apos resposta da API, evitando reload geral desnecessario.
+- Decisao tomada: a area Super-admin fica visivel somente para `isPlatformAdmin`; troca de tenant e incorporacao substituem a sessao via `authStore.replaceSession()`.
+- Alternativas consideradas: criar paginas separadas foi evitado para manter a gestao concentrada e fluida dentro do contexto do tenant.
+
+### Validacoes
+
+- `PATH=/home/lkt/.nvm/versions/node/v24.16.0/bin:$PATH npm run type-check`: passou.
+- `PATH=/home/lkt/.nvm/versions/node/v24.16.0/bin:$PATH npm run test:unit -- src/modules/organizations --maxWorkers=1`: passou com 2 arquivos e 3 testes.
+- `PATH=/home/lkt/.nvm/versions/node/v24.16.0/bin:$PATH npm run build`: passou.
+- Observacao: com Node `v18.20.4`, Vitest/Vite falham por engine/API (`styleText`/`CustomEvent`); as validacoes finais foram executadas com Node 24 instalado localmente.
+
+## 2026-05-28 - Ajustes UX/RBAC em revisoes e organizacoes
+
+### Implementado
+
+- Tarefa: clarificar links de projetos/documentos em revisoes, remover aba super-admin, adicionar incorporacao por usuario, proteger rotas por RBAC e reposicionar prioridade por colaborador.
+- Mudancas: `src/shared/auth/rbac.ts`, `src/router/index.ts`, `src/router/guards/auth.guard.ts`, `src/router/route-meta.d.ts`, `src/app/layouts/AuthenticatedLayout.vue`, `src/modules/auth/stores/auth.store.ts`, `src/modules/auth/stores/auth.store.spec.ts`, `src/modules/organizations/components/OrgSwitcher.vue`, `src/modules/organizations/pages/OrganizationsPage.vue`, `src/modules/organizations/pages/OrganizationsPage.spec.ts`, `src/modules/reviews/components/ReviewCard.vue`, `src/modules/reviews/components/ReviewDetailDialog.vue`, `src/shared/http/api-client.ts`, `src/shared/types/api-contracts.ts`.
+- Decisao tomada: permissao de rota e menu fica centralizada em `src/shared/auth/rbac.ts`; o guard redireciona para `/dashboard` quando o usuario impersonado tenta abrir URL sem permissao.
+- Decisao tomada: super-admin troca tenant no seletor global e incorpora usuario direto na linha do colaborador, sem exigir colar ID manualmente.
+- Decisao tomada: prioridades sairam de aba propria e viraram acao contextual do colaborador, vinculando usuario + projeto/entregavel/documento/revisao.
+- Decisao tomada: links em revisoes usam botoes tonais com texto "Ir para..." e cores distintas para projeto/documento, mantendo tooltips nos links e nas acoes da tabela.
+- Alternativas consideradas: manter aba de prioridades e super-admin foi evitado porque duplicava contexto e obrigava o usuario a operar por IDs.
+
+### Validacoes
+
+- `PATH=/home/lkt/.nvm/versions/node/v24.16.0/bin:$PATH npm run type-check`: passou.
+- `PATH=/home/lkt/.nvm/versions/node/v24.16.0/bin:$PATH npm run test:unit -- src/modules/organizations src/modules/reviews src/modules/auth --maxWorkers=1`: passou com 7 arquivos e 15 testes.
+- `PATH=/home/lkt/.nvm/versions/node/v24.16.0/bin:$PATH npm run build`: passou.

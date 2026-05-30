@@ -13,6 +13,13 @@ const props = defineProps<{
 
 const typeLabel = computed(() => knowledgeTypeLabels[props.item.type])
 const statusLabel = computed(() => knowledgeStatusLabels[props.item.status])
+
+const statusColor = computed(() => {
+  if (props.item.status === 'published') return 'green'
+  if (props.item.status === 'draft') return 'blue-grey'
+  if (props.item.status === 'deprecated') return 'amber'
+  return 'grey'
+})
 </script>
 
 <template>
@@ -24,7 +31,7 @@ const statusLabel = computed(() => knowledgeStatusLabels[props.item.status])
         </v-avatar>
         <div>
           <v-chip size="small" color="teal" variant="tonal">{{ typeLabel }}</v-chip>
-          <v-chip class="ml-2" size="small" color="blue-grey" variant="tonal">
+          <v-chip class="ml-2" size="small" :color="statusColor" variant="tonal">
             {{ statusLabel }}
           </v-chip>
         </div>
@@ -32,6 +39,16 @@ const statusLabel = computed(() => knowledgeStatusLabels[props.item.status])
 
       <h3>{{ item.title }}</h3>
       <p>{{ item.description || 'Sem descricao registrada.' }}</p>
+
+      <v-alert
+        v-if="item.status === 'deprecated'"
+        type="warning"
+        density="compact"
+        variant="tonal"
+        class="my-2"
+      >
+        Item obsoleto para novos projetos.
+      </v-alert>
 
       <div class="knowledge-card__tags">
         <v-chip v-for="tag in item.tags" :key="tag" size="x-small" variant="tonal">

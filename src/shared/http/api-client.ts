@@ -252,6 +252,7 @@ function mapKnowledgeItem(item: KnowledgeItem): KnowledgeItem {
     ...item,
     publishedAt: toTimestamp(item.publishedAt) ?? null,
     archivedAt: toTimestamp(item.archivedAt) ?? null,
+    deprecatedAt: toTimestamp(item.deprecatedAt) ?? null,
     createdAt: toTimestamp(item.createdAt) ?? Date.now(),
     updatedAt: toTimestamp(item.updatedAt) ?? Date.now(),
   }

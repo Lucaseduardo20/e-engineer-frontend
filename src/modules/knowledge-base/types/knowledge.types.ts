@@ -17,12 +17,14 @@ export interface KnowledgeItem {
   description?: string | null
   type: KnowledgeItemType
   status: KnowledgeItemStatus
+  visibility?: string
   tags: string[]
   content?: Record<string, unknown> | null
   createdBy: string
   updatedBy: string
   publishedAt?: number | null
   archivedAt?: number | null
+  deprecatedAt?: number | null
   createdAt: number
   updatedAt: number
 }

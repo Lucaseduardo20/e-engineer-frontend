@@ -26,10 +26,12 @@ export const useKnowledgeItemsStore = defineStore('knowledgeItems', () => {
     status?: KnowledgeItemStatus
     tags: string[]
     searchQuery: string
+    includeArchived: boolean
   }>({
-    status: 'published',
+    status: undefined,
     tags: [],
     searchQuery: '',
+    includeArchived: false,
   })
 
   const hasItems = computed(() => items.value.length > 0)
@@ -133,9 +135,10 @@ export const useKnowledgeItemsStore = defineStore('knowledgeItems', () => {
 
   function resetFilters() {
     filters.type = undefined
-    filters.status = 'published'
+    filters.status = undefined
     filters.tags = []
     filters.searchQuery = ''
+    filters.includeArchived = false
   }
 
   async function changeStatus(id: string, action: 'publish' | 'archive') {
@@ -166,6 +169,7 @@ export const useKnowledgeItemsStore = defineStore('knowledgeItems', () => {
       type: filters.type,
       status: filters.status,
       tags: filters.tags.length ? filters.tags : undefined,
+      includeArchived: filters.includeArchived,
     }
   }
 
