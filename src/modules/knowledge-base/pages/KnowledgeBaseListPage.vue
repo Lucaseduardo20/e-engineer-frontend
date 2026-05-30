@@ -10,8 +10,9 @@ const route = useRoute()
 const router = useRouter()
 const store = useKnowledgeItemsStore()
 const isFormOpen = ref(route.query.new === '1')
+const successMessage = ref('')
 
-const dialogTitle = computed(() => 'Novo conhecimento')
+const dialogTitle = computed(() => 'Criar item de conhecimento')
 
 watch(
   () => route.query.new,
@@ -24,8 +25,10 @@ async function create(payload: CreateKnowledgeItemDto) {
   const item = await store.createItem(payload)
 
   if (item) {
+    successMessage.value = 'Item de conhecimento criado como rascunho.'
     isFormOpen.value = false
-    await router.push(`/knowledge-base/${item.id}`)
+    await store.listItems(1)
+    await router.replace('/knowledge-base')
   }
 }
 
@@ -40,10 +43,14 @@ function closeForm() {
     <div class="knowledge-page__header">
       <div>
         <h1>Base de Conhecimento</h1>
-        <p>Padroes, referencias, modelos e licoes aprendidas do tenant.</p>
+        <p>Acervo tecnico reutilizavel com padroes, modelos, referencias e licoes aprendidas.</p>
       </div>
       <v-btn color="teal" prepend-icon="$success" @click="isFormOpen = true">Novo item</v-btn>
     </div>
+
+    <v-alert v-if="successMessage" type="success" variant="tonal" closable @click:close="successMessage = ''">
+      {{ successMessage }}
+    </v-alert>
 
     <KnowledgeItemsList />
 
