@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { formatDateTime } from '@/shared/formatters/date.formatter'
+import KnowledgeItemTypeContent from '@/modules/knowledge-base/components/detail/KnowledgeItemTypeContent.vue'
+import KnowledgeItemGenericContent from '@/modules/knowledge-base/components/detail/KnowledgeItemGenericContent.vue'
 import {
   knowledgeStatusLabels,
   knowledgeTypeLabels,
@@ -38,71 +40,29 @@ const typeGuidance = computed(() => {
   return 'Este padrao define como organizar e entregar um pacote tecnico.'
 })
 
-const summary = computed(() => {
-  const value = props.item?.content?.summary
-  return typeof value === 'string' ? value : ''
-})
-
-const sections = computed(() => {
-  const value = props.item?.content?.sections
-
-  if (!Array.isArray(value)) return []
-
-  return value
-    .map((section) => {
-      if (!section || typeof section !== 'object') return null
-      const title = typeof (section as Record<string, unknown>).title === 'string'
-        ? String((section as Record<string, unknown>).title)
-        : ''
-      const body = typeof (section as Record<string, unknown>).body === 'string'
-        ? String((section as Record<string, unknown>).body)
-        : ''
-
-      if (!title && !body) return null
-
-      return { title, body }
-    })
-    .filter(Boolean) as Array<{ title: string; body: string }>
-})
-
-const checklistItems = computed(() => {
-  const value = props.item?.content?.checklist
-  if (!Array.isArray(value)) return []
-
-  return value
-    .map((raw) => {
-      if (typeof raw === 'string') {
-        return { label: raw, required: false }
-      }
-
-      if (!raw || typeof raw !== 'object') return null
-
-      const record = raw as Record<string, unknown>
-      const label = typeof record.label === 'string' ? record.label : ''
-      const required = typeof record.required === 'boolean' ? record.required : false
-
-      if (!label) return null
-      return { label, required }
-    })
-    .filter(Boolean) as Array<{ label: string; required: boolean }>
-})
-
-const metadataEntries = computed(() => {
-  const value = props.item?.content?.metadata
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return []
-
-  return Object.entries(value).map(([key, item]) => ({
-    key,
-    value:
-      typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean'
-        ? String(item)
-        : JSON.stringify(item),
-  }))
-})
-
-const contentHasAnyData = computed(
-  () => !!summary.value || sections.value.length > 0 || checklistItems.value.length > 0 || metadataEntries.value.length > 0,
+const hasContextualType = computed(() =>
+  ['project_reference', 'document_model', 'lesson_learned', 'technical_standard', 'review_checklist', 'delivery_standard']
+    .includes(props.item?.type ?? ''),
 )
+function relationLabel(value: string) {
+  const labels: Record<string, string> = {
+    project: 'Projeto',
+    document: 'Documento',
+    document_version: 'Versao de documento',
+    deliverable: 'Entregavel',
+    review: 'Revisao',
+    template: 'Template',
+  }
+  return labels[value] ?? value
+}
+function relationTo(targetType: string, targetId: string) {
+  if (targetType === 'project') return `/projects/${targetId}`
+  if (targetType === 'document') return `/documents?documentId=${targetId}`
+  if (targetType === 'document_version') return `/documents?documentVersionId=${targetId}`
+  if (targetType === 'deliverable') return `/projects?deliverableId=${targetId}`
+  if (targetType === 'review') return `/reviews/${targetId}`
+  return null
+}
 </script>
 
 <template>
@@ -147,52 +107,8 @@ const contentHasAnyData = computed(
 
     <v-row>
       <v-col cols="12" md="8">
-        <v-sheet class="knowledge-detail__section">
-          <h2>Resumo</h2>
-          <p v-if="summary">{{ summary }}</p>
-          <p v-else>Sem resumo estruturado.</p>
-        </v-sheet>
-
-        <v-sheet class="knowledge-detail__section mt-4">
-          <h2>Conteudo tecnico</h2>
-          <template v-if="contentHasAnyData">
-            <div v-for="(section, index) in sections" :key="`${section.title}-${index}`" class="knowledge-detail__content-block">
-              <h3>{{ section.title || 'Secao' }}</h3>
-              <p>{{ section.body }}</p>
-            </div>
-
-            <div v-if="checklistItems.length" class="knowledge-detail__content-block">
-              <h3>Checklist</h3>
-              <v-list density="compact">
-                <v-list-item v-for="(check, index) in checklistItems" :key="`${check.label}-${index}`">
-                  <template #prepend>
-                    <v-icon icon="$file" size="16" color="teal" />
-                  </template>
-                  <v-list-item-title>
-                    {{ check.label }}
-                    <v-chip v-if="check.required" size="x-small" class="ml-2" color="teal" variant="outlined">
-                      obrigatorio
-                    </v-chip>
-                  </v-list-item-title>
-                </v-list-item>
-              </v-list>
-            </div>
-
-            <div v-if="metadataEntries.length" class="knowledge-detail__content-block">
-              <h3>Metadados</h3>
-              <v-table density="compact">
-                <tbody>
-                  <tr v-for="entry in metadataEntries" :key="entry.key">
-                    <td class="metadata-key">{{ entry.key }}</td>
-                    <td>{{ entry.value }}</td>
-                  </tr>
-                </tbody>
-              </v-table>
-            </div>
-          </template>
-
-          <p v-else>Sem conteudo estruturado registrado.</p>
-        </v-sheet>
+        <KnowledgeItemTypeContent v-if="hasContextualType" :item="item" />
+        <KnowledgeItemGenericContent v-else :content="item.content" />
       </v-col>
 
       <v-col cols="12" md="4">
@@ -209,9 +125,22 @@ const contentHasAnyData = computed(
           <v-list v-if="item.relations.length" density="compact">
             <v-list-item v-for="relation in item.relations" :key="relation.id">
               <v-list-item-title>
-                {{ relation.relationType }} · {{ relation.targetType }}
+                {{ relation.relationType }} · {{ relationLabel(relation.targetType) }}
               </v-list-item-title>
-              <v-list-item-subtitle>{{ relation.targetId }}</v-list-item-subtitle>
+              <v-list-item-subtitle>
+                <template v-if="relationTo(relation.targetType, relation.targetId)">
+                  <v-btn
+                    :to="relationTo(relation.targetType, relation.targetId)!"
+                    variant="text"
+                    size="small"
+                    color="teal"
+                    class="pa-0"
+                  >
+                    {{ relation.targetId }}
+                  </v-btn>
+                </template>
+                <template v-else>{{ relation.targetId }}</template>
+              </v-list-item-subtitle>
             </v-list-item>
           </v-list>
           <template v-else>
