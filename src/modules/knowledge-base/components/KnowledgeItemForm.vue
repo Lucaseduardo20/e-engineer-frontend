@@ -72,7 +72,7 @@ watch(
     form.title = item?.title ?? ''
     form.description = item?.description ?? ''
     form.type = item?.type ?? 'technical_standard'
-    form.tagsText = item?.tags.join(', ') ?? ''
+    form.tagsText = item?.tags.map((tag) => (typeof tag === 'string' ? tag : tag.name)).join(', ') ?? ''
 
     const summary = item?.content?.summary
     const sections = Array.isArray(item?.content?.sections)

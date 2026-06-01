@@ -18,7 +18,16 @@ export interface KnowledgeItem {
   type: KnowledgeItemType
   status: KnowledgeItemStatus
   visibility?: string
-  tags: string[]
+  tags: Array<
+    | string
+    | {
+        id: string
+        name: string
+        slug: string
+        category: string
+        status: string
+      }
+  >
   content?: Record<string, unknown> | null
   createdBy: string
   creatorName?: string | null
@@ -63,6 +72,7 @@ export interface CreateKnowledgeItemDto {
   description?: string | null
   type: KnowledgeItemType
   tags?: string[]
+  tagIds?: string[]
   content?: Record<string, unknown> | null
 }
 

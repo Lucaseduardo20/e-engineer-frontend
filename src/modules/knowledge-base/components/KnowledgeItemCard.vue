@@ -85,8 +85,8 @@ const creatorLabel = computed(() => props.item.creatorName || props.item.created
       </v-alert>
 
       <div class="knowledge-card__tags">
-        <v-chip v-for="tag in visibleTags" :key="tag" size="x-small" variant="tonal">
-          {{ tag }}
+        <v-chip v-for="(tag, index) in visibleTags" :key="typeof tag === 'string' ? `${tag}-${index}` : tag.id" size="x-small" variant="tonal">
+          {{ typeof tag === 'string' ? tag : tag.name }}
         </v-chip>
         <v-chip v-if="extraTagsCount" size="x-small" variant="outlined">+{{ extraTagsCount }}</v-chip>
       </div>

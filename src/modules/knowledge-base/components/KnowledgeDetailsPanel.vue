@@ -151,7 +151,7 @@ function linksFromMetadata(metadata: Record<string, unknown> | undefined) {
           <h2>Tags e contexto</h2>
           <p class="muted">Tags ajudam a encontrar e recomendar este conhecimento em novos projetos.</p>
           <div class="knowledge-detail__tags">
-            <v-chip v-for="tag in item.tags" :key="tag" size="small" variant="tonal">{{ tag }}</v-chip>
+            <v-chip v-for="(tag, index) in item.tags" :key="typeof tag === 'string' ? `${tag}-${index}` : tag.id" size="small" variant="tonal">{{ typeof tag === 'string' ? tag : tag.name }}</v-chip>
           </div>
         </v-sheet>
 
