@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/modules/auth/stores/auth.store'
 import KnowledgeItemForm from '@/modules/knowledge-base/components/KnowledgeItemForm.vue'
 import KnowledgeItemsList from '@/modules/knowledge-base/components/KnowledgeItemsList.vue'
 import { useKnowledgeItemsStore } from '@/modules/knowledge-base/stores/knowledge-items.store'
@@ -9,6 +10,7 @@ import type { CreateKnowledgeItemDto } from '@/modules/knowledge-base/types/know
 const route = useRoute()
 const router = useRouter()
 const store = useKnowledgeItemsStore()
+const auth = useAuthStore()
 const isFormOpen = ref(route.query.new === '1')
 const successMessage = ref('')
 
@@ -45,7 +47,14 @@ function closeForm() {
         <h1>Base de Conhecimento</h1>
         <p>Acervo tecnico reutilizavel com padroes, modelos, referencias e licoes aprendidas.</p>
       </div>
-      <v-btn color="teal" prepend-icon="$success" @click="isFormOpen = true">Novo item</v-btn>
+      <v-btn
+        v-if="auth.can('knowledge.create')"
+        color="teal"
+        prepend-icon="$success"
+        @click="isFormOpen = true"
+      >
+        Novo item
+      </v-btn>
     </div>
 
     <v-alert v-if="successMessage" type="success" variant="tonal" closable @click:close="successMessage = ''">

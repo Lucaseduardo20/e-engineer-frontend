@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/modules/auth/stores/auth.store'
 import KnowledgeDetailsPanel from '@/modules/knowledge-base/components/KnowledgeDetailsPanel.vue'
 import KnowledgeItemForm from '@/modules/knowledge-base/components/KnowledgeItemForm.vue'
 import { useKnowledgeItemsStore } from '@/modules/knowledge-base/stores/knowledge-items.store'
@@ -11,6 +12,7 @@ import type { AuditLogEntry } from '@/shared/types/api-contracts'
 const route = useRoute()
 const router = useRouter()
 const store = useKnowledgeItemsStore()
+const auth = useAuthStore()
 const showEdit = ref(false)
 const showConfirm = ref(false)
 const pendingAction = ref<'publish' | 'archive' | 'deprecate' | null>(null)
@@ -117,9 +119,17 @@ async function saveEdit(payload: CreateKnowledgeItemDto) {
 
     <template v-else>
       <div class="knowledge-detail-page__actions">
-        <v-btn color="teal" variant="tonal" prepend-icon="$file" :disabled="isArchived" @click="openEdit">Editar</v-btn>
+        <v-btn
+          v-if="auth.can('knowledge.update')"
+          color="teal"
+          variant="tonal"
+          prepend-icon="$file"
+          :disabled="isArchived"
+          @click="openEdit"
+        >Editar</v-btn>
         <v-btn
           v-if="store.selectedItem?.status === 'draft'"
+          v-show="auth.can('knowledge.publish')"
           color="teal"
           variant="flat"
           prepend-icon="$success"
@@ -127,6 +137,7 @@ async function saveEdit(payload: CreateKnowledgeItemDto) {
         >Publicar</v-btn>
         <v-btn
           v-if="store.selectedItem?.status === 'published'"
+          v-show="auth.can('knowledge.deprecate')"
           color="warning"
           variant="tonal"
           prepend-icon="$warning"
@@ -134,6 +145,7 @@ async function saveEdit(payload: CreateKnowledgeItemDto) {
         >Marcar como obsoleto</v-btn>
         <v-btn
           v-if="['draft', 'published', 'deprecated'].includes(store.selectedItem?.status ?? '')"
+          v-show="auth.can('knowledge.archive')"
           color="grey"
           variant="tonal"
           prepend-icon="$prev"

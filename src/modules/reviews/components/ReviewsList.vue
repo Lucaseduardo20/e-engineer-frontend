@@ -9,6 +9,7 @@ withDefaults(
     users?: User[]
     loading?: boolean
     saving?: boolean
+    canRegisterLesson?: boolean
     page?: number
     pageSize?: number
     total?: number
@@ -60,6 +61,7 @@ const emit = defineEmits<{
         :review="review"
         :users="users"
         :saving="saving"
+        :can-register-lesson="canRegisterLesson"
         @open="emit('open', $event)"
         @approve="emit('approve', $event)"
         @reject="emit('reject', $event)"

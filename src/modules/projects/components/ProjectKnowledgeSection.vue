@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useAuthStore } from '@/modules/auth/stores/auth.store'
 import { useProjectsStore } from '@/modules/projects/stores/projects.store'
 import { useKnowledgeItemsStore } from '@/modules/knowledge-base/stores/knowledge-items.store'
 import { knowledgeTypeLabels, knowledgeStatusLabels } from '@/modules/knowledge-base/types/knowledge.types'
@@ -8,6 +9,7 @@ const props = defineProps<{ projectId: string }>()
 
 const projectsStore = useProjectsStore()
 const knowledgeStore = useKnowledgeItemsStore()
+const auth = useAuthStore()
 
 const isLinkOpen = ref(false)
 const isPromoteOpen = ref(false)
@@ -122,8 +124,8 @@ async function promoteProject() {
           Padroes, referencias, documentos modelo e licoes aprendidas vinculados a este projeto.
         </small>
       </div>
-      <v-btn color="teal" variant="tonal" @click="openLinkDialog">Vincular conhecimento</v-btn>
-      <v-btn color="indigo" variant="flat" @click="openPromoteDialog">Promover como referencia</v-btn>
+      <v-btn v-if="auth.can('knowledge.link')" color="teal" variant="tonal" @click="openLinkDialog">Vincular conhecimento</v-btn>
+      <v-btn v-if="auth.can('knowledge.promote_project')" color="indigo" variant="flat" @click="openPromoteDialog">Promover como referencia</v-btn>
     </v-card-title>
 
     <v-card-text>
@@ -144,7 +146,12 @@ async function promoteProject() {
             {{ entry.relationType }}
           </v-list-item-subtitle>
           <template #append>
-            <v-btn variant="text" color="error" @click.prevent="confirmRemoveRelationId = entry.relationId">
+            <v-btn
+              v-if="auth.can('knowledge.unlink')"
+              variant="text"
+              color="error"
+              @click.prevent="confirmRemoveRelationId = entry.relationId"
+            >
               Remover
             </v-btn>
           </template>

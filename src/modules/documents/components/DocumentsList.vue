@@ -11,6 +11,7 @@ withDefaults(
     pageSize?: number
     total?: number
     users?: User[]
+    canSaveModel?: boolean
   }>(),
   {
     page: 1,
@@ -60,6 +61,7 @@ const emit = defineEmits<{
         :key="document.id"
         :document="document"
         :users="users"
+        :can-save-model="canSaveModel"
         @upload="emit('upload', $event)"
         @edit="emit('edit', $event)"
         @assign="emit('assign', $event)"

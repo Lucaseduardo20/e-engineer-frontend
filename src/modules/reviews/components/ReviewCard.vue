@@ -10,6 +10,7 @@ const props = defineProps<{
   review: ReviewSummary
   users?: User[]
   saving?: boolean
+  canRegisterLesson?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -104,7 +105,7 @@ function userName(userId: string) {
         Abrir
       </v-btn>
       <v-btn
-        v-if="review.status === 'rejected'"
+        v-if="review.status === 'rejected' && canRegisterLesson"
         size="small"
         color="indigo"
         variant="tonal"

@@ -35,7 +35,12 @@ export const permissions = {
     update: 'knowledge.update',
     publish: 'knowledge.publish',
     archive: 'knowledge.archive',
+    deprecate: 'knowledge.deprecate',
     link: 'knowledge.link',
+    unlink: 'knowledge.unlink',
+    promoteProject: 'knowledge.promote_project',
+    saveDocumentModel: 'knowledge.save_document_model',
+    registerLesson: 'knowledge.register_lesson',
   },
   platform: {
     tenantsRead: 'platform.tenants.read',
@@ -64,7 +69,12 @@ export type Permission =
   | 'knowledge.update'
   | 'knowledge.publish'
   | 'knowledge.archive'
+  | 'knowledge.deprecate'
   | 'knowledge.link'
+  | 'knowledge.unlink'
+  | 'knowledge.promote_project'
+  | 'knowledge.save_document_model'
+  | 'knowledge.register_lesson'
   | 'platform.tenants.read'
   | 'platform.tenant.switch'
   | 'platform.impersonate'
@@ -91,7 +101,12 @@ const rolePermissions: Record<string, Permission[]> = {
     permissions.knowledge.update,
     permissions.knowledge.publish,
     permissions.knowledge.archive,
+    permissions.knowledge.deprecate,
     permissions.knowledge.link,
+    permissions.knowledge.unlink,
+    permissions.knowledge.promoteProject,
+    permissions.knowledge.saveDocumentModel,
+    permissions.knowledge.registerLesson,
   ],
   project_manager: [
     permissions.dashboard.read,
@@ -107,6 +122,9 @@ const rolePermissions: Record<string, Permission[]> = {
     permissions.knowledge.update,
     permissions.knowledge.publish,
     permissions.knowledge.link,
+    permissions.knowledge.promoteProject,
+    permissions.knowledge.saveDocumentModel,
+    permissions.knowledge.registerLesson,
   ],
   estimator: [
     permissions.dashboard.read,
@@ -119,6 +137,10 @@ const rolePermissions: Record<string, Permission[]> = {
     permissions.knowledge.read,
     permissions.knowledge.create,
     permissions.knowledge.update,
+    permissions.knowledge.link,
+    permissions.knowledge.promoteProject,
+    permissions.knowledge.saveDocumentModel,
+    permissions.knowledge.registerLesson,
   ],
   finance: [
     permissions.dashboard.read,
@@ -139,6 +161,10 @@ const rolePermissions: Record<string, Permission[]> = {
     permissions.priority.request,
     permissions.knowledge.read,
     permissions.knowledge.create,
+    permissions.knowledge.link,
+    permissions.knowledge.promoteProject,
+    permissions.knowledge.saveDocumentModel,
+    permissions.knowledge.registerLesson,
   ],
 }
 

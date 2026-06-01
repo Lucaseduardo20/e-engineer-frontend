@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/modules/auth/stores/auth.store'
 import ReviewDetailDialog from '@/modules/reviews/components/ReviewDetailDialog.vue'
 import ReviewForm from '@/modules/reviews/components/ReviewForm.vue'
 import ReviewsList from '@/modules/reviews/components/ReviewsList.vue'
@@ -9,6 +10,7 @@ import BasePageHeader from '@/shared/components/BasePageHeader.vue'
 import type { ReviewStatus, ReviewSummary } from '@/shared/types/api-contracts'
 
 const reviewsStore = useReviewsStore()
+const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 const isFormOpen = ref(false)
@@ -188,6 +190,7 @@ function openLessonForm(review: ReviewSummary) {
 }
 
 async function submitLesson() {
+  if (!auth.can('knowledge.register_lesson')) return
   if (!lessonReview.value) return
   const tags = lessonForm.value.tags.split(',').map((tag) => tag.trim()).filter(Boolean)
   const created = await reviewsStore.registerLessonLearned(lessonReview.value.id, {
@@ -316,6 +319,7 @@ async function submitLesson() {
       :page="reviewsStore.page"
       :page-size="reviewsStore.pageSize"
       :total="reviewsStore.total"
+      :can-register-lesson="auth.can('knowledge.register_lesson')"
       @update:page="reviewsStore.loadReviews"
       @open="openReview"
       @approve="openDecision($event, 'approve')"

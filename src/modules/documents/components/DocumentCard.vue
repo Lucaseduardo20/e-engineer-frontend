@@ -9,6 +9,7 @@ import { documentBadgeKind } from '@/shared/ui/status-badges'
 const props = defineProps<{
   document: DocumentSummary
   users?: User[]
+  canSaveModel?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -22,7 +23,7 @@ const emit = defineEmits<{
 const actions = [
   { key: 'download', label: 'Baixar', icon: '$file' },
   { key: 'upload', label: 'Nova versao', icon: '$upload' },
-  { key: 'save-model', label: 'Salvar como modelo', icon: '$file' },
+  ...(props.canSaveModel ? [{ key: 'save-model', label: 'Salvar como modelo', icon: '$file' }] : []),
   { key: 'history', label: 'Historico', icon: '$calendar' },
   { key: 'edit', label: 'Editar', icon: '$edit' },
   { key: 'assign', label: 'Revisores', icon: '$success' },

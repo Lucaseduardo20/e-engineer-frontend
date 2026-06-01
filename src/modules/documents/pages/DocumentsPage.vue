@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/modules/auth/stores/auth.store'
 import DocumentUpload from '@/modules/documents/components/DocumentUpload.vue'
 import DocumentsList from '@/modules/documents/components/DocumentsList.vue'
 import { useDocumentsStore } from '@/modules/documents/stores/documents.store'
@@ -12,6 +13,7 @@ import { formatDateTime } from '@/shared/formatters/date.formatter'
 import type { DocumentStatus, DocumentSummary, DocumentType } from '@/shared/types/api-contracts'
 
 const documentsStore = useDocumentsStore()
+const auth = useAuthStore()
 const projectsStore = useProjectsStore()
 const route = useRoute()
 const router = useRouter()
@@ -317,6 +319,7 @@ async function confirmDelete() {
 }
 
 function openSaveModel(document: DocumentSummary) {
+  if (!auth.can('knowledge.save_document_model')) return
   saveModelDocument.value = document
   saveModelForm.title = document.title
   saveModelForm.description = `Modelo criado a partir do documento ${document.title}.`
@@ -327,6 +330,7 @@ function openSaveModel(document: DocumentSummary) {
 }
 
 async function submitSaveModel() {
+  if (!auth.can('knowledge.save_document_model')) return
   if (!saveModelDocument.value || !saveModelForm.title.trim()) return
   const tags = saveModelForm.tags.split(',').map((tag) => tag.trim()).filter(Boolean)
   const officialVersion = saveModelDocument.value.officialVersion
@@ -480,6 +484,7 @@ async function submitSaveModel() {
       :page-size="documentsStore.pageSize"
       :total="documentsStore.total"
       :users="documentsStore.reviewers"
+      :can-save-model="auth.can('knowledge.save_document_model')"
       @update:page="documentsStore.loadDocuments"
       @upload="openUploadForm"
       @edit="openEditForm"

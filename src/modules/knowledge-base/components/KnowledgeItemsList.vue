@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useAuthStore } from '@/modules/auth/stores/auth.store'
 import KnowledgeItemCard from './KnowledgeItemCard.vue'
 import { useKnowledgeItemsStore } from '@/modules/knowledge-base/stores/knowledge-items.store'
 import {
@@ -11,6 +12,7 @@ import {
 } from '@/modules/knowledge-base/types/knowledge.types'
 
 const store = useKnowledgeItemsStore()
+const auth = useAuthStore()
 const { items, total, page, pageSize, filters, isLoading, error } = storeToRefs(store)
 
 const typeOptions = Object.entries(knowledgeTypeLabels)
@@ -90,7 +92,13 @@ function updateStatus(value: KnowledgeItemStatus | null) {
         @update:model-value="applyFilters"
       />
       <v-btn color="teal" variant="flat" prepend-icon="$search" @click="applyFilters">Buscar</v-btn>
-      <v-btn to="/knowledge-base?new=1" color="teal" variant="tonal" prepend-icon="$success">
+      <v-btn
+        v-if="auth.can('knowledge.create')"
+        to="/knowledge-base?new=1"
+        color="teal"
+        variant="tonal"
+        prepend-icon="$success"
+      >
         Novo item
       </v-btn>
     </div>
