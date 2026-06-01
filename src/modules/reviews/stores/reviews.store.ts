@@ -183,6 +183,30 @@ export const useReviewsStore = defineStore('reviews', () => {
     }
   }
 
+  async function registerLessonLearned(
+    reviewId: string,
+    payload: {
+      title: string
+      context: string
+      identifiedProblem: string
+      impact?: string
+      recommendation: string
+      tags?: string[]
+      riskObservation?: string
+    },
+  ) {
+    isSaving.value = true
+    error.value = null
+    try {
+      return await apiClient.reviews.registerLessonLearned(reviewId, payload)
+    } catch (errorValue) {
+      error.value = getApiErrorMessage(errorValue, 'Nao foi possivel registrar a licao aprendida.')
+      return null
+    } finally {
+      isSaving.value = false
+    }
+  }
+
   return {
     reviews,
     selectedReview,
@@ -207,6 +231,7 @@ export const useReviewsStore = defineStore('reviews', () => {
     addComment,
     approveReview,
     rejectReview,
+    registerLessonLearned,
   }
 })
 

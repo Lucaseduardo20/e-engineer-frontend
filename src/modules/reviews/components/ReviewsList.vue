@@ -26,6 +26,7 @@ const emit = defineEmits<{
   open: [review: ReviewSummary]
   approve: [review: ReviewSummary]
   reject: [review: ReviewSummary]
+  lesson: [review: ReviewSummary]
 }>()
 </script>
 
@@ -62,6 +63,7 @@ const emit = defineEmits<{
         @open="emit('open', $event)"
         @approve="emit('approve', $event)"
         @reject="emit('reject', $event)"
+        @lesson="emit('lesson', $event)"
       />
     </div>
 

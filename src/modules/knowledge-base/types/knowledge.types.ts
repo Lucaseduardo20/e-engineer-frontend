@@ -21,6 +21,8 @@ export interface KnowledgeItem {
   tags: string[]
   content?: Record<string, unknown> | null
   createdBy: string
+  creatorName?: string | null
+  relationsCount?: number
   updatedBy: string
   publishedAt?: number | null
   archivedAt?: number | null

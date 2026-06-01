@@ -64,6 +64,15 @@ export interface CreateReviewRequest {
 export interface DecideReviewRequest {
   comment?: string | null
 }
+export interface RegisterReviewLessonRequest {
+  title: string
+  context: string
+  identifiedProblem: string
+  impact?: string
+  recommendation: string
+  tags?: string[]
+  riskObservation?: string
+}
 
 export interface CreateReviewCommentRequest {
   body: string
@@ -529,6 +538,11 @@ export const apiClient = {
     comment(id: string, payload: CreateReviewCommentRequest) {
       return unwrap<ReviewComment>(httpClient.post(`/reviews/${id}/comments`, payload)).then(
         mapReviewComment,
+      )
+    },
+    registerLessonLearned(id: string, payload: RegisterReviewLessonRequest) {
+      return unwrap<KnowledgeItem>(httpClient.post(`/reviews/${id}/register-lesson-learned`, payload)).then(
+        mapKnowledgeItem,
       )
     },
   },

@@ -140,12 +140,22 @@ function updateStatus(value: KnowledgeItemStatus | null) {
 
 .knowledge-list__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
 }
 
 @media (max-width: 900px) {
   .knowledge-list__toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .knowledge-list__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .knowledge-list__grid {
     grid-template-columns: 1fr;
   }
 }

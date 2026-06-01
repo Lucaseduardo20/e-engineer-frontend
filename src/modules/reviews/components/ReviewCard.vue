@@ -16,6 +16,7 @@ const emit = defineEmits<{
   open: [review: ReviewSummary]
   approve: [review: ReviewSummary]
   reject: [review: ReviewSummary]
+  lesson: [review: ReviewSummary]
 }>()
 
 const canDecide = computed(
@@ -101,6 +102,16 @@ function userName(userId: string) {
         @click.stop="emit('open', review)"
       >
         Abrir
+      </v-btn>
+      <v-btn
+        v-if="review.status === 'rejected'"
+        size="small"
+        color="indigo"
+        variant="tonal"
+        prepend-icon="$edit"
+        @click.stop="emit('lesson', review)"
+      >
+        Registrar licao aprendida
       </v-btn>
       <v-btn
         v-if="canDecide"

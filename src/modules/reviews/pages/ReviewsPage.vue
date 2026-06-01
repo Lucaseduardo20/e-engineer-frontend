@@ -15,7 +15,19 @@ const isFormOpen = ref(false)
 const isFiltersOpen = ref(false)
 const isDetailOpen = ref(false)
 const pendingDecision = ref<{ review: ReviewSummary; decision: 'approve' | 'reject' } | null>(null)
+const lessonReview = ref<ReviewSummary | null>(null)
+const lessonSuccess = ref<string | null>(null)
+const createdLessonId = ref<string | null>(null)
 const decisionComment = ref('')
+const lessonForm = ref({
+  title: '',
+  context: '',
+  identifiedProblem: '',
+  impact: '',
+  recommendation: '',
+  riskObservation: '',
+  tags: '',
+})
 const selectedProjectId = ref<string | null>(null)
 const selectedDeliverableId = ref<string | null>(null)
 const selectedDocumentId = ref<string | null>(null)
@@ -161,6 +173,38 @@ async function confirmDecision() {
     }
   }
 }
+
+function openLessonForm(review: ReviewSummary) {
+  lessonReview.value = review
+  lessonForm.value = {
+    title: `Licao aprendida: revisao ${review.id.slice(0, 8)}`,
+    context: review.comment || `Revisao do projeto ${review.projectId.slice(0, 8)}.`,
+    identifiedProblem: review.decisionComment || '',
+    impact: '',
+    recommendation: '',
+    riskObservation: '',
+    tags: '',
+  }
+}
+
+async function submitLesson() {
+  if (!lessonReview.value) return
+  const tags = lessonForm.value.tags.split(',').map((tag) => tag.trim()).filter(Boolean)
+  const created = await reviewsStore.registerLessonLearned(lessonReview.value.id, {
+    title: lessonForm.value.title.trim(),
+    context: lessonForm.value.context.trim(),
+    identifiedProblem: lessonForm.value.identifiedProblem.trim(),
+    impact: lessonForm.value.impact.trim() || undefined,
+    recommendation: lessonForm.value.recommendation.trim(),
+    riskObservation: lessonForm.value.riskObservation.trim() || undefined,
+    tags,
+  })
+  if (created) {
+    createdLessonId.value = created.id
+    lessonSuccess.value = 'Licao aprendida registrada na Base de Conhecimento.'
+    lessonReview.value = null
+  }
+}
 </script>
 
 <template>
@@ -178,6 +222,12 @@ async function confirmDecision() {
 
     <v-alert v-if="reviewsStore.error" type="error" variant="tonal">
       {{ reviewsStore.error }}
+    </v-alert>
+    <v-alert v-if="lessonSuccess" type="success" variant="tonal">
+      {{ lessonSuccess }}
+      <v-btn v-if="createdLessonId" class="ml-2" variant="text" :to="`/knowledge-base/${createdLessonId}`">
+        Abrir licao aprendida
+      </v-btn>
     </v-alert>
 
     <v-sheet class="reviews-page__filter-shell" border rounded="lg">
@@ -270,6 +320,7 @@ async function confirmDecision() {
       @open="openReview"
       @approve="openDecision($event, 'approve')"
       @reject="openDecision($event, 'reject')"
+      @lesson="openLessonForm"
     />
 
     <ReviewDetailDialog
@@ -317,6 +368,39 @@ async function confirmDecision() {
           <v-btn variant="text" @click="pendingDecision = null">Cancelar</v-btn>
           <v-btn color="teal" :loading="reviewsStore.isSaving" @click="confirmDecision">
             Confirmar
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog :model-value="Boolean(lessonReview)" max-width="760" @update:model-value="lessonReview = null">
+      <v-card>
+        <v-card-title>Registrar licao aprendida</v-card-title>
+        <v-card-text>
+          <v-alert type="warning" variant="tonal" class="mb-3">
+            Esta revisao foi reprovada. Registre o aprendizado para evitar retrabalho.
+          </v-alert>
+          <v-text-field v-model="lessonForm.title" label="Titulo *" variant="outlined" />
+          <v-textarea v-model="lessonForm.context" label="Contexto *" rows="2" variant="outlined" />
+          <v-textarea v-model="lessonForm.identifiedProblem" label="Problema identificado *" rows="2" variant="outlined" />
+          <v-textarea v-model="lessonForm.impact" label="Impacto" rows="2" variant="outlined" />
+          <v-textarea v-model="lessonForm.recommendation" label="Recomendacao *" rows="2" variant="outlined" />
+          <v-textarea v-model="lessonForm.riskObservation" label="Quando observar esse risco novamente" rows="2" variant="outlined" />
+          <v-text-field v-model="lessonForm.tags" label="Tags (separadas por virgula)" variant="outlined" />
+          <v-alert type="info" variant="tonal" class="mt-2">
+            A licao sera criada como rascunho na Base de Conhecimento.
+          </v-alert>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="lessonReview = null">Cancelar</v-btn>
+          <v-btn
+            color="indigo"
+            :loading="reviewsStore.isSaving"
+            :disabled="!lessonForm.title.trim() || !lessonForm.context.trim() || !lessonForm.identifiedProblem.trim() || !lessonForm.recommendation.trim()"
+            @click="submitLesson"
+          >
+            Registrar licao
           </v-btn>
         </v-card-actions>
       </v-card>
