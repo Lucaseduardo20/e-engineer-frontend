@@ -2,7 +2,7 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { apiClient } from '@/shared/http/api-client'
 import { projectsService } from '@/modules/projects/services/projects.service'
-import type { Deliverable, Project } from '@/shared/types/api-contracts'
+import type { Deliverable, Project, ProjectKnowledgeItem } from '@/shared/types/api-contracts'
 import type { CreateProjectRequest } from '@/shared/http/api'
 import { getApiErrorMessage } from '@/shared/http/api-error'
 
@@ -15,6 +15,7 @@ export const useProjectsStore = defineStore('projects', () => {
   const projects = ref<Project[]>([])
   const selectedProject = ref<Project | null>(null)
   const deliverables = ref<Deliverable[]>([])
+  const projectKnowledge = ref<ProjectKnowledgeItem[]>([])
   const total = ref(0)
   const page = ref(1)
   const pageSize = ref(10)
@@ -62,12 +63,14 @@ export const useProjectsStore = defineStore('projects', () => {
     error.value = null
 
     try {
-      const [project, deliverablePage] = await Promise.all([
+      const [project, deliverablePage, knowledgeResponse] = await Promise.all([
         projectsService.getById(projectId),
         apiClient.deliverables.list({ projectId, page: 1, pageSize: 50 }),
+        apiClient.projects.listKnowledge(projectId),
       ])
       selectedProject.value = project
       deliverables.value = deliverablePage.items
+      projectKnowledge.value = knowledgeResponse.items
     } catch (loadError) {
       error.value = getApiErrorMessage(
         loadError,
@@ -91,6 +94,28 @@ export const useProjectsStore = defineStore('projects', () => {
       return null
     } finally {
       isLoading.value = false
+    }
+  }
+
+  async function linkKnowledgeItem(projectId: string, payload: { knowledgeItemId: string; relationType: string }) {
+    try {
+      await apiClient.projects.linkKnowledge(projectId, payload)
+      await loadProjectDetail(projectId)
+      return true
+    } catch (errorValue) {
+      error.value = getApiErrorMessage(errorValue, "Nao foi possivel atualizar o conhecimento aplicado ao projeto.")
+      return false
+    }
+  }
+
+  async function unlinkKnowledgeRelation(projectId: string, relationId: string) {
+    try {
+      await apiClient.projects.unlinkKnowledge(projectId, relationId)
+      await loadProjectDetail(projectId)
+      return true
+    } catch (errorValue) {
+      error.value = getApiErrorMessage(errorValue, "Nao foi possivel atualizar o conhecimento aplicado ao projeto.")
+      return false
     }
   }
 
@@ -124,6 +149,7 @@ export const useProjectsStore = defineStore('projects', () => {
     projects,
     selectedProject,
     deliverables,
+    projectKnowledge,
     total,
     page,
     pageSize,
@@ -134,6 +160,8 @@ export const useProjectsStore = defineStore('projects', () => {
     loadProjects,
     loadProjectDetail,
     createProject,
+    linkKnowledgeItem,
+    unlinkKnowledgeRelation,
     updateProjectStatus,
   }
 })

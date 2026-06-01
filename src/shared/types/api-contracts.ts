@@ -220,3 +220,23 @@ export type {
   PromoteProjectToKnowledgeDto,
   UpdateKnowledgeItemDto,
 } from '@/modules/knowledge-base/types/knowledge.types'
+
+
+export interface ProjectKnowledgeItem {
+  relationId: string
+  relationType: string
+  linkedAt: number
+  linkedBy: string
+  knowledgeItem: {
+    id: string
+    title: string
+    description?: string | null
+    type: string
+    status: string
+    tags: string[]
+    updatedAt: number
+    publishedAt?: number | null
+    archivedAt?: number | null
+    deprecatedAt?: number | null
+  }
+}

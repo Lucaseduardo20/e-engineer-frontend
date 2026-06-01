@@ -5,6 +5,7 @@ import TraceableLinkButton from '@/shared/components/TraceableLinkButton.vue'
 import { projectBadgeKind } from '@/shared/ui/status-badges'
 import DeliverablesBoard from './DeliverablesBoard.vue'
 import ReviewsPanel from '@/modules/reviews/components/ReviewsPanel.vue'
+import ProjectKnowledgeSection from './ProjectKnowledgeSection.vue'
 
 defineProps<{
   project: Project
@@ -50,6 +51,8 @@ function updateDeliverableStatus(deliverable: Deliverable, status: Deliverable['
         </div>
       </v-card-text>
     </v-card>
+
+    <ProjectKnowledgeSection :project-id="project.id" />
 
     <DeliverablesBoard :deliverables="deliverables" @update:status="updateDeliverableStatus" />
 

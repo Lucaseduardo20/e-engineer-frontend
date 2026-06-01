@@ -30,6 +30,7 @@ import type {
   ReviewStatus,
   User,
   UpdateKnowledgeItemDto,
+  ProjectKnowledgeItem,
 } from '@/shared/types/api-contracts'
 import type { AuthToken, LoginCredentials } from '@/modules/auth/types/auth.types'
 
@@ -272,6 +273,20 @@ function mapKnowledgeAttachment(attachment: KnowledgeAttachment): KnowledgeAttac
   }
 }
 
+function mapProjectKnowledgeItem(item: ProjectKnowledgeItem): ProjectKnowledgeItem {
+  return {
+    ...item,
+    linkedAt: toTimestamp(item.linkedAt) ?? Date.now(),
+    knowledgeItem: {
+      ...item.knowledgeItem,
+      updatedAt: toTimestamp(item.knowledgeItem.updatedAt) ?? Date.now(),
+      publishedAt: toTimestamp(item.knowledgeItem.publishedAt) ?? null,
+      archivedAt: toTimestamp(item.knowledgeItem.archivedAt) ?? null,
+      deprecatedAt: toTimestamp(item.knowledgeItem.deprecatedAt) ?? null,
+    },
+  }
+}
+
 function mapKnowledgeItemDetail(item: KnowledgeItemDetail): KnowledgeItemDetail {
   return {
     ...mapKnowledgeItem(item),
@@ -360,6 +375,20 @@ export const apiClient = {
       return mapProject(
         await unwrap<Project>(httpClient.patch(`/projects/${id}/status`, { status })),
       )
+    },
+    async listKnowledge(projectId: string) {
+      const response = await unwrap<{ items: ProjectKnowledgeItem[] }>(
+        httpClient.get(`/projects/${projectId}/knowledge`),
+      )
+      return {
+        items: response.items.map(mapProjectKnowledgeItem),
+      }
+    },
+    linkKnowledge(projectId: string, payload: { knowledgeItemId: string; relationType: string }) {
+      return unwrap(httpClient.post(`/projects/${projectId}/knowledge`, payload))
+    },
+    unlinkKnowledge(projectId: string, relationId: string) {
+      return unwrap<{ removed: true }>(httpClient.post(`/projects/${projectId}/knowledge/${relationId}/remove`))
     },
   },
   deliverables: {
