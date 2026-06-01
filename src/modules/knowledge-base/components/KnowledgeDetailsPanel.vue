@@ -8,10 +8,12 @@ import {
   knowledgeTypeLabels,
   type KnowledgeItemDetail,
 } from '@/modules/knowledge-base/types/knowledge.types'
+import type { AuditLogEntry } from '@/shared/types/api-contracts'
 
 const props = defineProps<{
   item: KnowledgeItemDetail | null
   loading?: boolean
+  activities?: AuditLogEntry[]
 }>()
 
 const typeGuidance = computed(() => {
@@ -62,6 +64,39 @@ function relationTo(targetType: string, targetId: string) {
   if (targetType === 'deliverable') return `/projects?deliverableId=${targetId}`
   if (targetType === 'review') return `/reviews/${targetId}`
   return null
+}
+function toEntity(type: string, id: string | null | undefined) {
+  if (!id) return null
+  if (type === 'project') return `/projects/${id}`
+  if (type === 'document') return `/documents?documentId=${id}`
+  if (type === 'document_version') return `/documents?documentVersionId=${id}`
+  if (type === 'review') return `/reviews/${id}`
+  if (type === 'deliverable') return `/projects?deliverableId=${id}`
+  return null
+}
+function linksFromMetadata(metadata: Record<string, unknown> | undefined) {
+  if (!metadata) return []
+  const pairs: Array<{ label: string; to: string }> = []
+  const map: Array<[string, string, string]> = [
+    ['sourceProjectId', 'project', 'Projeto origem'],
+    ['projectId', 'project', 'Projeto'],
+    ['sourceDocumentId', 'document', 'Documento origem'],
+    ['documentId', 'document', 'Documento'],
+    ['sourceDocumentVersionId', 'document_version', 'Versao origem'],
+    ['documentVersionId', 'document_version', 'Versao'],
+    ['sourceReviewId', 'review', 'Revisao origem'],
+    ['reviewId', 'review', 'Revisao'],
+    ['sourceDeliverableId', 'deliverable', 'Entregavel origem'],
+    ['deliverableId', 'deliverable', 'Entregavel'],
+  ]
+  for (const [key, type, label] of map) {
+    const value = metadata[key]
+    if (typeof value === 'string') {
+      const to = toEntity(type, value)
+      if (to) pairs.push({ label, to })
+    }
+  }
+  return pairs
 }
 </script>
 
@@ -155,12 +190,37 @@ function relationTo(targetType: string, targetId: string) {
 
         <v-sheet class="knowledge-detail__section mt-4">
           <h2>Historico</h2>
-          <p>Criado por {{ item.createdBy }}</p>
-          <p>Criado em {{ formatDateTime(item.createdAt) }}</p>
-          <p>Atualizado em {{ formatDateTime(item.updatedAt) }}</p>
-          <p v-if="item.publishedAt">Publicado em {{ formatDateTime(item.publishedAt) }}</p>
-          <p v-if="item.archivedAt">Arquivado em {{ formatDateTime(item.archivedAt) }}</p>
-          <p v-if="item.deprecatedAt">Marcado como obsoleto em {{ formatDateTime(item.deprecatedAt) }}</p>
+          <v-list v-if="activities?.length" density="compact">
+            <v-list-item v-for="entry in activities" :key="entry.id">
+              <v-list-item-title>{{ entry.description }}</v-list-item-title>
+              <v-list-item-subtitle>{{ entry.actorDisplayName || entry.actorName }} · {{ formatDateTime(entry.occurredAt) }}</v-list-item-subtitle>
+              <div class="knowledge-detail__activity-links">
+                <v-btn
+                  v-if="toEntity(entry.entityType, entry.entityId ?? null)"
+                  :to="toEntity(entry.entityType, entry.entityId ?? null)!"
+                  size="x-small"
+                  variant="text"
+                  color="teal"
+                >
+                  Abrir entidade
+                </v-btn>
+                <v-btn
+                  v-for="link in linksFromMetadata(entry.metadata)"
+                  :key="`${entry.id}-${link.label}-${link.to}`"
+                  :to="link.to"
+                  size="x-small"
+                  variant="text"
+                  color="teal"
+                >
+                  {{ link.label }}
+                </v-btn>
+              </div>
+            </v-list-item>
+          </v-list>
+          <template v-else>
+            <p class="muted">Nenhuma atividade registrada</p>
+            <p class="placeholder">As principais acoes deste item aparecerao aqui.</p>
+          </template>
         </v-sheet>
       </v-col>
     </v-row>
@@ -221,5 +281,11 @@ function relationTo(targetType: string, targetId: string) {
   width: 35%;
   color: #42524d;
   font-weight: 600;
+}
+
+.knowledge-detail__activity-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
 }
 </style>

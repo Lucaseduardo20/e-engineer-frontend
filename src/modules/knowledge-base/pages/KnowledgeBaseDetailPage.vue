@@ -5,6 +5,8 @@ import KnowledgeDetailsPanel from '@/modules/knowledge-base/components/Knowledge
 import KnowledgeItemForm from '@/modules/knowledge-base/components/KnowledgeItemForm.vue'
 import { useKnowledgeItemsStore } from '@/modules/knowledge-base/stores/knowledge-items.store'
 import type { CreateKnowledgeItemDto } from '@/modules/knowledge-base/types/knowledge.types'
+import { apiClient } from '@/shared/http/api-client'
+import type { AuditLogEntry } from '@/shared/types/api-contracts'
 
 const route = useRoute()
 const router = useRouter()
@@ -13,12 +15,23 @@ const showEdit = ref(false)
 const showConfirm = ref(false)
 const pendingAction = ref<'publish' | 'archive' | 'deprecate' | null>(null)
 const successMessage = ref('')
+const itemActivities = ref<AuditLogEntry[]>([])
 
 const itemId = computed(() => String(route.params.id))
 
 onMounted(() => {
   void store.getItemDetail(itemId.value)
+  void loadActivity()
 })
+async function loadActivity() {
+  const data = await apiClient.audit.list({
+    page: 1,
+    pageSize: 30,
+    entityType: 'knowledge_item',
+    entityId: itemId.value,
+  })
+  itemActivities.value = data.items
+}
 
 const isNotFound = computed(() => !store.isLoading && !store.selectedItem && !store.error)
 const isArchived = computed(() => store.selectedItem?.status === 'archived')
@@ -69,6 +82,7 @@ async function confirmAction() {
           ? 'Item arquivado com sucesso.'
           : 'Item marcado como obsoleto.'
   }
+  await loadActivity()
 
   showConfirm.value = false
   pendingAction.value = null
@@ -80,6 +94,7 @@ async function saveEdit(payload: CreateKnowledgeItemDto) {
   if (updated) {
     successMessage.value = 'Item de conhecimento atualizado com sucesso.'
     showEdit.value = false
+    await loadActivity()
   }
 }
 </script>
@@ -128,7 +143,7 @@ async function saveEdit(payload: CreateKnowledgeItemDto) {
 
       <v-alert v-if="isArchived" type="info" variant="tonal">Este item esta arquivado e nao pode ser editado.</v-alert>
 
-      <KnowledgeDetailsPanel :item="store.selectedItem" :loading="store.isLoading" />
+      <KnowledgeDetailsPanel :item="store.selectedItem" :loading="store.isLoading" :activities="itemActivities" />
 
       <v-dialog v-model="showEdit" max-width="760">
         <v-card>

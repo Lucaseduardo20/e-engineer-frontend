@@ -614,7 +614,7 @@ export const apiClient = {
     },
   },
   audit: {
-    async list(params: PageParams = {}) {
+    async list(params: PageParams & { entityType?: string; entityId?: string } = {}) {
       const response = await unwrap<Paginated<AuditLogEntry>>(httpClient.get('/audit', { params }))
       return mapPaginated(response, mapAuditLogEntry)
     },
