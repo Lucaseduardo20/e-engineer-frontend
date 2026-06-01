@@ -136,6 +136,16 @@ const router = createRouter({
       },
     },
     {
+      path: '/technical-tags',
+      name: 'technical-tags',
+      component: () => import('@/modules/technical-tags/pages/TechnicalTagsPage.vue'),
+      meta: {
+        title: 'Taxonomia Tecnica',
+        requiresAuth: true,
+        requiredPermissions: [permissions.knowledge.read],
+      },
+    },
+    {
       path: '/organizations',
       name: 'organizations',
       component: () => import('@/modules/organizations/pages/OrganizationsPage.vue'),

@@ -31,6 +31,9 @@ import type {
   User,
   UpdateKnowledgeItemDto,
   ProjectKnowledgeItem,
+  TechnicalTag,
+  TechnicalTagCategory,
+  TechnicalTagStatus,
 } from '@/shared/types/api-contracts'
 import type { AuthToken, LoginCredentials } from '@/modules/auth/types/auth.types'
 
@@ -148,6 +151,19 @@ export interface UploadDocumentVersionRequest {
   isOfficial?: boolean
   status?: DocumentStatus
   notes?: string | null
+}
+
+export interface CreateTechnicalTagRequest {
+  name: string
+  category: TechnicalTagCategory
+  description?: string
+}
+
+export interface UpdateTechnicalTagRequest {
+  name?: string
+  category?: TechnicalTagCategory
+  description?: string
+  status?: TechnicalTagStatus
 }
 
 async function unwrap<T>(request: Promise<{ data: ApiResponse<T> }>): Promise<T> {
@@ -309,6 +325,16 @@ function mapKnowledgeItemDetail(item: KnowledgeItemDetail): KnowledgeItemDetail 
     ...mapKnowledgeItem(item),
     relations: item.relations?.map(mapKnowledgeRelation) ?? [],
     attachments: item.attachments?.map(mapKnowledgeAttachment) ?? [],
+  }
+}
+
+function mapTechnicalTag(item: TechnicalTag): TechnicalTag {
+  return {
+    ...item,
+    createdAt: toTimestamp(item.createdAt) ?? Date.now(),
+    updatedAt: toTimestamp(item.updatedAt) ?? Date.now(),
+    archivedAt: toTimestamp(item.archivedAt) ?? null,
+    deprecatedAt: toTimestamp(item.deprecatedAt) ?? null,
   }
 }
 
@@ -611,6 +637,35 @@ export const apiClient = {
       return unwrap<KnowledgeItem>(
         httpClient.post(`/projects/${projectId}/promote-to-knowledge`, payload),
       ).then(mapKnowledgeItem)
+    },
+  },
+  technicalTags: {
+    async list(
+      params: PageParams & {
+        search?: string
+        category?: TechnicalTagCategory
+        status?: TechnicalTagStatus
+        includeArchived?: boolean
+        limit?: number
+      } = {},
+    ) {
+      const response = await unwrap<Paginated<TechnicalTag>>(httpClient.get('/technical-tags', { params }))
+      return mapPaginated(response, mapTechnicalTag)
+    },
+    get(id: string) {
+      return unwrap<TechnicalTag>(httpClient.get(`/technical-tags/${id}`)).then(mapTechnicalTag)
+    },
+    create(payload: CreateTechnicalTagRequest) {
+      return unwrap<TechnicalTag>(httpClient.post('/technical-tags', payload)).then(mapTechnicalTag)
+    },
+    update(id: string, payload: UpdateTechnicalTagRequest) {
+      return unwrap<TechnicalTag>(httpClient.patch(`/technical-tags/${id}`, payload)).then(mapTechnicalTag)
+    },
+    archive(id: string) {
+      return unwrap<TechnicalTag>(httpClient.post(`/technical-tags/${id}/archive`)).then(mapTechnicalTag)
+    },
+    deprecate(id: string) {
+      return unwrap<TechnicalTag>(httpClient.post(`/technical-tags/${id}/deprecate`)).then(mapTechnicalTag)
     },
   },
   audit: {

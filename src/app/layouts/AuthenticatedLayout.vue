@@ -34,6 +34,12 @@ const navigationItems: NavigationItem[] = [
     permission: permissions.knowledge.read,
   },
   {
+    label: 'Taxonomia Tecnica',
+    path: '/technical-tags',
+    icon: '$edit',
+    permission: permissions.knowledge.read,
+  },
+  {
     label: 'Organizacao',
     path: '/organizations',
     icon: '$success',

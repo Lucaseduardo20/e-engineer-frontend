@@ -243,3 +243,30 @@ export interface ProjectKnowledgeItem {
     deprecatedAt?: number | null
   }
 }
+
+export type TechnicalTagCategory =
+  | 'project_type'
+  | 'technical_discipline'
+  | 'document_type'
+  | 'operational_pain'
+  | 'client_context'
+  | 'project_stage'
+  | 'knowledge_purpose'
+
+export type TechnicalTagStatus = 'active' | 'pending_review' | 'deprecated' | 'archived'
+
+export interface TechnicalTag {
+  id: string
+  organizationId: string
+  name: string
+  slug: string
+  category: TechnicalTagCategory
+  description?: string | null
+  status: TechnicalTagStatus
+  createdBy: string
+  updatedBy?: string | null
+  createdAt: number
+  updatedAt: number
+  archivedAt?: number | null
+  deprecatedAt?: number | null
+}
