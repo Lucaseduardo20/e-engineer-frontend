@@ -10,9 +10,20 @@ const projectsStore = useProjectsStore()
 const knowledgeStore = useKnowledgeItemsStore()
 
 const isLinkOpen = ref(false)
+const isPromoteOpen = ref(false)
 const relationType = ref('reference_for')
 const selectedKnowledgeItemId = ref('')
 const confirmRemoveRelationId = ref<string | null>(null)
+const promoteForm = ref({
+  title: '',
+  description: '',
+  tags: '',
+  reason: '',
+  whenToUse: '',
+  warnings: '',
+})
+const isSavingPromotion = ref(false)
+const showPromoteSuccess = ref(false)
 
 const relationTypeOptions = [
   { value: 'reference_for', title: 'Referencia para' },
@@ -64,6 +75,42 @@ async function removeRelation() {
     confirmRemoveRelationId.value = null
   }
 }
+
+async function openPromoteDialog() {
+  const project = projectsStore.selectedProject
+  promoteForm.value.title = project?.name ?? ''
+  promoteForm.value.description = project?.name
+    ? `Referencia criada a partir do projeto ${project.name}.`
+    : ''
+  promoteForm.value.tags = ''
+  promoteForm.value.reason = ''
+  promoteForm.value.whenToUse = ''
+  promoteForm.value.warnings = ''
+  showPromoteSuccess.value = false
+  isPromoteOpen.value = true
+}
+
+async function promoteProject() {
+  if (!promoteForm.value.title.trim() || !promoteForm.value.reason.trim()) return
+  isSavingPromotion.value = true
+  const tags = promoteForm.value.tags
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+  const created = await projectsStore.promoteProjectToKnowledge(props.projectId, {
+    title: promoteForm.value.title.trim(),
+    description: promoteForm.value.description.trim() || undefined,
+    tags,
+    reason: promoteForm.value.reason.trim(),
+    whenToUse: promoteForm.value.whenToUse.trim() || undefined,
+    warnings: promoteForm.value.warnings.trim() || undefined,
+  })
+  isSavingPromotion.value = false
+  if (created) {
+    showPromoteSuccess.value = true
+    isPromoteOpen.value = false
+  }
+}
 </script>
 
 <template>
@@ -76,12 +123,16 @@ async function removeRelation() {
         </small>
       </div>
       <v-btn color="teal" variant="tonal" @click="openLinkDialog">Vincular conhecimento</v-btn>
+      <v-btn color="indigo" variant="flat" @click="openPromoteDialog">Promover como referencia</v-btn>
     </v-card-title>
 
     <v-card-text>
       <v-empty-state v-if="!projectsStore.projectKnowledge.length"
         headline="Nenhum conhecimento aplicado a este projeto"
         text="Vincule padroes, referencias, documentos modelo ou licoes aprendidas para orientar a execucao tecnica e reduzir retrabalho." />
+      <v-alert v-if="showPromoteSuccess" type="success" variant="tonal" class="mb-4">
+        Projeto promovido para a Base de Conhecimento.
+      </v-alert>
 
       <v-list v-else lines="three">
         <v-list-item v-for="entry in projectsStore.projectKnowledge" :key="entry.relationId"
@@ -135,7 +186,41 @@ async function removeRelation() {
     </v-card>
   </v-dialog>
 
-  <v-dialog v-model="confirmRemoveRelationId" max-width="520">
+  <v-dialog v-model="isPromoteOpen" max-width="760">
+    <v-card>
+      <v-card-title>Promover projeto como referencia</v-card-title>
+      <v-card-text>
+        <v-text-field v-model="promoteForm.title" label="Titulo da referencia *" variant="outlined" />
+        <v-textarea v-model="promoteForm.description" label="Descricao" variant="outlined" rows="2" />
+        <v-text-field v-model="promoteForm.tags" label="Tags (separadas por virgula)" variant="outlined" />
+        <v-textarea v-model="promoteForm.reason" label="Motivo da promocao *" variant="outlined" rows="3" />
+        <v-textarea v-model="promoteForm.whenToUse" label="Quando usar esta referencia" variant="outlined" rows="2" />
+        <v-textarea v-model="promoteForm.warnings" label="Alertas e observacoes" variant="outlined" rows="2" />
+        <v-alert type="info" variant="tonal" class="mt-2">
+          O item sera criado como rascunho na Base de Conhecimento.
+        </v-alert>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn variant="text" @click="isPromoteOpen = false">Cancelar</v-btn>
+        <v-btn
+          color="indigo"
+          variant="flat"
+          :loading="isSavingPromotion"
+          :disabled="!promoteForm.title.trim() || !promoteForm.reason.trim()"
+          @click="promoteProject"
+        >
+          Criar referencia
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <v-dialog
+    :model-value="Boolean(confirmRemoveRelationId)"
+    @update:model-value="(open) => { if (!open) confirmRemoveRelationId = null }"
+    max-width="520"
+  >
     <v-card>
       <v-card-title>Remover conhecimento do projeto?</v-card-title>
       <v-card-text>

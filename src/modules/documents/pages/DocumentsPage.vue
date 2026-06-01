@@ -22,6 +22,10 @@ const editingDocument = ref<DocumentSummary | null>(null)
 const versionDocument = ref<DocumentSummary | null>(null)
 const reviewerDocument = ref<DocumentSummary | null>(null)
 const pendingDelete = ref<DocumentSummary | null>(null)
+const saveModelDocument = ref<DocumentSummary | null>(null)
+const saveModelSuccess = ref<string | null>(null)
+const saveModelWarning = ref<string | null>(null)
+const createdKnowledgeId = ref<string | null>(null)
 const historyDocument = ref<DocumentSummary | null>(null)
 const selectedProjectId = ref<string | null>(null)
 const selectedStatus = ref<DocumentStatus | null>(null)
@@ -36,6 +40,13 @@ const versionForm = reactive({
 const reviewerForm = reactive({
   reviewerId: null as string | null,
   comment: '',
+})
+const saveModelForm = reactive({
+  title: '',
+  description: '',
+  tags: '',
+  whenToUse: '',
+  notes: '',
 })
 
 const statusOptions: Array<{ title: string; value: DocumentStatus }> = [
@@ -304,6 +315,45 @@ async function confirmDelete() {
     pendingDelete.value = null
   }
 }
+
+function openSaveModel(document: DocumentSummary) {
+  saveModelDocument.value = document
+  saveModelForm.title = document.title
+  saveModelForm.description = `Modelo criado a partir do documento ${document.title}.`
+  saveModelForm.tags = ''
+  saveModelForm.whenToUse = ''
+  saveModelForm.notes = ''
+  saveModelWarning.value = null
+}
+
+async function submitSaveModel() {
+  if (!saveModelDocument.value || !saveModelForm.title.trim()) return
+  const tags = saveModelForm.tags.split(',').map((tag) => tag.trim()).filter(Boolean)
+  const officialVersion = saveModelDocument.value.officialVersion
+  const result = officialVersion
+    ? await apiClient.documents.saveVersionAsModel(saveModelDocument.value.id, officialVersion.id, {
+        title: saveModelForm.title.trim(),
+        description: saveModelForm.description.trim() || undefined,
+        tags,
+        whenToUse: saveModelForm.whenToUse.trim() || undefined,
+        notes: saveModelForm.notes.trim() || undefined,
+        allowNonOfficial: true,
+      })
+    : await documentsStore.saveAsKnowledgeModel(saveModelDocument.value.id, {
+    title: saveModelForm.title.trim(),
+    description: saveModelForm.description.trim() || undefined,
+    tags,
+    whenToUse: saveModelForm.whenToUse.trim() || undefined,
+    notes: saveModelForm.notes.trim() || undefined,
+    allowNonOfficial: true,
+  })
+  if (result) {
+    createdKnowledgeId.value = result.item.id
+    saveModelWarning.value = result.warning ?? null
+    saveModelSuccess.value = 'Documento salvo como modelo na Base de Conhecimento.'
+    saveModelDocument.value = null
+  }
+}
 </script>
 
 <template>
@@ -342,6 +392,19 @@ async function confirmDelete() {
 
     <v-alert v-if="documentsStore.error" type="error" variant="tonal">
       {{ documentsStore.error }}
+    </v-alert>
+    <v-alert v-if="saveModelSuccess" type="success" variant="tonal" class="mb-4">
+      {{ saveModelSuccess }}
+      <v-btn
+        v-if="createdKnowledgeId"
+        class="ml-3"
+        size="small"
+        color="success"
+        variant="text"
+        :to="`/knowledge-base/${createdKnowledgeId}`"
+      >
+        Abrir modelo criado
+      </v-btn>
     </v-alert>
 
     <v-sheet class="documents-page__filter-shell" border rounded="lg">
@@ -423,6 +486,7 @@ async function confirmDelete() {
       @assign="openReviewerForm"
       @history="openDocumentHistory"
       @delete="pendingDelete = $event"
+      @save-model="openSaveModel"
     />
 
     <v-dialog v-model="isFormOpen" max-width="760">
@@ -632,6 +696,36 @@ async function confirmDelete() {
           <v-btn variant="text" @click="pendingDelete = null">Cancelar</v-btn>
           <v-btn color="red" :loading="documentsStore.isSaving" @click="confirmDelete">
             Excluir
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog
+      :model-value="Boolean(saveModelDocument)"
+      max-width="760"
+      @update:model-value="saveModelDocument = null"
+    >
+      <v-card>
+        <v-card-title>Salvar documento como modelo</v-card-title>
+        <v-card-text>
+          <p class="text-body-2 text-medium-emphasis mb-3">Transforme este documento em um modelo reutilizavel para novos projetos da organizacao.</p>
+          <v-alert v-if="saveModelDocument && saveModelDocument.status !== 'approved'" type="warning" variant="tonal" class="mb-3">
+            Este documento ainda nao esta marcado como oficial. Voce pode salva-lo como modelo, mas revise seu conteudo antes de reutilizar.
+          </v-alert>
+          <v-text-field v-model="saveModelForm.title" label="Titulo *" variant="outlined" />
+          <v-textarea v-model="saveModelForm.description" label="Descricao" variant="outlined" rows="2" />
+          <v-text-field v-model="saveModelForm.tags" label="Tags (separadas por virgula)" variant="outlined" />
+          <v-textarea v-model="saveModelForm.whenToUse" label="Quando usar" variant="outlined" rows="2" />
+          <v-textarea v-model="saveModelForm.notes" label="Observacoes e cuidados" variant="outlined" rows="2" />
+          <v-alert type="info" variant="tonal" class="mt-2">O item sera criado como rascunho na Base de Conhecimento.</v-alert>
+          <v-alert v-if="saveModelWarning" type="warning" variant="tonal" class="mt-2">{{ saveModelWarning }}</v-alert>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="saveModelDocument = null">Cancelar</v-btn>
+          <v-btn color="indigo" variant="flat" :disabled="!saveModelForm.title.trim()" :loading="documentsStore.isSaving" @click="submitSaveModel">
+            Salvar como modelo
           </v-btn>
         </v-card-actions>
       </v-card>

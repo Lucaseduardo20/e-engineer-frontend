@@ -124,6 +124,14 @@ export interface UpdateDocumentRequest {
   type?: DocumentType
   status?: DocumentStatus
 }
+export interface SaveDocumentAsModelRequest {
+  title: string
+  description?: string | null
+  tags?: string[]
+  whenToUse?: string
+  notes?: string
+  allowNonOfficial?: boolean
+}
 
 export interface UploadDocumentVersionRequest {
   file: File
@@ -471,6 +479,16 @@ export const apiClient = {
           headers: { 'Content-Type': 'multipart/form-data' },
         }),
       ).then(mapDocumentDetail)
+    },
+    saveAsModel(id: string, payload: SaveDocumentAsModelRequest) {
+      return unwrap<{ item: KnowledgeItem; warning?: string }>(
+        httpClient.post(`/documents/${id}/save-as-model`, payload),
+      ).then((response) => ({ ...response, item: mapKnowledgeItem(response.item) }))
+    },
+    saveVersionAsModel(documentId: string, versionId: string, payload: SaveDocumentAsModelRequest) {
+      return unwrap<{ item: KnowledgeItem; warning?: string }>(
+        httpClient.post(`/documents/${documentId}/versions/${versionId}/save-as-model`, payload),
+      ).then((response) => ({ ...response, item: mapKnowledgeItem(response.item) }))
     },
   },
   reviews: {

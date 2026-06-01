@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { apiClient } from '@/shared/http/api-client'
 import { projectsService } from '@/modules/projects/services/projects.service'
 import type { Deliverable, Project, ProjectKnowledgeItem } from '@/shared/types/api-contracts'
+import type { PromoteProjectToKnowledgeDto } from '@/modules/knowledge-base/types/knowledge.types'
 import type { CreateProjectRequest } from '@/shared/http/api'
 import { getApiErrorMessage } from '@/shared/http/api-error'
 
@@ -145,6 +146,20 @@ export const useProjectsStore = defineStore('projects', () => {
     }
   }
 
+  async function promoteProjectToKnowledge(projectId: string, payload: PromoteProjectToKnowledgeDto) {
+    try {
+      const created = await apiClient.knowledgeBase.promoteProject(projectId, payload)
+      await loadProjectDetail(projectId)
+      return created
+    } catch (errorValue) {
+      error.value = getApiErrorMessage(
+        errorValue,
+        'Nao foi possivel promover o projeto para a Base de Conhecimento.',
+      )
+      return null
+    }
+  }
+
   return {
     projects,
     selectedProject,
@@ -163,5 +178,6 @@ export const useProjectsStore = defineStore('projects', () => {
     linkKnowledgeItem,
     unlinkKnowledgeRelation,
     updateProjectStatus,
+    promoteProjectToKnowledge,
   }
 })

@@ -76,9 +76,9 @@ export interface PromoteProjectToKnowledgeDto {
   title: string
   description?: string | null
   tags?: string[]
-  selectedDeliverableIds?: string[]
-  lessonsLearned?: string[]
-  warnings?: string[]
+  reason: string
+  whenToUse?: string
+  warnings?: string
 }
 
 export const knowledgeTypeLabels: Record<KnowledgeItemType, string> = {

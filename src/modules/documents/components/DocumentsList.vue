@@ -27,6 +27,7 @@ const emit = defineEmits<{
   assign: [document: DocumentSummary]
   history: [document: DocumentSummary]
   delete: [document: DocumentSummary]
+  'save-model': [document: DocumentSummary]
 }>()
 </script>
 
@@ -64,6 +65,7 @@ const emit = defineEmits<{
         @assign="emit('assign', $event)"
         @history="emit('history', $event)"
         @delete="emit('delete', $event)"
+        @save-model="emit('save-model', $event)"
       />
     </div>
 

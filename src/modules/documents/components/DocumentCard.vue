@@ -17,7 +17,29 @@ const emit = defineEmits<{
   assign: [document: DocumentSummary]
   history: [document: DocumentSummary]
   delete: [document: DocumentSummary]
+  'save-model': [document: DocumentSummary]
 }>()
+const actions = [
+  { key: 'download', label: 'Baixar', icon: '$file' },
+  { key: 'upload', label: 'Nova versao', icon: '$upload' },
+  { key: 'save-model', label: 'Salvar como modelo', icon: '$file' },
+  { key: 'history', label: 'Historico', icon: '$calendar' },
+  { key: 'edit', label: 'Editar', icon: '$edit' },
+  { key: 'assign', label: 'Revisores', icon: '$success' },
+  { key: 'delete', label: 'Excluir', icon: '$delete' },
+]
+function runAction(key: string) {
+  if (key === 'download') {
+    if (downloadUrl.value) globalThis.open(downloadUrl.value, '_blank')
+    return
+  }
+  if (key === 'upload') return emit('upload', props.document)
+  if (key === 'save-model') return emit('save-model', props.document)
+  if (key === 'history') return emit('history', props.document)
+  if (key === 'edit') return emit('edit', props.document)
+  if (key === 'assign') return emit('assign', props.document)
+  return emit('delete', props.document)
+}
 
 const documentTypeLabels: Record<string, string> = {
   memorial_descritivo: 'Memorial descritivo',
@@ -93,46 +115,21 @@ function userName(userId?: string | null) {
     </div>
 
     <div class="document-card__actions">
-      <v-btn
-        size="small"
-        color="teal"
-        variant="flat"
-        prepend-icon="$file"
-        :href="downloadUrl"
-        target="_blank"
-        rel="noopener"
-        :disabled="!downloadUrl"
-      >
-        Baixar
-      </v-btn>
-      <v-btn
-        size="small"
-        color="teal"
-        variant="tonal"
-        prepend-icon="$upload"
-        @click="emit('upload', document)"
-      >
-        Nova versao
-      </v-btn>
-      <v-btn size="small" variant="text" prepend-icon="$edit" @click="emit('edit', document)">
-        Editar
-      </v-btn>
-      <v-btn size="small" variant="text" prepend-icon="$success" @click="emit('assign', document)">
-        Revisores
-      </v-btn>
-      <v-btn size="small" variant="text" prepend-icon="$file" @click="emit('history', document)">
-        Historico
-      </v-btn>
       <TraceableLinkButton :path="`/documents?documentId=${document.id}`" label="Link" />
-      <v-btn
-        size="small"
-        color="red"
-        variant="text"
-        prepend-icon="$delete"
-        @click="emit('delete', document)"
-      >
-        Excluir
-      </v-btn>
+      <v-menu location="bottom end">
+        <template #activator="{ props: menuProps }">
+          <v-btn v-bind="menuProps" size="small" color="teal" variant="tonal" prepend-icon="$edit">Acoes</v-btn>
+        </template>
+        <v-list min-width="240" class="document-card__menu">
+          <v-list-item
+            v-for="item in actions"
+            :key="item.key"
+            :prepend-icon="item.icon"
+            :title="item.label"
+            @click="runAction(item.key)"
+          />
+        </v-list>
+      </v-menu>
     </div>
   </v-card>
 </template>

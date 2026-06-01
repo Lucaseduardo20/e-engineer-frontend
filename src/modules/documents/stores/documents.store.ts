@@ -184,6 +184,32 @@ export const useDocumentsStore = defineStore('documents', () => {
     }
   }
 
+  async function saveAsKnowledgeModel(
+    documentId: string,
+    payload: {
+      title: string
+      description?: string | null
+      tags?: string[]
+      whenToUse?: string
+      notes?: string
+      allowNonOfficial?: boolean
+    },
+  ) {
+    isSaving.value = true
+    error.value = null
+    try {
+      return await apiClient.documents.saveAsModel(documentId, payload)
+    } catch (saveError) {
+      error.value = getApiErrorMessage(
+        saveError,
+        'Nao foi possivel salvar o documento como modelo na Base de Conhecimento.',
+      )
+      return null
+    } finally {
+      isSaving.value = false
+    }
+  }
+
   return {
     documents,
     selectedDocument,
@@ -207,6 +233,7 @@ export const useDocumentsStore = defineStore('documents', () => {
     updateDocument,
     uploadVersion,
     deleteDocument,
+    saveAsKnowledgeModel,
   }
 })
 
