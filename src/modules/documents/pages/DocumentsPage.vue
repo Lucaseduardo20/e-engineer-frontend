@@ -11,6 +11,7 @@ import { apiClient } from '@/shared/http/api-client'
 import { getApiErrorMessage } from '@/shared/http/api-error'
 import { formatDateTime } from '@/shared/formatters/date.formatter'
 import type { DocumentStatus, DocumentSummary, DocumentType } from '@/shared/types/api-contracts'
+import TechnicalTagSelector from '@/modules/technical-taxonomy/components/TechnicalTagSelector.vue'
 
 const documentsStore = useDocumentsStore()
 const auth = useAuthStore()
@@ -47,6 +48,7 @@ const saveModelForm = reactive({
   title: '',
   description: '',
   tags: '',
+  tagIds: [] as string[],
   whenToUse: '',
   notes: '',
 })
@@ -324,6 +326,7 @@ function openSaveModel(document: DocumentSummary) {
   saveModelForm.title = document.title
   saveModelForm.description = `Modelo criado a partir do documento ${document.title}.`
   saveModelForm.tags = ''
+  saveModelForm.tagIds = []
   saveModelForm.whenToUse = ''
   saveModelForm.notes = ''
   saveModelWarning.value = null
@@ -332,13 +335,12 @@ function openSaveModel(document: DocumentSummary) {
 async function submitSaveModel() {
   if (!auth.can('knowledge.save_document_model')) return
   if (!saveModelDocument.value || !saveModelForm.title.trim()) return
-  const tags = saveModelForm.tags.split(',').map((tag) => tag.trim()).filter(Boolean)
   const officialVersion = saveModelDocument.value.officialVersion
   const result = officialVersion
     ? await apiClient.documents.saveVersionAsModel(saveModelDocument.value.id, officialVersion.id, {
         title: saveModelForm.title.trim(),
         description: saveModelForm.description.trim() || undefined,
-        tags,
+        tagIds: saveModelForm.tagIds,
         whenToUse: saveModelForm.whenToUse.trim() || undefined,
         notes: saveModelForm.notes.trim() || undefined,
         allowNonOfficial: true,
@@ -346,7 +348,7 @@ async function submitSaveModel() {
     : await documentsStore.saveAsKnowledgeModel(saveModelDocument.value.id, {
     title: saveModelForm.title.trim(),
     description: saveModelForm.description.trim() || undefined,
-    tags,
+    tagIds: saveModelForm.tagIds,
     whenToUse: saveModelForm.whenToUse.trim() || undefined,
     notes: saveModelForm.notes.trim() || undefined,
     allowNonOfficial: true,
@@ -720,7 +722,7 @@ async function submitSaveModel() {
           </v-alert>
           <v-text-field v-model="saveModelForm.title" label="Titulo *" variant="outlined" />
           <v-textarea v-model="saveModelForm.description" label="Descricao" variant="outlined" rows="2" />
-          <v-text-field v-model="saveModelForm.tags" label="Tags (separadas por virgula)" variant="outlined" />
+          <TechnicalTagSelector v-model="saveModelForm.tagIds" :allow-create="true" :categories="['document_type','technical_discipline','project_type','knowledge_purpose','client_context']" />
           <v-textarea v-model="saveModelForm.whenToUse" label="Quando usar" variant="outlined" rows="2" />
           <v-textarea v-model="saveModelForm.notes" label="Observacoes e cuidados" variant="outlined" rows="2" />
           <v-alert type="info" variant="tonal" class="mt-2">O item sera criado como rascunho na Base de Conhecimento.</v-alert>

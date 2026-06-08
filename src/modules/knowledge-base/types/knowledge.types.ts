@@ -88,6 +88,7 @@ export interface PromoteProjectToKnowledgeDto {
   title: string
   description?: string | null
   tags?: string[]
+  tagIds?: string[]
   reason: string
   whenToUse?: string
   warnings?: string

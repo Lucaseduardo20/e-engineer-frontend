@@ -190,6 +190,7 @@ export const useDocumentsStore = defineStore('documents', () => {
       title: string
       description?: string | null
       tags?: string[]
+      tagIds?: string[]
       whenToUse?: string
       notes?: string
       allowNonOfficial?: boolean

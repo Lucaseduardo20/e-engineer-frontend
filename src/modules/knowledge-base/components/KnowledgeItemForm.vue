@@ -7,6 +7,7 @@ import {
   type KnowledgeItem,
   type KnowledgeItemType,
 } from '@/modules/knowledge-base/types/knowledge.types'
+import TechnicalTagSelector from '@/modules/technical-taxonomy/components/TechnicalTagSelector.vue'
 
 const props = defineProps<{
   modelValue?: KnowledgeItem | null
@@ -38,7 +39,7 @@ const schema = z.object({
   summary: z.string().optional(),
   whenToUse: z.string().optional(),
   notes: z.string().optional(),
-  tagsText: z.string().optional(),
+  tagIds: z.array(z.string()).optional(),
 })
 
 const form = reactive({
@@ -48,7 +49,7 @@ const form = reactive({
   summary: '',
   whenToUse: '',
   notes: '',
-  tagsText: '',
+  tagIds: [] as string[],
 })
 
 const validationError = reactive({ message: '' })
@@ -72,7 +73,7 @@ watch(
     form.title = item?.title ?? ''
     form.description = item?.description ?? ''
     form.type = item?.type ?? 'technical_standard'
-    form.tagsText = item?.tags.map((tag) => (typeof tag === 'string' ? tag : tag.name)).join(', ') ?? ''
+    form.tagIds = item?.tags.filter((tag) => typeof tag !== 'string').map((tag) => tag.id) ?? []
 
     const summary = item?.content?.summary
     const sections = Array.isArray(item?.content?.sections)
@@ -104,13 +105,9 @@ function submit() {
     title: form.title,
     description: form.description || null,
     type: form.type,
-    tags: normalizeTags(form.tagsText),
+    tagIds: form.tagIds,
     content: buildContent(),
   })
-}
-
-function normalizeTags(value: string): string[] {
-  return [...new Set(value.split(',').map((tag) => tag.trim().toLowerCase()).filter(Boolean))]
 }
 
 function buildContent(): Record<string, unknown> {
@@ -157,7 +154,7 @@ function buildContent(): Record<string, unknown> {
     <v-textarea v-model="form.summary" label="Conteudo principal / resumo" variant="outlined" rows="3" />
     <v-textarea v-model="form.whenToUse" label="Quando usar (opcional)" variant="outlined" rows="2" />
     <v-textarea v-model="form.notes" label="Cuidados e observacoes (opcional)" variant="outlined" rows="2" />
-    <v-text-field v-model="form.tagsText" label="Tags (separadas por virgula)" hint="Exemplo: reforma-escolar, memorial, prefeitura-sp" persistent-hint variant="outlined" />
+    <TechnicalTagSelector v-model="form.tagIds" :allow-create="true" />
 
     <div class="knowledge-form__actions">
       <v-btn variant="text" @click="emit('cancel')">Cancelar</v-btn>

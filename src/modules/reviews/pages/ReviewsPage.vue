@@ -7,6 +7,7 @@ import ReviewForm from '@/modules/reviews/components/ReviewForm.vue'
 import ReviewsList from '@/modules/reviews/components/ReviewsList.vue'
 import { useReviewsStore } from '@/modules/reviews/stores/reviews.store'
 import BasePageHeader from '@/shared/components/BasePageHeader.vue'
+import TechnicalTagSelector from '@/modules/technical-taxonomy/components/TechnicalTagSelector.vue'
 import type { ReviewStatus, ReviewSummary } from '@/shared/types/api-contracts'
 
 const reviewsStore = useReviewsStore()
@@ -29,6 +30,7 @@ const lessonForm = ref({
   recommendation: '',
   riskObservation: '',
   tags: '',
+  tagIds: [] as string[],
 })
 const selectedProjectId = ref<string | null>(null)
 const selectedDeliverableId = ref<string | null>(null)
@@ -186,13 +188,13 @@ function openLessonForm(review: ReviewSummary) {
     recommendation: '',
     riskObservation: '',
     tags: '',
+    tagIds: [],
   }
 }
 
 async function submitLesson() {
   if (!auth.can('knowledge.register_lesson')) return
   if (!lessonReview.value) return
-  const tags = lessonForm.value.tags.split(',').map((tag) => tag.trim()).filter(Boolean)
   const created = await reviewsStore.registerLessonLearned(lessonReview.value.id, {
     title: lessonForm.value.title.trim(),
     context: lessonForm.value.context.trim(),
@@ -200,7 +202,7 @@ async function submitLesson() {
     impact: lessonForm.value.impact.trim() || undefined,
     recommendation: lessonForm.value.recommendation.trim(),
     riskObservation: lessonForm.value.riskObservation.trim() || undefined,
-    tags,
+    tagIds: lessonForm.value.tagIds,
   })
   if (created) {
     createdLessonId.value = created.id
@@ -390,7 +392,7 @@ async function submitLesson() {
           <v-textarea v-model="lessonForm.impact" label="Impacto" rows="2" variant="outlined" />
           <v-textarea v-model="lessonForm.recommendation" label="Recomendacao *" rows="2" variant="outlined" />
           <v-textarea v-model="lessonForm.riskObservation" label="Quando observar esse risco novamente" rows="2" variant="outlined" />
-          <v-text-field v-model="lessonForm.tags" label="Tags (separadas por virgula)" variant="outlined" />
+          <TechnicalTagSelector v-model="lessonForm.tagIds" :allow-create="true" :categories="['operational_pain','technical_discipline','project_type','document_type','knowledge_purpose']" />
           <v-alert type="info" variant="tonal" class="mt-2">
             A licao sera criada como rascunho na Base de Conhecimento.
           </v-alert>

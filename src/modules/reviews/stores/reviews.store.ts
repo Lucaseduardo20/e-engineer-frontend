@@ -192,6 +192,7 @@ export const useReviewsStore = defineStore('reviews', () => {
       impact?: string
       recommendation: string
       tags?: string[]
+      tagIds?: string[]
       riskObservation?: string
     },
   ) {

@@ -74,6 +74,7 @@ export interface RegisterReviewLessonRequest {
   impact?: string
   recommendation: string
   tags?: string[]
+  tagIds?: string[]
   riskObservation?: string
 }
 
@@ -140,6 +141,7 @@ export interface SaveDocumentAsModelRequest {
   title: string
   description?: string | null
   tags?: string[]
+  tagIds?: string[]
   whenToUse?: string
   notes?: string
   allowNonOfficial?: boolean

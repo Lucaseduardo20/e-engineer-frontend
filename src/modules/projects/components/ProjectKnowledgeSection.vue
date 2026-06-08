@@ -4,6 +4,7 @@ import { useAuthStore } from '@/modules/auth/stores/auth.store'
 import { useProjectsStore } from '@/modules/projects/stores/projects.store'
 import { useKnowledgeItemsStore } from '@/modules/knowledge-base/stores/knowledge-items.store'
 import { knowledgeTypeLabels, knowledgeStatusLabels } from '@/modules/knowledge-base/types/knowledge.types'
+import TechnicalTagSelector from '@/modules/technical-taxonomy/components/TechnicalTagSelector.vue'
 
 const props = defineProps<{ projectId: string }>()
 
@@ -20,6 +21,7 @@ const promoteForm = ref({
   title: '',
   description: '',
   tags: '',
+  tagIds: [] as string[],
   reason: '',
   whenToUse: '',
   warnings: '',
@@ -85,6 +87,7 @@ async function openPromoteDialog() {
     ? `Referencia criada a partir do projeto ${project.name}.`
     : ''
   promoteForm.value.tags = ''
+  promoteForm.value.tagIds = []
   promoteForm.value.reason = ''
   promoteForm.value.whenToUse = ''
   promoteForm.value.warnings = ''
@@ -95,14 +98,10 @@ async function openPromoteDialog() {
 async function promoteProject() {
   if (!promoteForm.value.title.trim() || !promoteForm.value.reason.trim()) return
   isSavingPromotion.value = true
-  const tags = promoteForm.value.tags
-    .split(',')
-    .map((tag) => tag.trim())
-    .filter(Boolean)
   const created = await projectsStore.promoteProjectToKnowledge(props.projectId, {
     title: promoteForm.value.title.trim(),
     description: promoteForm.value.description.trim() || undefined,
-    tags,
+    tagIds: promoteForm.value.tagIds,
     reason: promoteForm.value.reason.trim(),
     whenToUse: promoteForm.value.whenToUse.trim() || undefined,
     warnings: promoteForm.value.warnings.trim() || undefined,
@@ -199,7 +198,7 @@ async function promoteProject() {
       <v-card-text>
         <v-text-field v-model="promoteForm.title" label="Titulo da referencia *" variant="outlined" />
         <v-textarea v-model="promoteForm.description" label="Descricao" variant="outlined" rows="2" />
-        <v-text-field v-model="promoteForm.tags" label="Tags (separadas por virgula)" variant="outlined" />
+        <TechnicalTagSelector v-model="promoteForm.tagIds" :allow-create="true" :categories="['project_type','technical_discipline','client_context','knowledge_purpose','operational_pain']" />
         <v-textarea v-model="promoteForm.reason" label="Motivo da promocao *" variant="outlined" rows="3" />
         <v-textarea v-model="promoteForm.whenToUse" label="Quando usar esta referencia" variant="outlined" rows="2" />
         <v-textarea v-model="promoteForm.warnings" label="Alertas e observacoes" variant="outlined" rows="2" />
