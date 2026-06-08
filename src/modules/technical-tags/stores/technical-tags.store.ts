@@ -12,6 +12,12 @@ export const useTechnicalTagsStore = defineStore('technicalTags', () => {
   const isLoading = ref(false)
   const isSaving = ref(false)
   const error = ref<string | null>(null)
+  const currentFilters = ref<{
+    search?: string
+    category?: TechnicalTagCategory
+    status?: TechnicalTagStatus
+    includeArchived?: boolean
+  }>({})
 
   const hasItems = computed(() => items.value.length > 0)
 
@@ -27,6 +33,12 @@ export const useTechnicalTagsStore = defineStore('technicalTags', () => {
     error.value = null
     page.value = params.page ?? page.value
     pageSize.value = params.pageSize ?? pageSize.value
+    currentFilters.value = {
+      search: params.search,
+      category: params.category,
+      status: params.status,
+      includeArchived: params.includeArchived,
+    }
     try {
       const response = await apiClient.technicalTags.list({
         page: page.value,
@@ -52,7 +64,7 @@ export const useTechnicalTagsStore = defineStore('technicalTags', () => {
     error.value = null
     try {
       const created = await apiClient.technicalTags.create(payload)
-      await load({ page: 1 })
+      await load({ ...currentFilters.value, page: 1 })
       return created
     } catch (saveError) {
       error.value = getApiErrorMessage(saveError, 'Nao foi possivel criar a tag tecnica.')
@@ -67,7 +79,7 @@ export const useTechnicalTagsStore = defineStore('technicalTags', () => {
     error.value = null
     try {
       const updated = await apiClient.technicalTags.update(id, payload)
-      await load({ page: page.value })
+      await load({ ...currentFilters.value, page: page.value })
       return updated
     } catch (saveError) {
       error.value = getApiErrorMessage(saveError, 'Nao foi possivel atualizar a tag tecnica.')
@@ -82,7 +94,7 @@ export const useTechnicalTagsStore = defineStore('technicalTags', () => {
     error.value = null
     try {
       const updated = await apiClient.technicalTags.archive(id)
-      await load({ page: page.value })
+      await load({ ...currentFilters.value, page: page.value })
       return updated
     } catch (saveError) {
       error.value = getApiErrorMessage(saveError, 'Nao foi possivel arquivar a tag tecnica.')
@@ -97,7 +109,7 @@ export const useTechnicalTagsStore = defineStore('technicalTags', () => {
     error.value = null
     try {
       const updated = await apiClient.technicalTags.deprecate(id)
-      await load({ page: page.value })
+      await load({ ...currentFilters.value, page: page.value })
       return updated
     } catch (saveError) {
       error.value = getApiErrorMessage(saveError, 'Nao foi possivel marcar a tag como obsoleta.')

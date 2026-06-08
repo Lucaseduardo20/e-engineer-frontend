@@ -259,6 +259,21 @@ nvm use 22
 - Decisao tomada: cards de revisao agora mostram o projeto como acao navegavel para `/projects/:projectId` e tambem expõem links discretos para copiar a URL da revisao e do projeto.
 - Alternativas consideradas: manter botoes textuais foi evitado porque competia visualmente com acoes primarias como abrir/aprovar/rejeitar.
 
+## 2026-06-08 - Tela administrativa de Tags
+
+### Implementado
+
+- Tarefa: finalizar a tela de taxonomia tecnica como gestao de Tags na organizacao.
+- Mudancas: `src/modules/technical-tags/pages/TechnicalTagsPage.vue`, `src/modules/technical-tags/stores/technical-tags.store.ts`, `src/shared/http/api-client.ts`, `src/shared/types/api-contracts.ts`, `src/router/index.ts`, `src/app/layouts/AuthenticatedLayout.vue`.
+- Decisao tomada: a rota existente `/technical-tags` foi preservada, mas a navegacao e a pagina passaram a usar o nome de produto "Tags".
+- Decisao tomada: `manager` representa o papel de coordenador no RBAC atual; usuarios sem `knowledge.update/archive/deprecate` veem a tela em modo somente leitura, sem acoes de gerenciamento.
+- Decisao tomada: arquivar e depreciar exigem confirmacao e continuam sem exclusao destrutiva.
+
+### Validacoes
+
+- `npm run type-check`: passou.
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run build`: passou.
+
 ### Validacoes
 
 - `npm run type-check`: passou com Node 22.13.1.

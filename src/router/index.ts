@@ -140,7 +140,7 @@ const router = createRouter({
       name: 'technical-tags',
       component: () => import('@/modules/technical-tags/pages/TechnicalTagsPage.vue'),
       meta: {
-        title: 'Taxonomia Tecnica',
+        title: 'Tags',
         requiresAuth: true,
         requiredPermissions: [permissions.knowledge.read],
       },

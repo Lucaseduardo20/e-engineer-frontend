@@ -263,6 +263,7 @@ export interface TechnicalTag {
   category: TechnicalTagCategory
   description?: string | null
   status: TechnicalTagStatus
+  usageCount: number
   createdBy: string
   updatedBy?: string | null
   createdAt: number

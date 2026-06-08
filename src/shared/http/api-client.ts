@@ -333,6 +333,7 @@ function mapKnowledgeItemDetail(item: KnowledgeItemDetail): KnowledgeItemDetail 
 function mapTechnicalTag(item: TechnicalTag): TechnicalTag {
   return {
     ...item,
+    usageCount: item.usageCount ?? 0,
     createdAt: toTimestamp(item.createdAt) ?? Date.now(),
     updatedAt: toTimestamp(item.updatedAt) ?? Date.now(),
     archivedAt: toTimestamp(item.archivedAt) ?? null,
