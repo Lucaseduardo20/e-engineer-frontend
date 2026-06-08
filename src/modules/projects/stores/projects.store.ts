@@ -2,7 +2,14 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { apiClient } from '@/shared/http/api-client'
 import { projectsService } from '@/modules/projects/services/projects.service'
-import type { Deliverable, Project, ProjectKnowledgeItem } from '@/shared/types/api-contracts'
+import type {
+  AuditLogEntry,
+  Deliverable,
+  DocumentSummary,
+  Project,
+  ProjectKnowledgeItem,
+  ReviewSummary,
+} from '@/shared/types/api-contracts'
 import type { PromoteProjectToKnowledgeDto } from '@/modules/knowledge-base/types/knowledge.types'
 import type { CreateProjectRequest } from '@/shared/http/api'
 import { getApiErrorMessage } from '@/shared/http/api-error'
@@ -16,6 +23,9 @@ export const useProjectsStore = defineStore('projects', () => {
   const projects = ref<Project[]>([])
   const selectedProject = ref<Project | null>(null)
   const deliverables = ref<Deliverable[]>([])
+  const documents = ref<DocumentSummary[]>([])
+  const reviews = ref<ReviewSummary[]>([])
+  const auditLogs = ref<AuditLogEntry[]>([])
   const projectKnowledge = ref<ProjectKnowledgeItem[]>([])
   const total = ref(0)
   const page = ref(1)
@@ -64,14 +74,20 @@ export const useProjectsStore = defineStore('projects', () => {
     error.value = null
 
     try {
-      const [project, deliverablePage, knowledgeResponse] = await Promise.all([
+      const [project, deliverablePage, documentPage, reviewPage, knowledgeResponse, auditPage] = await Promise.all([
         projectsService.getById(projectId),
         apiClient.deliverables.list({ projectId, page: 1, pageSize: 50 }),
+        apiClient.documents.list({ projectId, page: 1, pageSize: 50 }),
+        apiClient.reviews.list({ projectId, page: 1, pageSize: 50 }),
         apiClient.projects.listKnowledge(projectId),
+        apiClient.audit.list({ entityType: 'project', entityId: projectId, page: 1, pageSize: 20 }),
       ])
       selectedProject.value = project
       deliverables.value = deliverablePage.items
+      documents.value = documentPage.items
+      reviews.value = reviewPage.items
       projectKnowledge.value = knowledgeResponse.items
+      auditLogs.value = auditPage.items
     } catch (loadError) {
       error.value = getApiErrorMessage(
         loadError,
@@ -164,6 +180,9 @@ export const useProjectsStore = defineStore('projects', () => {
     projects,
     selectedProject,
     deliverables,
+    documents,
+    reviews,
+    auditLogs,
     projectKnowledge,
     total,
     page,

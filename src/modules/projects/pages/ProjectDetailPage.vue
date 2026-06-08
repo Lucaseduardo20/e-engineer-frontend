@@ -39,6 +39,10 @@ async function updateDeliverableStatus(deliverable: Deliverable, status: Deliver
       v-else-if="projectsStore.selectedProject"
       :project="projectsStore.selectedProject"
       :deliverables="projectsStore.deliverables"
+      :documents="projectsStore.documents"
+      :reviews="projectsStore.reviews"
+      :knowledge-items="projectsStore.projectKnowledge"
+      :audit-logs="projectsStore.auditLogs"
       @update:deliverable-status="updateDeliverableStatus"
     />
   </v-container>

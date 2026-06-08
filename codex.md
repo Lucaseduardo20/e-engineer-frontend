@@ -274,6 +274,22 @@ nvm use 22
 - `npm run type-check`: passou.
 - `source ~/.nvm/nvm.sh && nvm use 22 && npm run build`: passou.
 
+## 2026-06-08 - Cockpit tecnico do projeto
+
+### Implementado
+
+- Tarefa: redesenhar o detalhe do projeto como cockpit tecnico operacional.
+- Mudancas: `src/modules/projects/components/ProjectDetail.vue`, `src/modules/projects/pages/ProjectDetailPage.vue`, `src/modules/projects/stores/projects.store.ts`, `src/shared/types/api-contracts.ts`.
+- Decisao tomada: o cockpit usa composicao frontend sobre endpoints existentes, sem depender de `GET /projects/:projectId/technical-summary` neste MVP.
+- Decisao tomada: a pagina passa a carregar documentos, revisoes, conhecimento aplicado e historico junto do detalhe do projeto para calcular indicadores, recomendacoes, riscos e aprendizados.
+- Decisao tomada: as secoes pedidas foram organizadas como header executivo, indicadores rapidos, resumo operacional, entregaveis, documentos, revisoes, conhecimento aplicado, recomendacoes, riscos/aprendizados e historico.
+
+### Validacoes
+
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run type-check`: passou.
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run test:unit -- --run src/modules/projects`: passou com 2 arquivos e 4 testes.
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run build`: passou.
+
 ### Validacoes
 
 - `npm run type-check`: passou com Node 22.13.1.
