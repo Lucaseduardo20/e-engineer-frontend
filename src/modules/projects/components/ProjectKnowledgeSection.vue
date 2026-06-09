@@ -3,7 +3,9 @@ import { computed, ref } from 'vue'
 import { useAuthStore } from '@/modules/auth/stores/auth.store'
 import { useProjectsStore } from '@/modules/projects/stores/projects.store'
 import { useKnowledgeItemsStore } from '@/modules/knowledge-base/stores/knowledge-items.store'
+import { apiClient } from '@/shared/http/api-client'
 import type { Deliverable } from '@/shared/types/api-contracts'
+import type { TechnicalTag } from '@/shared/types/api-contracts'
 import {
   knowledgeStatusLabels,
   knowledgeTypeLabels,
@@ -28,6 +30,8 @@ const selectedKnowledgeItemId = ref('')
 const targetScope = ref<'project' | 'deliverable'>('project')
 const selectedDeliverableId = ref('')
 const confirmRemoveRelationId = ref<string | null>(null)
+const suggestedTechnicalTags = ref<TechnicalTag[]>([])
+const isLoadingSuggestedTags = ref(false)
 const promoteForm = ref({
   title: '',
   description: '',
@@ -47,6 +51,24 @@ const relationTypeOptions = [
   { value: 'standard_for', title: 'Padrao tecnico recomendado' },
   { value: 'checklist_for', title: 'Checklist de revisao' },
 ]
+const deliverableTypeLabels: Record<string, string> = {
+  technical_survey: 'levantamento tecnico',
+  architectural_project: 'projeto arquitetonico',
+  structural_project: 'projeto estrutural',
+  electrical_project: 'projeto eletrico',
+  hydraulic_project: 'projeto hidraulico',
+  drainage_project: 'drenagem',
+  paving_project: 'pavimentacao',
+  landscaping_project: 'paisagismo',
+  lighting_project: 'iluminacao',
+  descriptive_memorial: 'memorial descritivo',
+  budget: 'orcamento',
+  schedule: 'cronograma',
+  art_rrt: 'art rrt',
+  photographic_report: 'relatorio fotografico',
+  technical_report: 'relatorio tecnico',
+  other: 'entregavel tecnico',
+}
 
 const appliedKnowledge = computed(() => projectsStore.projectKnowledge)
 const appliedCount = computed(() => appliedKnowledge.value.length)
@@ -123,6 +145,7 @@ const promoteSteps = [
 const canAdvancePromoteBase = computed(
   () => Boolean(promoteForm.value.title.trim()) && Boolean(promoteForm.value.reason.trim()),
 )
+const selectedSuggestedTagIds = computed(() => new Set(promoteForm.value.tagIds))
 
 async function openManagement(panel = 'overview') {
   isManagementOpen.value = true
@@ -137,6 +160,43 @@ async function showApplyPanel() {
   activePanel.value = 'apply'
   if (knowledgeStore.items.length === 0) {
     await knowledgeStore.listItems(1, 30)
+  }
+}
+
+async function loadSuggestedTechnicalTags() {
+  if (suggestedTechnicalTags.value.length || isLoadingSuggestedTags.value) return
+
+  isLoadingSuggestedTags.value = true
+
+  try {
+    const response = await apiClient.technicalTags.list({
+      status: 'active',
+      limit: 100,
+      page: 1,
+    })
+    const deliverableTerms = new Set(
+      props.deliverables.flatMap((deliverable) =>
+        normalizeTagText(
+          [
+            deliverable.title,
+            deliverable.description,
+            deliverable.type,
+            deliverable.type ? deliverableTypeLabels[deliverable.type] : '',
+          ].join(' '),
+        )
+          .split(' ')
+          .filter((term) => term.length > 3),
+      ),
+    )
+
+    suggestedTechnicalTags.value = response.items
+      .filter((tag) => {
+        const tagTerms = normalizeTagText(`${tag.name} ${tag.slug} ${tag.description ?? ''}`).split(' ')
+        return tagTerms.some((term) => deliverableTerms.has(term))
+      })
+      .slice(0, 8)
+  } finally {
+    isLoadingSuggestedTags.value = false
   }
 }
 
@@ -184,6 +244,7 @@ function openPromotePanel() {
   promoteStep.value = 1
   showPromoteSuccess.value = false
   activePanel.value = 'promote'
+  void loadSuggestedTechnicalTags()
 }
 
 async function promoteProject() {
@@ -216,6 +277,25 @@ function targetLabel(targetType: string, targetId: string) {
   }
 
   return 'Projeto inteiro'
+}
+
+function toggleSuggestedTag(tagId: string) {
+  const selected = new Set(promoteForm.value.tagIds)
+
+  if (selected.has(tagId)) {
+    selected.delete(tagId)
+  } else {
+    selected.add(tagId)
+  }
+
+  promoteForm.value.tagIds = [...selected]
+}
+
+function normalizeTagText(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
 }
 
 function goToPromoteStep(step: number) {
@@ -543,6 +623,36 @@ function goToPromoteStep(step: number) {
                       Tags conectam essa referencia a disciplinas, dores operacionais, contexto do
                       cliente e futuras recomendacoes do cockpit.
                     </span>
+                  </v-sheet>
+
+                  <v-sheet border rounded="lg" class="project-knowledge-modal__tag-suggestions">
+                    <div>
+                      <strong>Tags sugeridas pelos entregáveis</strong>
+                      <span>
+                        A plataforma usa os tipos de entregáveis como pista para formar linhas de raciocínio e recomendação.
+                      </span>
+                    </div>
+                    <div class="project-knowledge-modal__suggested-tags">
+                      <v-chip
+                        v-for="tag in suggestedTechnicalTags"
+                        :key="tag.id"
+                        :color="selectedSuggestedTagIds.has(tag.id) ? 'teal' : 'blue-grey'"
+                        :variant="selectedSuggestedTagIds.has(tag.id) ? 'flat' : 'tonal'"
+                        size="small"
+                        @click="toggleSuggestedTag(tag.id)"
+                      >
+                        {{ tag.name }}
+                      </v-chip>
+                      <v-chip v-if="isLoadingSuggestedTags" color="teal" variant="tonal" size="small">
+                        Buscando sugestões...
+                      </v-chip>
+                      <span
+                        v-if="!isLoadingSuggestedTags && suggestedTechnicalTags.length === 0"
+                        class="project-knowledge-modal__muted"
+                      >
+                        Nenhuma tag existente combinou com os entregáveis. Crie ou selecione tags abaixo.
+                      </span>
+                    </div>
                   </v-sheet>
 
                   <TechnicalTagSelector
@@ -1097,6 +1207,37 @@ function goToPromoteStep(step: number) {
 
 .project-knowledge-modal__value-strip span {
   color: #60716b;
+}
+
+.project-knowledge-modal__tag-suggestions {
+  display: grid;
+  gap: 0.75rem;
+  border-color: #b9ddd2;
+  background:
+    linear-gradient(135deg, #f0fbf7, #ffffff 62%),
+    #ffffff;
+  padding: 0.9rem;
+}
+
+.project-knowledge-modal__tag-suggestions > div:first-child {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.project-knowledge-modal__tag-suggestions strong {
+  color: #143d33;
+}
+
+.project-knowledge-modal__tag-suggestions span,
+.project-knowledge-modal__muted {
+  color: #60716b;
+  font-size: 0.9rem;
+}
+
+.project-knowledge-modal__suggested-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
 }
 
 .project-knowledge-modal__actions {

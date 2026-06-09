@@ -39,6 +39,7 @@ describe('DeliverableForm', () => {
           VIcon: PassthroughStub,
           VSelect: PassthroughStub,
           VSpacer: PassthroughStub,
+          TechnicalTagSelector: PassthroughStub,
           VTextarea: {
             props: ['modelValue'],
             emits: ['update:modelValue'],
@@ -68,6 +69,8 @@ describe('DeliverableForm', () => {
         status: 'todo',
         type: 'technical_report',
         assignees: [],
+        tagIds: [],
+        knowledgeItemIds: [],
       },
     ])
   })

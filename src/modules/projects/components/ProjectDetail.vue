@@ -66,6 +66,15 @@ const nextDueDeliverable = computed(() =>
     .filter((deliverable) => Boolean(deliverable.dueDate))
     .sort((first, second) => (toTimestamp(first.dueDate) ?? 0) - (toTimestamp(second.dueDate) ?? 0))[0],
 )
+const featuredDeliverables = computed(() =>
+  [...props.deliverables]
+    .sort((first, second) => {
+      const firstRisk = overdueDeliverables.value.some((deliverable) => deliverable.id === first.id) ? -1 : 0
+      const secondRisk = overdueDeliverables.value.some((deliverable) => deliverable.id === second.id) ? -1 : 0
+      return firstRisk - secondRisk || (toTimestamp(first.dueDate) ?? Infinity) - (toTimestamp(second.dueDate) ?? Infinity)
+    })
+    .slice(0, 3),
+)
 const recommendationCount = computed(() => recommendations.value.length)
 const knowledgeValueLabel = computed(() =>
   props.knowledgeItems.length
@@ -333,9 +342,9 @@ function firstAssignee() {
           Abrir entregaveis
         </v-btn>
       </div>
-      <div v-if="deliverables.length" class="project-cockpit__deliverable-cards">
+      <div v-if="featuredDeliverables.length" class="project-cockpit__deliverable-cards">
         <ProjectDeliverableTechnicalCard
-          v-for="deliverable in deliverables"
+          v-for="deliverable in featuredDeliverables"
           :key="deliverable.id"
           :deliverable="deliverable"
           :documents="documents"
@@ -349,7 +358,16 @@ function firstAssignee() {
         headline="Sem entregaveis tecnicos"
         text="Cadastre entregaveis para transformar o projeto em um cockpit operacional rastreavel."
       />
-      <DeliverablesBoard :deliverables="deliverables" @update:status="updateDeliverableStatus" />
+      <v-expansion-panels v-if="deliverables.length" variant="accordion" class="project-cockpit__flow-panel">
+        <v-expansion-panel>
+          <v-expansion-panel-title>
+            Ver fluxo completo por status
+          </v-expansion-panel-title>
+          <v-expansion-panel-text>
+            <DeliverablesBoard :deliverables="deliverables" @update:status="updateDeliverableStatus" />
+          </v-expansion-panel-text>
+        </v-expansion-panel>
+      </v-expansion-panels>
     </section>
 
     <section class="project-cockpit__split">
@@ -766,8 +784,14 @@ function firstAssignee() {
 
 .project-cockpit__deliverable-cards {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
+}
+
+.project-cockpit__flow-panel {
+  border: 1px solid #d7e9e2;
+  border-radius: 1rem;
+  overflow: hidden;
 }
 
 .project-cockpit__knowledge-anchor {
@@ -811,6 +835,10 @@ function firstAssignee() {
 @media (max-width: 1280px) {
   .project-cockpit__metrics {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .project-cockpit__deliverable-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

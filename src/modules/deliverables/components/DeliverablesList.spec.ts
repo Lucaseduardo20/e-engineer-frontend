@@ -30,6 +30,7 @@ const DataTableStub = defineComponent({
         props.items.flatMap((item) => [
           slots['item.title']?.({ item }),
           slots['item.type']?.({ item }),
+          slots['item.intelligence']?.({ item }),
           slots['item.status']?.({ item }),
           slots['item.dueDate']?.({ item }),
           slots['item.actions']?.({ item }),
@@ -50,6 +51,16 @@ describe('DeliverablesList', () => {
         type: 'architectural_project',
         dueDate: 1781222400000,
         assignees: ['Lucas Eduardo'],
+        tags: [
+          {
+            id: 'tag-1',
+            name: 'Arquitetura',
+            slug: 'arquitetura',
+            category: 'technical_discipline',
+            status: 'active',
+          },
+        ],
+        tagIds: ['tag-1'],
       },
     ]
 
@@ -62,9 +73,12 @@ describe('DeliverablesList', () => {
           VCardTitle: PassthroughStub,
           VDataTable: DataTableStub,
           VIcon: PassthroughStub,
+          VSheet: PassthroughStub,
           VSelect: SelectStub,
           VChip: PassthroughStub,
+          VAlert: PassthroughStub,
           VExpandTransition: PassthroughStub,
+          VMenu: PassthroughStub,
           ExpandTransition: PassthroughStub,
           BasePagination: PassthroughStub,
           BaseStatusBadge: {
@@ -77,6 +91,8 @@ describe('DeliverablesList', () => {
     expect(wrapper.text()).toContain('Projeto arquitetonico')
     expect(wrapper.text()).toContain('Projeto arquitetonico')
     expect(wrapper.text()).toContain('Lucas Eduardo')
+    expect(wrapper.text()).toContain('Com tags')
+    expect(wrapper.text()).toContain('Arquitetura')
     expect(wrapper.text()).toContain('Em producao')
     expect(wrapper.text()).toContain('Editar')
   })

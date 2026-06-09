@@ -50,6 +50,7 @@ export type CreateDeliverableRequest = {
   status?: Deliverable['status']
   type: DeliverableType
   assignees?: string[]
+  tagIds?: string[]
 }
 
 export type UpdateDeliverableRequest = Partial<Omit<CreateDeliverableRequest, 'projectId'>>

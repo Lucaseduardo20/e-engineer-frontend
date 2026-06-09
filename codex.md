@@ -502,3 +502,50 @@ nvm use 22
 - `source ~/.nvm/nvm.sh && nvm use 22 && npm run test:unit -- --run src/modules/projects/components/ProjectDeliverableTechnicalCard.spec.ts`: passou com 1 arquivo e 1 teste.
 - `source ~/.nvm/nvm.sh && nvm use 22 && npm run type-check`: passou.
 - `source ~/.nvm/nvm.sh && nvm use 22 && npm run build`: passou.
+
+## 2026-06-09 - Refinamento UX de entregaveis e tags como inteligencia
+
+### Implementado
+
+- Tarefa: reduzir ruido nas listagens de entregaveis, mover gestao para modal e fortalecer tags tecnicas como motor de recomendacao.
+- Mudancas: `src/modules/deliverables/pages/DeliverablesPage.vue`, `src/modules/deliverables/components/DeliverablesList.vue`, `src/modules/deliverables/components/DeliverablesList.spec.ts`, `src/modules/projects/components/ProjectDetail.vue`, `src/modules/projects/components/ProjectKnowledgeSection.vue`.
+- Decisao tomada: rotas de criar/editar entregavel continuam existindo, mas agora abrem modal scrollavel e elegante, evitando tirar o usuario do contexto operacional.
+- Decisao tomada: a listagem oficial de entregaveis ganhou sinais compactos e removeu descricao longa da linha principal, priorizando status, prazo, responsavel e tipo.
+- Decisao tomada: no detalhe do projeto, apenas entregaveis prioritarios aparecem como cards ricos; o fluxo completo por status fica recolhido para evitar projeto visualmente gigante.
+- Decisao tomada: a etapa de tags na criacao de referencia sugere tags tecnicas existentes a partir dos tipos/titulos/descricoes dos entregaveis, reforcando tags como neuronios de recomendacao da plataforma.
+
+### Validacoes
+
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run type-check`: passou.
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run test:unit -- --run src/modules/deliverables src/modules/projects/components/ProjectDeliverableTechnicalCard.spec.ts`: passou com 4 arquivos e 6 testes.
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run build`: passou.
+
+## 2026-06-09 - Entregaveis com fluxo guiado, tags e knowledge
+
+### Implementado
+
+- Tarefa: refatorar criacao/edicao de entregaveis para fluxo por etapas com informacoes basicas e camada de inteligencia.
+- Mudancas: `src/modules/deliverables/components/DeliverableForm.vue`, `src/modules/deliverables/pages/DeliverablesPage.vue`, `src/modules/deliverables/components/DeliverableForm.spec.ts`, `src/shared/http/api-client.ts`, `src/shared/types/api-contracts.ts`.
+- Decisao tomada: o formulario de entregavel agora tem etapas `Base` e `Inteligencia`; a segunda concentra tags tecnicas e conhecimentos relacionados para criar rastreio e dados de recomendacao.
+- Decisao tomada: knowledge selecionado no form e sincronizado apos criar/editar usando a relacao existente `KnowledgeRelation` com `targetType = deliverable`.
+
+### Validacoes
+
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run test:unit -- --run src/modules/deliverables`: passou com 3 arquivos e 5 testes.
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run build`: passou.
+
+## 2026-06-09 - Inteligencia aplicada mais visivel em entregaveis
+
+### Implementado
+
+- Tarefa: deixar tags e inteligencia aplicada claramente visiveis na listagem e no modal de entregavel.
+- Mudancas: `src/modules/deliverables/components/DeliverablesList.vue`, `src/modules/deliverables/components/DeliverablesList.spec.ts`, `src/modules/deliverables/components/DeliverableForm.vue`.
+- Decisao tomada: a listagem oficial ganhou sinalizador de tags por entregavel com popup estetico, explicando que tags sustentam tracing, recomendacao e raciocinio tecnico.
+- Decisao tomada: a etapa `Inteligencia` do form ganhou bloco hero proprio e maior contraste visual, posicionando tags e conhecimentos como valor principal do entregavel.
+- Decisao tomada: campos do formulario receberam contraste melhorado via estilos scoped para reduzir aparencia apagada.
+
+### Validacoes
+
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run test:unit -- --run src/modules/deliverables`: passou com 3 arquivos e 5 testes.
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run type-check`: passou.
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run build`: passou.
