@@ -16,6 +16,7 @@ const props = withDefaults(defineProps<{
   readonly?: boolean
   allowCreate?: boolean
   maxTags?: number
+  maxListHeight?: number
 }>(), {
   label: 'Tags tecnicas',
   placeholder: 'Busque tags tecnicas...',
@@ -23,6 +24,7 @@ const props = withDefaults(defineProps<{
   allowedStatuses: () => ['active', 'pending_review', 'deprecated'],
   allowCreate: false,
   maxTags: 20,
+  maxListHeight: 320,
 })
 
 const emit = defineEmits<{ 'update:modelValue': [string[]]; created: [TechnicalTag] }>()
@@ -33,6 +35,10 @@ const selected = ref<TechnicalTag[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 const query = ref('')
+const page = ref(1)
+const pageSize = 50
+const total = ref(0)
+let searchTimeout: ReturnType<typeof setTimeout> | undefined
 const createDialog = ref(false)
 const createForm = ref<{ name: string; category: TechnicalTagCategory; description: string }>({
   name: '',
@@ -41,6 +47,8 @@ const createForm = ref<{ name: string; category: TechnicalTagCategory; descripti
 })
 
 const canCreate = computed(() => props.allowCreate && auth.can('knowledge.update'))
+const hasMore = computed(() => allTags.value.length < total.value)
+const listStyle = computed(() => ({ maxHeight: `${props.maxListHeight}px` }))
 
 const categoryOptions = Object.entries(TECHNICAL_TAG_CATEGORY_LABELS).map(([value, title]) => ({ value, title }))
 
@@ -68,12 +76,7 @@ const groupedTags = computed(() => {
 watch(
   () => props.modelValue,
   (ids) => {
-    if (!ids?.length) {
-      selected.value = []
-      return
-    }
-    const set = new Set(ids)
-    selected.value = allTags.value.filter((tag) => set.has(tag.id))
+    syncSelected(ids ?? [])
   },
   { immediate: true },
 )
@@ -81,26 +84,63 @@ watch(
 watch(
   allTags,
   () => {
-    if (!props.modelValue?.length) return
-    const set = new Set(props.modelValue)
-    selected.value = allTags.value.filter((tag) => set.has(tag.id))
+    syncSelected(props.modelValue ?? [])
   },
   { immediate: true },
 )
 
-void loadTags()
+watch(query, () => {
+  if (searchTimeout) {
+    clearTimeout(searchTimeout)
+  }
 
-async function loadTags() {
+  searchTimeout = setTimeout(() => {
+    void loadTags({ reset: true })
+  }, 250)
+})
+
+void loadTags({ reset: true })
+
+async function loadTags(options: { reset?: boolean } = {}) {
   loading.value = true
   error.value = null
+  if (options.reset) {
+    page.value = 1
+  }
+
   try {
-    const response = await apiClient.technicalTags.list({ includeArchived: false, limit: 100 })
-    allTags.value = response.items
+    const response = await apiClient.technicalTags.list({
+      includeArchived: false,
+      limit: pageSize,
+      page: page.value,
+      search: query.value.trim() || undefined,
+    })
+    total.value = response.total
+    allTags.value = options.reset ? response.items : [...allTags.value, ...response.items]
   } catch {
     error.value = 'Nao foi possivel carregar tags tecnicas.'
   } finally {
     loading.value = false
   }
+}
+
+function syncSelected(ids: string[]) {
+  if (!ids.length) {
+    selected.value = []
+    return
+  }
+
+  const current = new Map(selected.value.map((tag) => [tag.id, tag]))
+  const loaded = new Map(allTags.value.map((tag) => [tag.id, tag]))
+  selected.value = ids
+    .map((id) => loaded.get(id) ?? current.get(id))
+    .filter((tag): tag is TechnicalTag => Boolean(tag))
+}
+
+async function loadMore() {
+  if (!hasMore.value || loading.value) return
+  page.value += 1
+  await loadTags()
 }
 
 function isSelected(tagId: string) {
@@ -135,6 +175,7 @@ async function quickCreate() {
     description: createForm.value.description.trim() || undefined,
   })
   allTags.value = [created, ...allTags.value]
+  total.value += 1
   emit('created', created)
   toggleTag(created)
   createDialog.value = false
@@ -142,7 +183,7 @@ async function quickCreate() {
 </script>
 
 <template>
-  <div class="technical-tag-selector">
+  <div class="technical-tag-selector" :style="{ '--tag-selector-max-height': `${maxListHeight}px` }">
     <div class="technical-tag-selector__header">
       <strong>{{ label }}</strong>
       <small>{{ hint }}</small>
@@ -178,29 +219,55 @@ async function quickCreate() {
       </div>
     </div>
 
-    <div v-if="!loading && groupedTags.length" class="technical-tag-selector__groups">
-      <div v-for="[category, tags] in groupedTags" :key="category" class="technical-tag-selector__group">
-        <div class="technical-tag-selector__group-title">{{ TECHNICAL_TAG_CATEGORY_LABELS[category] }}</div>
-        <div class="technical-tag-selector__chips">
-          <v-chip
-            v-for="tag in tags"
-            :key="tag.id"
-            :color="isSelected(tag.id) ? 'teal' : statusColor(tag.status)"
-            :variant="isSelected(tag.id) ? 'flat' : 'tonal'"
-            @click="toggleTag(tag)"
-          >
-            {{ tag.name }}
-            <span v-if="tag.status !== 'active'" class="ml-1">({{ TECHNICAL_TAG_STATUS_LABELS[tag.status] }})</span>
-          </v-chip>
+    <div class="technical-tag-selector__available">
+      <div class="technical-tag-selector__available-head">
+        <span class="technical-tag-selector__section-label">Disponiveis</span>
+        <small>{{ visibleTags.length }} de {{ total }} tag(s)</small>
+      </div>
+
+      <div
+        v-if="!loading && groupedTags.length"
+        class="technical-tag-selector__viewport"
+        :style="listStyle"
+      >
+        <div class="technical-tag-selector__groups">
+          <div v-for="[category, tags] in groupedTags" :key="category" class="technical-tag-selector__group">
+            <div class="technical-tag-selector__group-title">{{ TECHNICAL_TAG_CATEGORY_LABELS[category] }}</div>
+            <div class="technical-tag-selector__chips">
+              <v-chip
+                v-for="tag in tags"
+                :key="tag.id"
+                :color="isSelected(tag.id) ? 'teal' : statusColor(tag.status)"
+                :variant="isSelected(tag.id) ? 'flat' : 'tonal'"
+                @click="toggleTag(tag)"
+              >
+                {{ tag.name }}
+                <span v-if="tag.status !== 'active'" class="ml-1">({{ TECHNICAL_TAG_STATUS_LABELS[tag.status] }})</span>
+              </v-chip>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <v-empty-state
-      v-else-if="!loading"
-      headline="Nenhuma tag encontrada"
-      text="Tente ajustar a busca ou criar uma nova tag tecnica."
-    />
+      <v-empty-state
+        v-else-if="!loading"
+        headline="Nenhuma tag encontrada"
+        text="Tente ajustar a busca ou criar uma nova tag tecnica."
+      />
+
+      <div class="technical-tag-selector__footer">
+        <v-btn
+          v-if="hasMore"
+          size="small"
+          variant="tonal"
+          color="teal"
+          :loading="loading"
+          @click="loadMore"
+        >
+          Carregar mais tags
+        </v-btn>
+      </div>
+    </div>
 
     <v-btn
       v-if="canCreate"
@@ -240,23 +307,44 @@ async function quickCreate() {
 </template>
 
 <style scoped>
+.technical-tag-selector {
+  display: grid;
+  gap: 0.75rem;
+  border: 1px solid #d7e9e2;
+  border-radius: 0.75rem;
+  background: #fbfffd;
+  padding: 0.85rem;
+}
+
 .technical-tag-selector__header {
   display: grid;
   gap: 0.2rem;
-  margin-bottom: 0.5rem;
+}
+
+.technical-tag-selector__header strong {
+  color: #14231f;
 }
 
 .technical-tag-selector__header small {
-  color: #667085;
+  color: #60716b;
 }
 
 .technical-tag-selector__section-label,
 .technical-tag-selector__group-title {
   display: block;
   margin: 0.35rem 0;
-  color: #344054;
+  color: #143d33;
   font-size: 0.8rem;
   font-weight: 700;
+}
+
+.technical-tag-selector__selected {
+  display: grid;
+  gap: 0.35rem;
+  border: 1px solid #cce5dd;
+  border-radius: 0.6rem;
+  background: #ffffff;
+  padding: 0.65rem;
 }
 
 .technical-tag-selector__chips {
@@ -265,7 +353,55 @@ async function quickCreate() {
   gap: 0.4rem;
 }
 
+.technical-tag-selector__available {
+  display: grid;
+  gap: 0.5rem;
+  min-height: 0;
+}
+
+.technical-tag-selector__available-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.technical-tag-selector__available-head small {
+  color: #60716b;
+}
+
+.technical-tag-selector__viewport {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid #d7e9e2;
+  border-radius: 0.6rem;
+  background: #ffffff;
+  padding: 0.75rem;
+  scrollbar-color: #8ccbbd #eef7f3;
+  scrollbar-width: thin;
+}
+
+.technical-tag-selector__viewport::-webkit-scrollbar {
+  width: 0.6rem;
+}
+
+.technical-tag-selector__viewport::-webkit-scrollbar-track {
+  background: #eef7f3;
+}
+
+.technical-tag-selector__viewport::-webkit-scrollbar-thumb {
+  border: 0.14rem solid #eef7f3;
+  border-radius: 999px;
+  background: #8ccbbd;
+}
+
 .technical-tag-selector__group + .technical-tag-selector__group {
   margin-top: 0.6rem;
+}
+
+.technical-tag-selector__footer {
+  display: flex;
+  justify-content: flex-end;
+  min-height: 2rem;
 }
 </style>

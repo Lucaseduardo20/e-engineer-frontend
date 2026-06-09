@@ -290,6 +290,96 @@ nvm use 22
 - `source ~/.nvm/nvm.sh && nvm use 22 && npm run test:unit -- --run src/modules/projects`: passou com 2 arquivos e 4 testes.
 - `source ~/.nvm/nvm.sh && nvm use 22 && npm run build`: passou.
 
+## 2026-06-08 - Experiencia de Knowledge do Projeto
+
+### Implementado
+
+- Tarefa: transformar conhecimento aplicado no projeto em uma experiencia visivel, orientada por valor e com gestao em modal.
+- Mudancas: `src/modules/projects/components/ProjectKnowledgeSection.vue`.
+- Decisao tomada: manter os endpoints atuais de conhecimento do projeto; a melhoria fica no fluxo frontend, usando vinculo, remocao e promocao ja existentes.
+- Decisao tomada: a tela principal mostra um resumo estrategico com valor percebido e um botao forte de gestao; a modal concentra panorama, aplicacao, criacao de referencia e gerenciamento de vinculos.
+
+### Validacoes
+
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run test:unit -- --run src/modules/projects`: passou com 2 arquivos e 4 testes.
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run type-check`: passou.
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run build`: passou.
+
+## 2026-06-08 - Refinamento visual e rolagem da modal de Knowledge
+
+### Implementado
+
+- Tarefa: melhorar a estilização da modal de Knowledge do projeto e corrigir a falta de rolagem quando o conteúdo ultrapassa o viewport.
+- Mudancas: `src/modules/projects/components/ProjectKnowledgeSection.vue`.
+- Decisao tomada: a modal passa a ter altura maxima controlada, cabecalho e abas fixos, corpo com scroll interno e barras de rolagem estilizadas.
+- Decisao tomada: a interface reforca a identidade visual da plataforma com verde escuro, teal, superficies claras e blocos de valor antes das acoes.
+
+### Validacoes
+
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run test:unit -- --run src/modules/projects`: passou com 2 arquivos e 4 testes.
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run type-check`: passou.
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run build`: passou.
+
+## 2026-06-08 - TechnicalTagSelector autossustentavel
+
+### Implementado
+
+- Tarefa: corrigir a UX ruim de tags dentro da modal de Knowledge e evitar dependencias de scroll externo.
+- Mudancas: `src/modules/technical-taxonomy/components/TechnicalTagSelector.vue`, `src/modules/projects/components/ProjectKnowledgeSection.vue`.
+- Decisao tomada: o seletor de tags passa a ter viewport propria com scroll interno, paginação por "Carregar mais tags", busca server-side e preservacao de selecoes durante buscas.
+- Decisao tomada: a aba de criar referencia limita a lista de tags internamente, evitando que o formulario estoure a modal.
+
+### Validacoes
+
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run test:unit -- --run src/modules/projects`: passou com 2 arquivos e 4 testes.
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run type-check`: passou.
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run build`: passou.
+
+## 2026-06-08 - Wizard de criacao de referencia Knowledge
+
+### Implementado
+
+- Tarefa: corrigir a experiencia espremida da aba "Criar referencia" na modal de Knowledge do projeto.
+- Mudancas: `src/modules/projects/components/ProjectKnowledgeSection.vue`.
+- Decisao tomada: a criacao de referencia passa a ser um fluxo em 3 passos: Base, Tags e Uso. A etapa de Tags ocupa largura total e tem viewport propria maior, evitando que a selecao fique impraticavel.
+- Decisao tomada: o usuario so avanca para Tags apos informar titulo e motivo, reduzindo ruido e deixando a organizacao por tags como um momento dedicado do fluxo.
+
+### Validacoes
+
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run test:unit -- --run src/modules/projects`: passou com 2 arquivos e 4 testes.
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run type-check`: passou.
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run build`: passou.
+
+## 2026-06-08 - Correcao de scroll da modal de Knowledge
+
+### Implementado
+
+- Tarefa: corrigir bug onde a modal de Knowledge cortava o conteudo da etapa "Criar referencia" sem permitir rolagem.
+- Mudancas: `src/modules/projects/components/ProjectKnowledgeSection.vue`.
+- Decisao tomada: o `content-class` global da dialog agora define altura baseada no viewport; o card ocupa 100% dessa altura em coluna e o `v-card-text` recebe `flex: 1` com `overflow-y: auto`.
+- Decisao tomada: o `v-window` tambem recebe `min-height: 0` para nao bloquear o scroll do corpo da modal.
+
+### Validacoes
+
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run test:unit -- --run src/modules/projects`: passou com 2 arquivos e 4 testes.
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run type-check`: passou.
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run build`: passou.
+
+## 2026-06-08 - Scroll interno forcado no card da modal de Knowledge
+
+### Implementado
+
+- Tarefa: corrigir definitivamente o corte de conteudo na modal de Knowledge quando a etapa "Criar referencia" ultrapassa a altura visivel.
+- Mudancas: `src/modules/projects/components/ProjectKnowledgeSection.vue`.
+- Decisao tomada: a altura da modal passa a ser definida diretamente no `v-card`, e o `v-card-text` vira o container rolavel com `flex: 1 1 0` e `overflow-y: scroll`, garantindo scroll interno da modal.
+- Decisao tomada: o `v-window` deixa de ser grid para nao interferir no calculo de overflow.
+
+### Validacoes
+
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run test:unit -- --run src/modules/projects`: passou com 2 arquivos e 4 testes.
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run type-check`: passou.
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run build`: passou.
+
 ### Validacoes
 
 - `npm run type-check`: passou com Node 22.13.1.
