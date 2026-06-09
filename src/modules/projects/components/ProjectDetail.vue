@@ -24,6 +24,7 @@ import {
 } from '@/shared/formatters/date.formatter'
 import DeliverablesBoard from './DeliverablesBoard.vue'
 import ProjectKnowledgeSection from './ProjectKnowledgeSection.vue'
+import ProjectDeliverableTechnicalCard from './ProjectDeliverableTechnicalCard.vue'
 
 const props = defineProps<{
   project: Project
@@ -66,6 +67,17 @@ const nextDueDeliverable = computed(() =>
     .sort((first, second) => (toTimestamp(first.dueDate) ?? 0) - (toTimestamp(second.dueDate) ?? 0))[0],
 )
 const recommendationCount = computed(() => recommendations.value.length)
+const knowledgeValueLabel = computed(() =>
+  props.knowledgeItems.length
+    ? `${props.knowledgeItems.length} referencia(s) reduzindo retrabalho`
+    : 'Nenhuma referencia aplicada ainda',
+)
+const deliverableFocusLabel = computed(() => {
+  if (overdueDeliverables.value.length) return `${overdueDeliverables.value.length} entrega(s) precisam de acao`
+  if (pendingReviews.value.length) return `${pendingReviews.value.length} revisao(oes) segurando fluxo`
+  if (activeDeliverables.value.length) return `${activeDeliverables.value.length} entrega(s) em producao`
+  return 'Fluxo tecnico estabilizado'
+})
 const riskItems = computed(() => {
   const items: Array<{
     title: string
@@ -146,12 +158,14 @@ const metrics = computed(() => [
     value: props.deliverables.length,
     detail: `${activeDeliverables.value.length} em aberto`,
     color: 'teal',
+    emphasis: true,
   },
   {
     label: 'Entregaveis atrasados',
     value: overdueDeliverables.value.length,
     detail: overdueDeliverables.value.length ? 'pedem atencao' : 'sem atraso',
-    color: overdueDeliverables.value.length ? 'error' : 'green',
+    color: overdueDeliverables.value.length ? 'red' : 'green',
+    emphasis: overdueDeliverables.value.length > 0,
   },
   {
     label: 'Documentos oficiais',
@@ -163,19 +177,22 @@ const metrics = computed(() => [
     label: 'Revisoes pendentes',
     value: pendingReviews.value.length,
     detail: `${props.reviews.length} revisao(oes) totais`,
-    color: pendingReviews.value.length ? 'warning' : 'green',
+    color: pendingReviews.value.length ? 'amber' : 'green',
+    emphasis: pendingReviews.value.length > 0,
   },
   {
     label: 'Revisoes reprovadas',
     value: rejectedReviews.value.length,
     detail: rejectedReviews.value.length ? 'geram aprendizado' : 'sem reprovacao',
-    color: rejectedReviews.value.length ? 'error' : 'green',
+    color: rejectedReviews.value.length ? 'red' : 'green',
+    emphasis: rejectedReviews.value.length > 0,
   },
   {
     label: 'Conhecimentos aplicados',
     value: props.knowledgeItems.length,
     detail: props.knowledgeItems.length ? 'referencias vinculadas' : 'nenhum vinculo',
-    color: 'indigo',
+    color: 'purple',
+    emphasis: true,
   },
   {
     label: 'Recomendacoes',
@@ -239,10 +256,40 @@ function firstAssignee() {
         border
         rounded="lg"
         class="project-cockpit__metric"
+        :class="{ 'project-cockpit__metric--emphasis': metric.emphasis }"
+        :data-color="metric.color"
       >
+        <i aria-hidden="true" />
         <span>{{ metric.label }}</span>
         <strong>{{ metric.value }}</strong>
         <small>{{ metric.detail }}</small>
+      </v-sheet>
+    </section>
+
+    <section class="project-cockpit__value-grid" aria-label="Foco de valor do projeto">
+      <v-sheet border rounded="xl" class="project-cockpit__value-card project-cockpit__value-card--knowledge">
+        <span>Base de conhecimento em destaque</span>
+        <h2>Use o que a equipe ja aprendeu para acelerar este projeto.</h2>
+        <p>{{ knowledgeValueLabel }}. Conhecimentos aplicados viram contexto, recomendacao e decisao mais segura para a engenharia.</p>
+        <div class="project-cockpit__value-actions">
+          <v-btn color="teal" variant="flat" prepend-icon="$command" href="#project-knowledge">
+            Gerenciar knowledge
+          </v-btn>
+          <v-btn to="/knowledge-base" color="teal" variant="tonal">
+            Abrir base
+          </v-btn>
+        </div>
+      </v-sheet>
+
+      <v-sheet border rounded="xl" class="project-cockpit__value-card project-cockpit__value-card--deliverables">
+        <span>Entregaveis como eixo operacional</span>
+        <h2>{{ deliverableFocusLabel }}</h2>
+        <p>Documentos, revisoes, prazos e responsaveis aparecem conectados para transformar cada entregavel em ponto claro de acao.</p>
+        <div class="project-cockpit__value-actions">
+          <v-btn :to="`/projects/${project.id}/deliverables`" color="indigo" variant="flat" prepend-icon="$calendar">
+            Operar entregaveis
+          </v-btn>
+        </div>
       </v-sheet>
     </section>
 
@@ -272,16 +319,36 @@ function firstAssignee() {
       </div>
     </section>
 
-    <section class="project-cockpit__section">
+    <div id="project-knowledge" class="project-cockpit__knowledge-anchor">
+      <ProjectKnowledgeSection :project-id="project.id" />
+    </div>
+
+    <section class="project-cockpit__section project-cockpit__section--deliverables">
       <div class="project-cockpit__section-title">
         <div>
-          <h2>Entregaveis</h2>
-          <p>Fluxo de producao tecnica organizado por etapa.</p>
+          <h2>Entregaveis tecnicos</h2>
+          <p>Eixo operacional do projeto: prazos, documentos, revisoes, responsaveis e knowledge aplicado.</p>
         </div>
         <v-btn :to="`/projects/${project.id}/deliverables`" color="teal" variant="tonal">
           Abrir entregaveis
         </v-btn>
       </div>
+      <div v-if="deliverables.length" class="project-cockpit__deliverable-cards">
+        <ProjectDeliverableTechnicalCard
+          v-for="deliverable in deliverables"
+          :key="deliverable.id"
+          :deliverable="deliverable"
+          :documents="documents"
+          :reviews="reviews"
+          :knowledge-items="knowledgeItems"
+          @update:status="updateDeliverableStatus"
+        />
+      </div>
+      <v-empty-state
+        v-else
+        headline="Sem entregaveis tecnicos"
+        text="Cadastre entregaveis para transformar o projeto em um cockpit operacional rastreavel."
+      />
       <DeliverablesBoard :deliverables="deliverables" @update:status="updateDeliverableStatus" />
     </section>
 
@@ -332,8 +399,6 @@ function firstAssignee() {
         </v-list>
       </v-sheet>
     </section>
-
-    <ProjectKnowledgeSection :project-id="project.id" />
 
     <section class="project-cockpit__split">
       <v-sheet border rounded="lg" class="project-cockpit__panel">
@@ -430,11 +495,13 @@ function firstAssignee() {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 1.25rem;
   align-items: center;
-  border: 1px solid #d8e5df;
-  border-radius: 0.75rem;
-  background: #ffffff;
+  border: 1px solid #b9ddd2;
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at top left, rgb(39 115 101 / 0.18), transparent 28rem),
+    linear-gradient(135deg, #ffffff, #f4fbf8 62%, #e8f7f1);
   padding: 1.25rem;
-  box-shadow: 0 14px 30px rgb(15 45 38 / 0.06);
+  box-shadow: 0 18px 42px rgb(15 45 38 / 0.09);
 }
 
 .project-cockpit__eyebrow {
@@ -493,22 +560,77 @@ function firstAssignee() {
 }
 
 .project-cockpit__metric {
+  position: relative;
   display: grid;
-  gap: 0.2rem;
+  gap: 0.28rem;
   min-height: 7rem;
+  overflow: hidden;
+  border-color: color-mix(in srgb, var(--metric-accent) 28%, #d8e5df);
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--metric-accent) 15%, #ffffff), #ffffff 68%),
+    #ffffff;
   padding: 0.9rem;
+  box-shadow: 0 12px 26px rgb(15 45 38 / 0.06);
+}
+
+.project-cockpit__metric[data-color='teal'] {
+  --metric-accent: #009688;
+}
+
+.project-cockpit__metric[data-color='green'] {
+  --metric-accent: #2e7d50;
+}
+
+.project-cockpit__metric[data-color='red'] {
+  --metric-accent: #d1493f;
+}
+
+.project-cockpit__metric[data-color='amber'] {
+  --metric-accent: #d9901f;
+}
+
+.project-cockpit__metric[data-color='purple'] {
+  --metric-accent: #6750a4;
+}
+
+.project-cockpit__metric[data-color='blue'] {
+  --metric-accent: #2474a6;
+}
+
+.project-cockpit__metric i {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 0.28rem;
+  background: var(--metric-accent);
+}
+
+.project-cockpit__metric::after {
+  position: absolute;
+  right: -1.25rem;
+  bottom: -1.75rem;
+  width: 4.6rem;
+  height: 4.6rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--metric-accent) 18%, transparent);
+  content: '';
+}
+
+.project-cockpit__metric--emphasis {
+  transform: translateY(-0.15rem);
+  box-shadow: 0 18px 36px color-mix(in srgb, var(--metric-accent) 18%, transparent);
 }
 
 .project-cockpit__metric span,
 .project-cockpit__summary-card span {
-  color: #60716b;
+  color: color-mix(in srgb, var(--metric-accent, #267365) 70%, #60716b);
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
 }
 
 .project-cockpit__metric strong {
-  color: #14231f;
+  color: color-mix(in srgb, var(--metric-accent, #14231f) 72%, #14231f);
   font-size: 2rem;
   line-height: 1;
 }
@@ -522,6 +644,76 @@ function firstAssignee() {
 .project-cockpit__panel {
   display: grid;
   gap: 1rem;
+}
+
+.project-cockpit__value-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: 1rem;
+}
+
+.project-cockpit__value-card {
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+  min-height: 15rem;
+  padding: 1.25rem;
+  box-shadow: 0 18px 42px rgb(15 45 38 / 0.08);
+}
+
+.project-cockpit__value-card--knowledge {
+  border-color: #9bd9cb;
+  background:
+    radial-gradient(circle at top right, rgb(0 150 136 / 0.2), transparent 18rem),
+    linear-gradient(135deg, #10342d, #146052 56%, #e8fbf4);
+}
+
+.project-cockpit__value-card--deliverables {
+  border-color: #c6c1ef;
+  background:
+    radial-gradient(circle at top right, rgb(103 80 164 / 0.22), transparent 18rem),
+    linear-gradient(135deg, #ffffff, #f7f4ff 72%, #eef8f4);
+}
+
+.project-cockpit__value-card span {
+  color: #d7f2e7;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.project-cockpit__value-card--deliverables span {
+  color: #6750a4;
+}
+
+.project-cockpit__value-card h2 {
+  max-width: 42rem;
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(1.35rem, 2vw, 2rem);
+  line-height: 1.12;
+}
+
+.project-cockpit__value-card--deliverables h2 {
+  color: #241d42;
+}
+
+.project-cockpit__value-card p {
+  max-width: 44rem;
+  margin: 0;
+  color: rgb(255 255 255 / 0.82);
+}
+
+.project-cockpit__value-card--deliverables p {
+  color: #5e5a72;
+}
+
+.project-cockpit__value-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.35rem;
 }
 
 .project-cockpit__section-title,
@@ -560,11 +752,36 @@ function firstAssignee() {
 .project-cockpit__summary-card {
   display: grid;
   gap: 0.35rem;
+  border-color: #d7e9e2;
+  background:
+    linear-gradient(135deg, rgb(232 248 242 / 0.72), #ffffff 58%),
+    #ffffff;
+  box-shadow: 0 10px 24px rgb(15 45 38 / 0.05);
 }
 
 .project-cockpit__summary-card strong {
   color: #14231f;
   font-size: 1rem;
+}
+
+.project-cockpit__deliverable-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.project-cockpit__knowledge-anchor {
+  scroll-margin-top: 5rem;
+}
+
+.project-cockpit__section--deliverables {
+  border: 1px solid #c8dff7;
+  border-radius: 1rem;
+  background:
+    linear-gradient(135deg, rgb(241 247 255 / 0.92), rgb(255 255 255 / 0.72)),
+    #ffffff;
+  padding: 1rem;
+  box-shadow: 0 16px 34px rgb(31 54 92 / 0.06);
 }
 
 .project-cockpit__recommendations,
@@ -600,7 +817,9 @@ function firstAssignee() {
 @media (max-width: 960px) {
   .project-cockpit__hero,
   .project-cockpit__summary-grid,
-  .project-cockpit__split {
+  .project-cockpit__split,
+  .project-cockpit__value-grid,
+  .project-cockpit__deliverable-cards {
     grid-template-columns: 1fr;
   }
 

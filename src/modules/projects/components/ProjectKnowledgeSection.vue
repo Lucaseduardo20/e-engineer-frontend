@@ -592,6 +592,13 @@ function goToPromoteStep(step: number) {
 .project-knowledge {
   display: grid;
   gap: 1rem;
+  border: 1px solid #9bd9cb;
+  border-radius: 1.1rem;
+  background:
+    radial-gradient(circle at top left, rgb(0 150 136 / 0.14), transparent 24rem),
+    linear-gradient(180deg, #f0fbf7, #ffffff 54%);
+  padding: 1rem;
+  box-shadow: 0 20px 48px rgb(15 45 38 / 0.09);
 }
 
 .project-knowledge__summary {
@@ -599,17 +606,17 @@ function goToPromoteStep(step: number) {
   grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 1.25rem;
   align-items: center;
-  border: 1px solid #b9ddd2;
-  border-radius: 0.75rem;
+  border: 1px solid #72c7b6;
+  border-radius: 1rem;
   background:
-    linear-gradient(135deg, rgb(215 242 231 / 0.92), rgb(255 255 255 / 0.96) 46%),
-    #ffffff;
+    radial-gradient(circle at 85% 10%, rgb(150 226 207 / 0.34), transparent 17rem),
+    linear-gradient(135deg, #10231f, #145246 58%, #e5fbf3);
   padding: 1.25rem;
-  box-shadow: 0 16px 34px rgb(15 45 38 / 0.08);
+  box-shadow: 0 18px 42px rgb(15 45 38 / 0.14);
 }
 
 .project-knowledge__eyebrow {
-  color: #267365;
+  color: #a9f3de;
   font-size: 0.78rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -617,8 +624,9 @@ function goToPromoteStep(step: number) {
 
 .project-knowledge__copy h2 {
   margin: 0.25rem 0;
-  color: #14231f;
-  font-size: 1.35rem;
+  color: #ffffff;
+  font-size: clamp(1.4rem, 2vw, 2rem);
+  line-height: 1.1;
 }
 
 .project-knowledge__copy p,
@@ -630,20 +638,25 @@ function goToPromoteStep(step: number) {
   color: #60716b;
 }
 
+.project-knowledge__summary .project-knowledge__copy p {
+  max-width: 48rem;
+  color: rgb(255 255 255 / 0.82);
+}
+
 .project-knowledge__score {
   display: grid;
   justify-items: center;
   min-width: 8.5rem;
-  border-radius: 0.75rem;
-  border: 1px solid #d7f2e7;
-  background: #ffffff;
+  border-radius: 1rem;
+  border: 1px solid rgb(215 242 231 / 0.66);
+  background: rgb(255 255 255 / 0.94);
   padding: 1rem;
-  box-shadow: inset 0 0 0 1px rgb(20 61 51 / 0.03);
+  box-shadow: 0 16px 30px rgb(0 0 0 / 0.14);
 }
 
 .project-knowledge__score strong {
-  color: #123c32;
-  font-size: 2.35rem;
+  color: #00897b;
+  font-size: 2.8rem;
   line-height: 1;
 }
 
@@ -667,11 +680,24 @@ function goToPromoteStep(step: number) {
 }
 
 .project-knowledge__signal {
+  position: relative;
   display: grid;
   gap: 0.3rem;
-  border-color: #d7e9e2;
-  background: #ffffff;
+  overflow: hidden;
+  border-color: #b9ddd2;
+  background:
+    linear-gradient(145deg, #ffffff, #f0fbf7),
+    #ffffff;
   padding: 0.9rem;
+  box-shadow: 0 12px 24px rgb(15 45 38 / 0.06);
+}
+
+.project-knowledge__signal::before {
+  width: 2.4rem;
+  height: 0.28rem;
+  border-radius: 999px;
+  background: #00a98f;
+  content: '';
 }
 
 .project-knowledge__signal strong,
@@ -690,9 +716,12 @@ function goToPromoteStep(step: number) {
 .project-knowledge__preview {
   display: grid;
   gap: 0.85rem;
-  border-color: #d7e9e2;
-  background: #ffffff;
+  border-color: #b9ddd2;
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 0.94), rgb(232 248 242 / 0.76)),
+    #ffffff;
   padding: 1rem;
+  box-shadow: inset 0 0 0 1px rgb(20 61 51 / 0.03);
 }
 
 .project-knowledge__preview-head {
@@ -716,11 +745,23 @@ function goToPromoteStep(step: number) {
 .project-knowledge__preview-item {
   display: grid;
   min-width: min(100%, 18rem);
-  border: 1px solid #d8e5df;
-  border-radius: 0.5rem;
-  background: #fbfffd;
+  border: 1px solid #b9ddd2;
+  border-radius: 0.75rem;
+  background:
+    linear-gradient(135deg, #ffffff, #effaf6),
+    #fbfffd;
   padding: 0.75rem;
   text-decoration: none;
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.project-knowledge__preview-item:hover {
+  border-color: #00a98f;
+  transform: translateY(-0.12rem);
+  box-shadow: 0 12px 24px rgb(15 45 38 / 0.1);
 }
 
 .project-knowledge-modal {

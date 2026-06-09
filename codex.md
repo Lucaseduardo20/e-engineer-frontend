@@ -455,3 +455,35 @@ nvm use 22
 - `PATH=/home/lkt/.nvm/versions/node/v24.16.0/bin:$PATH npm run type-check`: passou.
 - `PATH=/home/lkt/.nvm/versions/node/v24.16.0/bin:$PATH npm run test:unit -- src/modules/organizations src/modules/reviews src/modules/auth --maxWorkers=1`: passou com 7 arquivos e 15 testes.
 - `PATH=/home/lkt/.nvm/versions/node/v24.16.0/bin:$PATH npm run build`: passou.
+
+## 2026-06-09 - Task 7 entregaveis como eixo operacional
+
+### Implementado
+
+- Tarefa: criar visao rica de entregaveis tecnicos dentro do cockpit do projeto.
+- Mudancas: `src/modules/projects/components/ProjectDeliverableTechnicalCard.vue`, `src/modules/projects/components/ProjectDeliverableTechnicalCard.spec.ts`, `src/modules/projects/components/ProjectDetail.vue`.
+- Decisao tomada: o primeiro corte usa dados ja carregados pelo detalhe do projeto (`deliverables`, `documents`, `reviews` e knowledge aplicado), evitando endpoint agregado novo enquanto `deliverableId` em documentos/revisoes atende a rastreabilidade principal.
+- Decisao tomada: knowledge aplicado ao projeto aparece no card como contexto tecnico e tenta destacar afinidade por titulo/tipo/tags do entregavel; relacoes especificas por entregavel ficam como evolucao futura de contrato.
+- Decisao tomada: o board de entregaveis foi mantido como visao de fluxo, e os novos cards entram antes dele como leitura operacional rica e orientada a acao.
+
+### Validacoes
+
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run test:unit -- --run src/modules/projects/components/ProjectDeliverableTechnicalCard.spec.ts`: passou com 1 arquivo e 1 teste.
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run type-check`: passou.
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run build`: passou.
+
+## 2026-06-09 - Reforco visual do cockpit do projeto
+
+### Implementado
+
+- Tarefa: dar mais enfase visual para Base de Conhecimento e entregaveis dentro do detalhe do projeto.
+- Mudancas: `src/modules/projects/components/ProjectDetail.vue`, `src/modules/projects/components/ProjectKnowledgeSection.vue`.
+- Decisao tomada: a Base de Conhecimento foi elevada na hierarquia da pagina, com chamada de valor propria logo apos as metricas e antes dos entregaveis, para deixar claro que knowledge reduz retrabalho e orienta decisoes.
+- Decisao tomada: cards de metricas passaram a usar cores/acento por tipo de sinal, destacando gargalos, knowledge aplicado e entregaveis de forma mais imediata.
+- Decisao tomada: os entregaveis seguem como eixo operacional, mas agora aparecem em uma area visualmente mais marcada e conectada ao valor do knowledge.
+
+### Validacoes
+
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run test:unit -- --run src/modules/projects/components/ProjectDeliverableTechnicalCard.spec.ts`: passou com 1 arquivo e 1 teste.
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run type-check`: passou.
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run build`: passou.
