@@ -487,3 +487,18 @@ nvm use 22
 - `source ~/.nvm/nvm.sh && nvm use 22 && npm run test:unit -- --run src/modules/projects/components/ProjectDeliverableTechnicalCard.spec.ts`: passou com 1 arquivo e 1 teste.
 - `source ~/.nvm/nvm.sh && nvm use 22 && npm run type-check`: passou.
 - `source ~/.nvm/nvm.sh && nvm use 22 && npm run build`: passou.
+
+## 2026-06-09 - Task 8 knowledge aplicado a entregaveis
+
+### Implementado
+
+- Tarefa: permitir aplicar KnowledgeItem em entregaveis especificos dentro do projeto.
+- Mudancas: `src/shared/types/api-contracts.ts`, `src/shared/http/api-client.ts`, `src/modules/projects/stores/projects.store.ts`, `src/modules/projects/components/ProjectKnowledgeSection.vue`, `src/modules/projects/components/ProjectDetail.vue`, `src/modules/projects/components/ProjectDeliverableTechnicalCard.vue`, `src/modules/projects/components/ProjectDeliverableTechnicalCard.spec.ts`.
+- Decisao tomada: a modal de knowledge do projeto ganhou selecao de alvo (`Projeto inteiro` ou `Entregavel especifico`), usando o mesmo fluxo de aplicacao e permissao `knowledge.link`.
+- Decisao tomada: cards de entregaveis priorizam knowledge aplicada diretamente ao entregavel e usam knowledge do projeto como contexto secundario.
+
+### Validacoes
+
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run test:unit -- --run src/modules/projects/components/ProjectDeliverableTechnicalCard.spec.ts`: passou com 1 arquivo e 1 teste.
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run type-check`: passou.
+- `source ~/.nvm/nvm.sh && nvm use 22 && npm run build`: passou.

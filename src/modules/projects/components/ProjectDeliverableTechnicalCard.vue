@@ -89,8 +89,18 @@ const normalizedDeliverableContext = computed(() =>
   ),
 )
 
+const directlyAppliedKnowledgeItems = computed(() =>
+  props.knowledgeItems.filter(
+    (entry) => entry.targetType === 'deliverable' && entry.targetId === props.deliverable.id,
+  ),
+)
+
+const projectWideKnowledgeItems = computed(() =>
+  props.knowledgeItems.filter((entry) => entry.targetType === 'project'),
+)
+
 const matchedKnowledgeItems = computed(() =>
-  props.knowledgeItems.filter(({ knowledgeItem }) => {
+  projectWideKnowledgeItems.value.filter(({ knowledgeItem }) => {
     const tags = Array.isArray(knowledgeItem.tags) ? knowledgeItem.tags : []
     const searchableKnowledge = normalizeText([
       knowledgeItem.title,
@@ -117,11 +127,23 @@ const matchedKnowledgeItems = computed(() =>
   }),
 )
 
-const contextualKnowledgeItems = computed(() =>
-  matchedKnowledgeItems.value.length
-    ? matchedKnowledgeItems.value.slice(0, 3)
-    : props.knowledgeItems.slice(0, 2),
-)
+const contextualKnowledgeItems = computed(() => {
+  if (directlyAppliedKnowledgeItems.value.length) {
+    return directlyAppliedKnowledgeItems.value.slice(0, 3)
+  }
+
+  if (matchedKnowledgeItems.value.length) {
+    return matchedKnowledgeItems.value.slice(0, 3)
+  }
+
+  return projectWideKnowledgeItems.value.slice(0, 2)
+})
+
+const knowledgeSignalLabel = computed(() => {
+  if (directlyAppliedKnowledgeItems.value.length) return 'aplicado no entregavel'
+  if (matchedKnowledgeItems.value.length) return 'afinidade do projeto'
+  return 'contexto do projeto'
+})
 
 const isOverdue = computed(() => {
   const dueDate = toTimestamp(props.deliverable.dueDate)
@@ -165,8 +187,8 @@ const riskItems = computed(() => {
     items.push('Responsavel tecnico indefinido')
   }
 
-  if (props.knowledgeItems.length === 0) {
-    items.push('Sem referencia tecnica aplicada ao projeto')
+  if (contextualKnowledgeItems.value.length === 0) {
+    items.push('Sem referencia tecnica aplicada ao entregavel')
   }
 
   return items
@@ -266,7 +288,7 @@ function normalizeText(value: string) {
       <v-sheet rounded="lg" class="deliverable-technical-card__signal">
         <span>Knowledge aplicado</span>
         <strong>{{ contextualKnowledgeItems.length }}</strong>
-        <small>{{ matchedKnowledgeItems.length ? 'com afinidade tecnica' : 'contexto do projeto' }}</small>
+        <small>{{ knowledgeSignalLabel }}</small>
       </v-sheet>
     </div>
 

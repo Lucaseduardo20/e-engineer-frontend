@@ -320,7 +320,7 @@ function firstAssignee() {
     </section>
 
     <div id="project-knowledge" class="project-cockpit__knowledge-anchor">
-      <ProjectKnowledgeSection :project-id="project.id" />
+      <ProjectKnowledgeSection :project-id="project.id" :deliverables="deliverables" />
     </div>
 
     <section class="project-cockpit__section project-cockpit__section--deliverables">

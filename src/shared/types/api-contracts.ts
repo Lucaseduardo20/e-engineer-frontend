@@ -232,6 +232,8 @@ export type {
 export interface ProjectKnowledgeItem {
   relationId: string
   relationType: string
+  targetType: 'project' | 'deliverable' | string
+  targetId: string
   linkedAt: number
   linkedBy: string
   knowledgeItem: {

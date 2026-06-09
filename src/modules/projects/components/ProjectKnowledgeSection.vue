@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useAuthStore } from '@/modules/auth/stores/auth.store'
 import { useProjectsStore } from '@/modules/projects/stores/projects.store'
 import { useKnowledgeItemsStore } from '@/modules/knowledge-base/stores/knowledge-items.store'
+import type { Deliverable } from '@/shared/types/api-contracts'
 import {
   knowledgeStatusLabels,
   knowledgeTypeLabels,
@@ -10,7 +11,10 @@ import {
 } from '@/modules/knowledge-base/types/knowledge.types'
 import TechnicalTagSelector from '@/modules/technical-taxonomy/components/TechnicalTagSelector.vue'
 
-const props = defineProps<{ projectId: string }>()
+const props = defineProps<{
+  projectId: string
+  deliverables: Deliverable[]
+}>()
 
 const projectsStore = useProjectsStore()
 const knowledgeStore = useKnowledgeItemsStore()
@@ -21,6 +25,8 @@ const activePanel = ref('overview')
 const promoteStep = ref(1)
 const relationType = ref('reference_for')
 const selectedKnowledgeItemId = ref('')
+const targetScope = ref<'project' | 'deliverable'>('project')
+const selectedDeliverableId = ref('')
 const confirmRemoveRelationId = ref<string | null>(null)
 const promoteForm = ref({
   title: '',
@@ -78,6 +84,17 @@ const knowledgeOptions = computed(() =>
 const selectedKnowledge = computed(() =>
   knowledgeOptions.value.find((item) => item.value === selectedKnowledgeItemId.value),
 )
+const deliverableOptions = computed(() =>
+  props.deliverables.map((deliverable) => ({
+    value: deliverable.id,
+    title: deliverable.title,
+    subtitle: deliverable.dueDate ? 'Com prazo definido' : 'Sem prazo definido',
+  })),
+)
+const canLinkKnowledge = computed(() =>
+  Boolean(selectedKnowledgeItemId.value) &&
+  (targetScope.value === 'project' || Boolean(selectedDeliverableId.value)),
+)
 const canManageKnowledge = computed(
   () =>
     auth.can('knowledge.link') ||
@@ -124,15 +141,18 @@ async function showApplyPanel() {
 }
 
 async function linkKnowledge() {
-  if (!selectedKnowledgeItemId.value) return
+  if (!canLinkKnowledge.value) return
 
   const success = await projectsStore.linkKnowledgeItem(props.projectId, {
     knowledgeItemId: selectedKnowledgeItemId.value,
     relationType: relationType.value,
+    deliverableId: targetScope.value === 'deliverable' ? selectedDeliverableId.value : undefined,
   })
 
   if (success) {
     selectedKnowledgeItemId.value = ''
+    targetScope.value = 'project'
+    selectedDeliverableId.value = ''
     relationType.value = 'reference_for'
     activePanel.value = 'manage'
   }
@@ -188,6 +208,14 @@ async function promoteProject() {
 
 function relationLabel(value: string) {
   return relationTypeOptions.find((item) => item.value === value)?.title ?? value
+}
+
+function targetLabel(targetType: string, targetId: string) {
+  if (targetType === 'deliverable') {
+    return props.deliverables.find((deliverable) => deliverable.id === targetId)?.title ?? 'Entregavel'
+  }
+
+  return 'Projeto inteiro'
 }
 
 function goToPromoteStep(step: number) {
@@ -383,6 +411,43 @@ function goToPromoteStep(step: number) {
                     </template>
                   </v-select>
 
+                  <div class="project-knowledge-modal__target-grid">
+                    <v-select
+                      v-model="targetScope"
+                      :items="[
+                        { title: 'Projeto inteiro', value: 'project' },
+                        { title: 'Entregavel especifico', value: 'deliverable' },
+                      ]"
+                      item-title="title"
+                      item-value="value"
+                      label="Onde aplicar este conhecimento?"
+                      variant="outlined"
+                    />
+
+                    <v-select
+                      v-if="targetScope === 'deliverable'"
+                      v-model="selectedDeliverableId"
+                      :items="deliverableOptions"
+                      item-title="title"
+                      item-value="value"
+                      label="Entregavel"
+                      variant="outlined"
+                      :disabled="deliverableOptions.length === 0"
+                    >
+                      <template #item="{ props: itemProps, item }">
+                        <v-list-item v-bind="itemProps" :subtitle="item.subtitle" />
+                      </template>
+                    </v-select>
+                  </div>
+
+                  <v-alert
+                    v-if="targetScope === 'deliverable' && deliverableOptions.length === 0"
+                    type="info"
+                    variant="tonal"
+                  >
+                    Cadastre entregaveis para aplicar conhecimento em uma entrega especifica.
+                  </v-alert>
+
                   <v-select
                     v-model="relationType"
                     :items="relationTypeOptions"
@@ -406,10 +471,10 @@ function goToPromoteStep(step: number) {
                     <v-btn
                       color="teal"
                       variant="flat"
-                      :disabled="!selectedKnowledgeItemId"
+                      :disabled="!canLinkKnowledge"
                       @click="linkKnowledge"
                     >
-                      Aplicar ao projeto
+                      Aplicar conhecimento
                     </v-btn>
                   </div>
                 </div>
@@ -548,6 +613,7 @@ function goToPromoteStep(step: number) {
                       {{ knowledgeTypeLabels[entry.knowledgeItem.type as keyof typeof knowledgeTypeLabels] }}
                       · {{ knowledgeStatusLabels[entry.knowledgeItem.status as keyof typeof knowledgeStatusLabels] }}
                       · {{ relationLabel(entry.relationType) }}
+                      · {{ targetLabel(entry.targetType, entry.targetId) }}
                     </v-list-item-subtitle>
                     <template #append>
                       <v-btn
@@ -902,6 +968,12 @@ function goToPromoteStep(step: number) {
   grid-template-columns: minmax(14rem, 0.7fr) minmax(0, 1.3fr);
 }
 
+.project-knowledge-modal__target-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
 .project-knowledge-modal__wizard,
 .project-knowledge-modal__step-panel {
   display: grid;
@@ -1054,6 +1126,7 @@ function goToPromoteStep(step: number) {
 @media (max-width: 760px) {
   .project-knowledge__insights,
   .project-knowledge-modal__stats,
+  .project-knowledge-modal__target-grid,
   .project-knowledge-modal__steps {
     grid-template-columns: 1fr;
   }

@@ -430,7 +430,10 @@ export const apiClient = {
         items: response.items.map(mapProjectKnowledgeItem),
       }
     },
-    linkKnowledge(projectId: string, payload: { knowledgeItemId: string; relationType: string }) {
+    linkKnowledge(
+      projectId: string,
+      payload: { knowledgeItemId: string; relationType: string; deliverableId?: string },
+    ) {
       return unwrap(httpClient.post(`/projects/${projectId}/knowledge`, payload))
     },
     unlinkKnowledge(projectId: string, relationId: string) {

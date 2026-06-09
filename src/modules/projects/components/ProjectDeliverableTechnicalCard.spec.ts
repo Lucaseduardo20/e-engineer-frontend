@@ -85,6 +85,8 @@ describe('ProjectDeliverableTechnicalCard', () => {
       {
         relationId: 'relation-1',
         relationType: 'applies_to',
+        targetType: 'deliverable',
+        targetId: 'deliverable-1',
         linkedAt: Date.now(),
         linkedBy: 'coord-1',
         knowledgeItem: {

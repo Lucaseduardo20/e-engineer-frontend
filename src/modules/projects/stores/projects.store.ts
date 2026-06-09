@@ -114,7 +114,10 @@ export const useProjectsStore = defineStore('projects', () => {
     }
   }
 
-  async function linkKnowledgeItem(projectId: string, payload: { knowledgeItemId: string; relationType: string }) {
+  async function linkKnowledgeItem(
+    projectId: string,
+    payload: { knowledgeItemId: string; relationType: string; deliverableId?: string },
+  ) {
     try {
       await apiClient.projects.linkKnowledge(projectId, payload)
       await loadProjectDetail(projectId)
