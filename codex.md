@@ -5,6 +5,19 @@ Este arquivo registra auditoria, decisoes e contexto de continuidade do frontend
 O guia estavel do produto esta em `../master.md`.
 As instrucoes operacionais especificas do frontend estao em `frontend-agent.md`.
 
+## 2026-06-09 - Cockpit do projeto em abas e upload contextual
+
+- Decisao implementada: o detalhe do projeto passa a usar abas para reduzir a altura da pagina, mantendo a primeira aba como visao de maior valor com knowledge, recomendacoes, metricas e entregaveis em foco.
+- Decisao implementada: tags do projeto sao exibidas no header como agregacao visual das tags tecnicas dos entregaveis, com origem por entregavel, sem persistencia propria neste corte.
+- Decisao implementada: o header do projeto ganhou upload contextual de documento usando o fluxo existente de documentos, com projeto travado e entregavel opcional.
+- Validado: testes focados de projetos/documentos, type-check e build frontend.
+
+## 2026-06-09 - Task 9 Recomendacoes por tags no cockpit
+
+- Decisao implementada: o detalhe do projeto consome recomendacoes de KnowledgeItems por tags tecnicas e exibe cards de "Recomendado por tags" no painel de recomendacoes.
+- Decisao implementada: as recomendacoes aparecem com motivo e tags combinadas, reforcando que a taxonomia tecnica e a base do raciocinio da plataforma.
+- Validado: type-check e build frontend apos integrar API/store/componente.
+
 ## 2026-05-25 - Inicializacao do registro de auditoria frontend
 
 ### Contexto

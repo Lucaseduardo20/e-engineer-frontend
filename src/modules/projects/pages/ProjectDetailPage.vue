@@ -42,8 +42,10 @@ async function updateDeliverableStatus(deliverable: Deliverable, status: Deliver
       :documents="projectsStore.documents"
       :reviews="projectsStore.reviews"
       :knowledge-items="projectsStore.projectKnowledge"
+      :knowledge-recommendations="projectsStore.projectKnowledgeRecommendations"
       :audit-logs="projectsStore.auditLogs"
       @update:deliverable-status="updateDeliverableStatus"
+      @refresh="projectsStore.loadProjectDetail(String(route.params.id))"
     />
   </v-container>
 </template>

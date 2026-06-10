@@ -24,6 +24,7 @@ import type {
   PriorityTargetType,
   PromoteProjectToKnowledgeDto,
   Project,
+  ProjectKnowledgeRecommendation,
   ReviewComment,
   ReviewDetail,
   ReviewSummary,
@@ -323,6 +324,19 @@ function mapProjectKnowledgeItem(item: ProjectKnowledgeItem): ProjectKnowledgeIt
   }
 }
 
+function mapProjectKnowledgeRecommendation(
+  recommendation: ProjectKnowledgeRecommendation,
+): ProjectKnowledgeRecommendation {
+  return {
+    ...recommendation,
+    knowledgeItem: {
+      ...recommendation.knowledgeItem,
+      updatedAt: toTimestamp(recommendation.knowledgeItem.updatedAt) ?? Date.now(),
+      publishedAt: toTimestamp(recommendation.knowledgeItem.publishedAt) ?? null,
+    },
+  }
+}
+
 function mapKnowledgeItemDetail(item: KnowledgeItemDetail): KnowledgeItemDetail {
   return {
     ...mapKnowledgeItem(item),
@@ -429,6 +443,14 @@ export const apiClient = {
       )
       return {
         items: response.items.map(mapProjectKnowledgeItem),
+      }
+    },
+    async recommendKnowledge(projectId: string) {
+      const response = await unwrap<{ items: ProjectKnowledgeRecommendation[] }>(
+        httpClient.get(`/projects/${projectId}/knowledge/recommendations`),
+      )
+      return {
+        items: response.items.map(mapProjectKnowledgeRecommendation),
       }
     },
     linkKnowledge(

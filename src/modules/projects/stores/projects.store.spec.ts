@@ -28,6 +28,7 @@ vi.mock('@/shared/http/api-client', () => ({
     },
     projects: {
       listKnowledge: vi.fn(),
+      recommendKnowledge: vi.fn(),
       updateStatus: vi.fn(),
     },
   },
@@ -124,6 +125,7 @@ describe('projects store', () => {
       pageSize: 50,
     })
     vi.mocked(apiClient.projects.listKnowledge).mockResolvedValue({ items: [] })
+    vi.mocked(apiClient.projects.recommendKnowledge).mockResolvedValue({ items: [] })
     vi.mocked(apiClient.audit.list).mockResolvedValue({
       items: [
         {
@@ -148,6 +150,7 @@ describe('projects store', () => {
     expect(store.deliverables).toHaveLength(1)
     expect(store.documents).toHaveLength(1)
     expect(store.reviews).toHaveLength(1)
+    expect(store.projectKnowledgeRecommendations).toHaveLength(0)
     expect(store.auditLogs).toHaveLength(1)
   })
 

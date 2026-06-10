@@ -1,13 +1,17 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type {
   AuditLogEntry,
   Deliverable,
+  DocumentStatus,
   DocumentSummary,
+  DocumentType,
   Project,
   ProjectKnowledgeItem,
+  ProjectKnowledgeRecommendation,
   ReviewSummary,
 } from '@/shared/types/api-contracts'
+import { apiClient } from '@/shared/http/api-client'
 import BaseStatusBadge from '@/shared/components/BaseStatusBadge.vue'
 import TraceableLinkButton from '@/shared/components/TraceableLinkButton.vue'
 import {
@@ -25,6 +29,7 @@ import {
 import DeliverablesBoard from './DeliverablesBoard.vue'
 import ProjectKnowledgeSection from './ProjectKnowledgeSection.vue'
 import ProjectDeliverableTechnicalCard from './ProjectDeliverableTechnicalCard.vue'
+import DocumentUpload from '@/modules/documents/components/DocumentUpload.vue'
 
 const props = defineProps<{
   project: Project
@@ -32,12 +37,18 @@ const props = defineProps<{
   documents: DocumentSummary[]
   reviews: ReviewSummary[]
   knowledgeItems: ProjectKnowledgeItem[]
+  knowledgeRecommendations: ProjectKnowledgeRecommendation[]
   auditLogs: AuditLogEntry[]
 }>()
 
 const emit = defineEmits<{
   'update:deliverable-status': [deliverable: Deliverable, status: Deliverable['status']]
+  refresh: []
 }>()
+
+const activeTab = ref('overview')
+const isDocumentModalOpen = ref(false)
+const isSavingDocument = ref(false)
 
 const todayStart = computed(() => {
   const today = new Date()
@@ -73,9 +84,43 @@ const featuredDeliverables = computed(() =>
       const secondRisk = overdueDeliverables.value.some((deliverable) => deliverable.id === second.id) ? -1 : 0
       return firstRisk - secondRisk || (toTimestamp(first.dueDate) ?? Infinity) - (toTimestamp(second.dueDate) ?? Infinity)
     })
-    .slice(0, 3),
+    .slice(0, 4),
 )
-const recommendationCount = computed(() => recommendations.value.length)
+const inheritedTags = computed(() => {
+  const tags = new Map<
+    string,
+    {
+      id: string
+      name: string
+      slug: string
+      category: string
+      status: string
+      deliverables: string[]
+    }
+  >()
+
+  for (const deliverable of props.deliverables) {
+    for (const tag of deliverable.tags ?? []) {
+      const current = tags.get(tag.id) ?? {
+        ...tag,
+        deliverables: [],
+      }
+      if (!current.deliverables.includes(deliverable.title)) {
+        current.deliverables.push(deliverable.title)
+      }
+      tags.set(tag.id, current)
+    }
+  }
+
+  return [...tags.values()].sort(
+    (first, second) =>
+      second.deliverables.length - first.deliverables.length ||
+      first.name.localeCompare(second.name),
+  )
+})
+const visibleInheritedTags = computed(() => inheritedTags.value.slice(0, 8))
+const hiddenInheritedTagsCount = computed(() => Math.max(inheritedTags.value.length - visibleInheritedTags.value.length, 0))
+const recommendationCount = computed(() => recommendations.value.length + props.knowledgeRecommendations.length)
 const knowledgeValueLabel = computed(() =>
   props.knowledgeItems.length
     ? `${props.knowledgeItems.length} referencia(s) reduzindo retrabalho`
@@ -210,9 +255,14 @@ const metrics = computed(() => [
     color: 'blue',
   },
 ])
-const recentDocuments = computed(() => props.documents.slice(0, 5))
-const recentReviews = computed(() => props.reviews.slice(0, 5))
 const recentHistory = computed(() => props.auditLogs.slice(0, 6))
+const tabItems = computed(() => [
+  { title: 'Visao geral', value: 'overview', count: recommendationCount.value + props.knowledgeItems.length },
+  { title: 'Entregaveis', value: 'deliverables', count: props.deliverables.length },
+  { title: 'Documentos', value: 'documents', count: props.documents.length },
+  { title: 'Revisoes', value: 'reviews', count: props.reviews.length },
+  { title: 'Historico', value: 'history', count: props.auditLogs.length },
+])
 
 function updateDeliverableStatus(deliverable: Deliverable, status: Deliverable['status']) {
   emit('update:deliverable-status', deliverable, status)
@@ -220,6 +270,53 @@ function updateDeliverableStatus(deliverable: Deliverable, status: Deliverable['
 
 function firstAssignee() {
   return props.deliverables.flatMap((deliverable) => deliverable.assignees)[0]
+}
+
+function inheritedTagOrigin(tag: { deliverables: string[] }) {
+  return tag.deliverables.length
+    ? `Incluida via ${tag.deliverables.slice(0, 3).join(', ')}${tag.deliverables.length > 3 ? ` +${tag.deliverables.length - 3}` : ''}`
+    : 'Sem origem operacional'
+}
+
+async function handleDocumentSubmit(payload: {
+  projectId: string
+  deliverableId?: string | null
+  title: string
+  description?: string | null
+  type: DocumentType
+  status: DocumentStatus
+  file?: File
+  revision?: string
+  isOfficial: boolean
+  notes?: string | null
+}) {
+  isSavingDocument.value = true
+
+  try {
+    const document = await apiClient.documents.create({
+      projectId: props.project.id,
+      deliverableId: payload.deliverableId,
+      title: payload.title,
+      description: payload.description,
+      type: payload.type,
+      status: payload.status,
+    })
+
+    if (payload.file) {
+      await apiClient.documents.uploadVersion(document.id, {
+        file: payload.file,
+        revision: payload.revision,
+        isOfficial: payload.isOfficial,
+        status: payload.status,
+        notes: payload.notes,
+      })
+    }
+
+    isDocumentModalOpen.value = false
+    emit('refresh')
+  } finally {
+    isSavingDocument.value = false
+  }
 }
 </script>
 
@@ -238,267 +335,362 @@ function firstAssignee() {
           <span>Responsavel: <strong>{{ project.responsibleName || firstAssignee() || 'Nao definido' }}</strong></span>
           <span>Prazo: <strong>{{ nextDueDeliverable ? formatRelativeDueDate(nextDueDeliverable.dueDate) : 'sem prazo critico' }}</strong></span>
         </div>
+        <div class="project-cockpit__tag-strip">
+          <span class="project-cockpit__tag-label">Tags herdadas dos entregaveis</span>
+          <div v-if="visibleInheritedTags.length" class="project-cockpit__tag-list">
+            <v-menu
+              v-for="tag in visibleInheritedTags"
+              :key="tag.id"
+              location="bottom"
+              open-on-hover
+              :close-on-content-click="false"
+            >
+              <template #activator="{ props: menuProps }">
+                <v-chip v-bind="menuProps" color="teal" variant="tonal" size="small">
+                  {{ tag.name }}
+                  <span class="project-cockpit__tag-count">{{ tag.deliverables.length }}</span>
+                </v-chip>
+              </template>
+              <v-card class="project-cockpit__tag-popover" rounded="lg">
+                <strong>{{ tag.name }}</strong>
+                <span>{{ inheritedTagOrigin(tag) }}</span>
+              </v-card>
+            </v-menu>
+            <v-chip v-if="hiddenInheritedTagsCount" color="teal" variant="outlined" size="small">
+              +{{ hiddenInheritedTagsCount }} tag(s)
+            </v-chip>
+          </div>
+          <span v-else class="project-cockpit__tag-empty">
+            Tags aparecem aqui quando forem vinculadas aos entregaveis.
+          </span>
+        </div>
       </div>
       <div class="project-cockpit__hero-actions">
         <v-progress-circular :model-value="project.progress" color="teal" size="88" width="9">
           {{ project.progress }}%
         </v-progress-circular>
         <v-btn
-          :to="`/projects/${project.id}/deliverables`"
+          href="#project-knowledge"
           color="teal"
           variant="flat"
-          prepend-icon="$calendar"
+          prepend-icon="$command"
         >
-          Gerenciar entregaveis
+          Gerenciar knowledge
         </v-btn>
-        <v-btn to="/documents" color="teal" variant="tonal" prepend-icon="$file">
-          Documentos
+        <v-btn color="teal" variant="tonal" prepend-icon="$upload" @click="isDocumentModalOpen = true">
+          Novo documento
+        </v-btn>
+        <v-btn :to="`/projects/${project.id}/deliverables`" color="indigo" variant="tonal" prepend-icon="$calendar">
+          Entregaveis
         </v-btn>
         <TraceableLinkButton :path="`/projects/${project.id}`" label="Link do projeto" />
       </div>
     </section>
 
-    <section class="project-cockpit__metrics" aria-label="Indicadores rapidos">
-      <v-sheet
-        v-for="metric in metrics"
-        :key="metric.label"
-        border
-        rounded="lg"
-        class="project-cockpit__metric"
-        :class="{ 'project-cockpit__metric--emphasis': metric.emphasis }"
-        :data-color="metric.color"
-      >
-        <i aria-hidden="true" />
-        <span>{{ metric.label }}</span>
-        <strong>{{ metric.value }}</strong>
-        <small>{{ metric.detail }}</small>
-      </v-sheet>
-    </section>
+    <v-sheet border rounded="xl" class="project-cockpit__tabs-shell">
+      <v-tabs v-model="activeTab" color="teal" class="project-cockpit__tabs">
+        <v-tab v-for="tab in tabItems" :key="tab.value" :value="tab.value">
+          {{ tab.title }}
+          <v-chip size="x-small" variant="tonal" color="teal" class="ml-2">{{ tab.count }}</v-chip>
+        </v-tab>
+      </v-tabs>
+    </v-sheet>
 
-    <section class="project-cockpit__value-grid" aria-label="Foco de valor do projeto">
-      <v-sheet border rounded="xl" class="project-cockpit__value-card project-cockpit__value-card--knowledge">
-        <span>Base de conhecimento em destaque</span>
-        <h2>Use o que a equipe ja aprendeu para acelerar este projeto.</h2>
-        <p>{{ knowledgeValueLabel }}. Conhecimentos aplicados viram contexto, recomendacao e decisao mais segura para a engenharia.</p>
-        <div class="project-cockpit__value-actions">
-          <v-btn color="teal" variant="flat" prepend-icon="$command" href="#project-knowledge">
-            Gerenciar knowledge
-          </v-btn>
-          <v-btn to="/knowledge-base" color="teal" variant="tonal">
-            Abrir base
-          </v-btn>
-        </div>
-      </v-sheet>
+    <v-window v-model="activeTab" class="project-cockpit__window">
+      <v-window-item value="overview">
+        <section class="project-cockpit__tab-panel">
+          <section class="project-cockpit__metrics" aria-label="Indicadores rapidos">
+            <v-sheet
+              v-for="metric in metrics"
+              :key="metric.label"
+              border
+              rounded="lg"
+              class="project-cockpit__metric"
+              :class="{ 'project-cockpit__metric--emphasis': metric.emphasis }"
+              :data-color="metric.color"
+            >
+              <i aria-hidden="true" />
+              <span>{{ metric.label }}</span>
+              <strong>{{ metric.value }}</strong>
+              <small>{{ metric.detail }}</small>
+            </v-sheet>
+          </section>
 
-      <v-sheet border rounded="xl" class="project-cockpit__value-card project-cockpit__value-card--deliverables">
-        <span>Entregaveis como eixo operacional</span>
-        <h2>{{ deliverableFocusLabel }}</h2>
-        <p>Documentos, revisoes, prazos e responsaveis aparecem conectados para transformar cada entregavel em ponto claro de acao.</p>
-        <div class="project-cockpit__value-actions">
-          <v-btn :to="`/projects/${project.id}/deliverables`" color="indigo" variant="flat" prepend-icon="$calendar">
-            Operar entregaveis
-          </v-btn>
-        </div>
-      </v-sheet>
-    </section>
+          <section class="project-cockpit__value-grid" aria-label="Foco de valor do projeto">
+            <v-sheet border rounded="xl" class="project-cockpit__value-card project-cockpit__value-card--knowledge">
+              <span>Base de conhecimento em destaque</span>
+              <h2>Use o que a equipe ja aprendeu para acelerar este projeto.</h2>
+              <p>{{ knowledgeValueLabel }}. Conhecimentos aplicados viram contexto, recomendacao e decisao mais segura para a engenharia.</p>
+              <div class="project-cockpit__value-actions">
+                <v-btn color="teal" variant="flat" prepend-icon="$command" href="#project-knowledge">
+                  Gerenciar knowledge
+                </v-btn>
+                <v-btn to="/knowledge-base" color="teal" variant="tonal">
+                  Abrir base
+                </v-btn>
+              </div>
+            </v-sheet>
 
-    <section class="project-cockpit__section">
-      <div class="project-cockpit__section-title">
-        <div>
-          <h2>Resumo operacional</h2>
-          <p>Leitura rapida da saude tecnica e do proximo gargalo do projeto.</p>
-        </div>
-      </div>
-      <div class="project-cockpit__summary-grid">
-        <v-sheet border rounded="lg" class="project-cockpit__summary-card">
-          <span>Proxima entrega</span>
-          <strong>{{ nextDueDeliverable?.title ?? 'Nenhum entregavel com prazo' }}</strong>
-          <small>{{ nextDueDeliverable ? formatShortDate(nextDueDeliverable.dueDate) : 'Cadastre prazos para orientar o cockpit.' }}</small>
-        </v-sheet>
-        <v-sheet border rounded="lg" class="project-cockpit__summary-card">
-          <span>Tipo tecnico</span>
-          <strong>{{ project.projectType || 'Nao informado' }}</strong>
-          <small>{{ project.tags?.length ? project.tags.join(', ') : 'Sem tags legadas no projeto' }}</small>
-        </v-sheet>
-        <v-sheet border rounded="lg" class="project-cockpit__summary-card">
-          <span>Foco atual</span>
-          <strong>{{ pendingReviews.length ? 'Destravar revisoes' : activeDeliverables.length ? 'Executar entregaveis' : 'Consolidar fechamento' }}</strong>
-          <small>{{ riskItems.length ? `${riskItems.length} ponto(s) de atencao` : 'Sem risco operacional evidente' }}</small>
-        </v-sheet>
-      </div>
-    </section>
+            <v-sheet border rounded="xl" class="project-cockpit__value-card project-cockpit__value-card--deliverables">
+              <span>Entregaveis como eixo operacional</span>
+              <h2>{{ deliverableFocusLabel }}</h2>
+              <p>Documentos, revisoes, prazos e responsaveis aparecem conectados para transformar cada entregavel em ponto claro de acao.</p>
+              <div class="project-cockpit__value-actions">
+                <v-btn color="indigo" variant="flat" prepend-icon="$calendar" @click="activeTab = 'deliverables'">
+                  Ver entregaveis
+                </v-btn>
+              </div>
+            </v-sheet>
+          </section>
 
-    <div id="project-knowledge" class="project-cockpit__knowledge-anchor">
-      <ProjectKnowledgeSection :project-id="project.id" :deliverables="deliverables" />
-    </div>
+          <section class="project-cockpit__split project-cockpit__split--wide">
+            <v-sheet border rounded="lg" class="project-cockpit__panel">
+              <div class="project-cockpit__panel-head">
+                <div>
+                  <h2>Entregaveis em foco</h2>
+                  <p>Resumo compacto dos pontos que mais merecem acao agora.</p>
+                </div>
+                <v-btn size="small" color="teal" variant="text" @click="activeTab = 'deliverables'">Ver todos</v-btn>
+              </div>
+              <div v-if="featuredDeliverables.length" class="project-cockpit__focus-list">
+                <v-sheet
+                  v-for="deliverable in featuredDeliverables"
+                  :key="deliverable.id"
+                  border
+                  rounded="lg"
+                  class="project-cockpit__focus-card"
+                >
+                  <div>
+                    <strong>{{ deliverable.title }}</strong>
+                    <span>{{ deliverable.dueDate ? formatRelativeDueDate(deliverable.dueDate) : 'Sem prazo definido' }}</span>
+                  </div>
+                  <BaseStatusBadge :kind="deliverableBadgeKind(deliverable.status)" size="x-small" />
+                  <div class="project-cockpit__focus-tags">
+                    <v-chip
+                      v-for="tag in (deliverable.tags ?? []).slice(0, 3)"
+                      :key="tag.id"
+                      size="x-small"
+                      color="teal"
+                      variant="tonal"
+                    >
+                      {{ tag.name }}
+                    </v-chip>
+                    <small v-if="!(deliverable.tags ?? []).length">Sem tags tecnicas</small>
+                  </div>
+                </v-sheet>
+              </div>
+              <v-empty-state
+                v-else
+                headline="Sem entregaveis tecnicos"
+                text="Cadastre entregaveis para transformar o projeto em um cockpit operacional rastreavel."
+              />
+            </v-sheet>
 
-    <section class="project-cockpit__section project-cockpit__section--deliverables">
-      <div class="project-cockpit__section-title">
-        <div>
-          <h2>Entregaveis tecnicos</h2>
-          <p>Eixo operacional do projeto: prazos, documentos, revisoes, responsaveis e knowledge aplicado.</p>
-        </div>
-        <v-btn :to="`/projects/${project.id}/deliverables`" color="teal" variant="tonal">
-          Abrir entregaveis
-        </v-btn>
-      </div>
-      <div v-if="featuredDeliverables.length" class="project-cockpit__deliverable-cards">
-        <ProjectDeliverableTechnicalCard
-          v-for="deliverable in featuredDeliverables"
-          :key="deliverable.id"
-          :deliverable="deliverable"
-          :documents="documents"
-          :reviews="reviews"
-          :knowledge-items="knowledgeItems"
-          @update:status="updateDeliverableStatus"
-        />
-      </div>
-      <v-empty-state
-        v-else
-        headline="Sem entregaveis tecnicos"
-        text="Cadastre entregaveis para transformar o projeto em um cockpit operacional rastreavel."
-      />
-      <v-expansion-panels v-if="deliverables.length" variant="accordion" class="project-cockpit__flow-panel">
-        <v-expansion-panel>
-          <v-expansion-panel-title>
-            Ver fluxo completo por status
-          </v-expansion-panel-title>
-          <v-expansion-panel-text>
-            <DeliverablesBoard :deliverables="deliverables" @update:status="updateDeliverableStatus" />
-          </v-expansion-panel-text>
-        </v-expansion-panel>
-      </v-expansion-panels>
-    </section>
+            <v-sheet border rounded="lg" class="project-cockpit__panel">
+              <div class="project-cockpit__panel-head">
+                <div>
+                  <h2>Recomendacoes</h2>
+                  <p>Inteligencia simples por tags: a taxonomia aponta referencias que combinam com os entregaveis.</p>
+                </div>
+              </div>
+              <div class="project-cockpit__recommendations">
+                <v-sheet
+                  v-for="recommendation in knowledgeRecommendations"
+                  :key="recommendation.knowledgeItem.id"
+                  border
+                  rounded="lg"
+                  class="project-cockpit__recommendation project-cockpit__recommendation--knowledge"
+                >
+                  <div class="project-cockpit__recommendation-head">
+                    <span>Recomendado por tags</span>
+                    <strong>{{ recommendation.knowledgeItem.title }}</strong>
+                  </div>
+                  <p>{{ recommendation.reason }}</p>
+                  <div class="project-cockpit__recommendation-tags">
+                    <v-chip
+                      v-for="tag in recommendation.matchedTags.slice(0, 4)"
+                      :key="tag.id"
+                      size="small"
+                      color="teal"
+                      variant="tonal"
+                    >
+                      {{ tag.name }}
+                    </v-chip>
+                  </div>
+                  <v-btn :to="`/knowledge-base/${recommendation.knowledgeItem.id}`" size="small" color="teal" variant="flat">
+                    Ver referencia
+                  </v-btn>
+                </v-sheet>
+                <v-sheet
+                  v-for="recommendation in recommendations"
+                  :key="recommendation.title"
+                  border
+                  rounded="lg"
+                  class="project-cockpit__recommendation"
+                >
+                  <strong>{{ recommendation.title }}</strong>
+                  <span>{{ recommendation.description }}</span>
+                  <v-btn v-if="recommendation.to" :to="recommendation.to" size="small" color="teal" variant="tonal">
+                    {{ recommendation.actionLabel }}
+                  </v-btn>
+                </v-sheet>
+                <v-empty-state
+                  v-if="recommendations.length === 0 && knowledgeRecommendations.length === 0"
+                  headline="Sem recomendacoes agora"
+                  text="Quando entregaveis tiverem tags tecnicas, a plataforma passa a sugerir knowledge relevante automaticamente."
+                />
+              </div>
+            </v-sheet>
+          </section>
 
-    <section class="project-cockpit__split">
-      <v-sheet border rounded="lg" class="project-cockpit__panel">
-        <div class="project-cockpit__panel-head">
-          <div>
-            <h2>Documentos</h2>
-            <p>Versoes oficiais, minutas e documentos em revisao.</p>
+          <div id="project-knowledge" class="project-cockpit__knowledge-anchor">
+            <ProjectKnowledgeSection :project-id="project.id" :deliverables="deliverables" />
           </div>
-          <v-btn to="/documents" size="small" variant="text" color="teal">Abrir</v-btn>
-        </div>
-        <v-list lines="two" bg-color="transparent">
-          <v-list-item
-            v-for="document in recentDocuments"
-            :key="document.id"
-            :title="document.title"
-            :subtitle="document.officialVersion?.revision ? `Oficial ${document.officialVersion.revision}` : document.description || 'Sem versao oficial'"
-          >
-            <template #append>
-              <BaseStatusBadge :kind="documentBadgeKind(document.status)" size="x-small" />
-            </template>
-          </v-list-item>
-          <v-list-item v-if="recentDocuments.length === 0" title="Sem documentos cadastrados" />
-        </v-list>
-      </v-sheet>
+        </section>
+      </v-window-item>
 
-      <v-sheet border rounded="lg" class="project-cockpit__panel">
-        <div class="project-cockpit__panel-head">
-          <div>
-            <h2>Revisoes</h2>
-            <p>Pendencias, aprovacoes e reprovacoes tecnicas.</p>
-          </div>
-          <v-btn to="/reviews" size="small" variant="text" color="teal">Abrir</v-btn>
-        </div>
-        <v-list lines="two" bg-color="transparent">
-          <v-list-item
-            v-for="review in recentReviews"
-            :key="review.id"
-            :title="review.comment || 'Revisao tecnica'"
-            :subtitle="review.dueDate ? formatRelativeDueDate(review.dueDate) : 'Sem prazo de revisao'"
-          >
-            <template #append>
-              <BaseStatusBadge :kind="reviewBadgeKind(review.status)" size="x-small" />
-            </template>
-          </v-list-item>
-          <v-list-item v-if="recentReviews.length === 0" title="Sem revisoes cadastradas" />
-        </v-list>
-      </v-sheet>
-    </section>
-
-    <section class="project-cockpit__split">
-      <v-sheet border rounded="lg" class="project-cockpit__panel">
-        <div class="project-cockpit__panel-head">
-          <div>
-            <h2>Recomendacoes</h2>
-            <p>Acoes sugeridas a partir do estado atual do projeto.</p>
-          </div>
-        </div>
-        <div class="project-cockpit__recommendations">
-          <v-sheet
-            v-for="recommendation in recommendations"
-            :key="recommendation.title"
-            border
-            rounded="lg"
-            class="project-cockpit__recommendation"
-          >
-            <strong>{{ recommendation.title }}</strong>
-            <span>{{ recommendation.description }}</span>
-            <v-btn v-if="recommendation.to" :to="recommendation.to" size="small" color="teal" variant="tonal">
-              {{ recommendation.actionLabel }}
+      <v-window-item value="deliverables">
+        <section class="project-cockpit__tab-panel project-cockpit__section--deliverables">
+          <div class="project-cockpit__section-title">
+            <div>
+              <h2>Entregaveis tecnicos</h2>
+              <p>Visao completa, com documentos, revisoes, tags e knowledge aplicado.</p>
+            </div>
+            <v-btn :to="`/projects/${project.id}/deliverables`" color="teal" variant="tonal">
+              Gerenciar entregaveis
             </v-btn>
-          </v-sheet>
-          <v-empty-state
-            v-if="recommendations.length === 0"
-            headline="Sem recomendacoes agora"
-            text="O projeto nao apresenta lacunas operacionais evidentes."
-          />
-        </div>
-      </v-sheet>
-
-      <v-sheet border rounded="lg" class="project-cockpit__panel">
-        <div class="project-cockpit__panel-head">
-          <div>
-            <h2>Riscos e aprendizados</h2>
-            <p>Sinais de retrabalho, atraso ou falta de referencia tecnica.</p>
           </div>
-        </div>
-        <div class="project-cockpit__risks">
-          <v-alert
-            v-for="risk in riskItems"
-            :key="risk.title"
-            :type="risk.tone"
-            variant="tonal"
-            density="comfortable"
-          >
-            <strong>{{ risk.title }}</strong>
-            <div>{{ risk.description }}</div>
-          </v-alert>
-          <v-alert v-if="riskItems.length === 0" type="success" variant="tonal">
-            Nenhum risco tecnico evidente com os dados atuais.
-          </v-alert>
-        </div>
-      </v-sheet>
-    </section>
+          <div v-if="deliverables.length" class="project-cockpit__deliverable-cards">
+            <ProjectDeliverableTechnicalCard
+              v-for="deliverable in deliverables"
+              :key="deliverable.id"
+              :deliverable="deliverable"
+              :documents="documents"
+              :reviews="reviews"
+              :knowledge-items="knowledgeItems"
+              @update:status="updateDeliverableStatus"
+            />
+          </div>
+          <DeliverablesBoard v-if="deliverables.length" :deliverables="deliverables" @update:status="updateDeliverableStatus" />
+          <v-empty-state
+            v-else
+            headline="Sem entregaveis tecnicos"
+            text="Cadastre entregaveis para conectar tags, documentos e conhecimento aplicado."
+          />
+        </section>
+      </v-window-item>
 
-    <section class="project-cockpit__section">
-      <div class="project-cockpit__section-title">
-        <div>
-          <h2>Historico</h2>
-          <p>Movimentos auditaveis ligados ao projeto.</p>
-        </div>
-      </div>
-      <v-sheet border rounded="lg" class="project-cockpit__history">
-        <v-timeline density="compact" side="end">
-          <v-timeline-item
-            v-for="entry in recentHistory"
-            :key="entry.id"
-            dot-color="teal"
-            size="small"
-          >
-            <strong>{{ entry.description }}</strong>
-            <div>{{ entry.actorDisplayName || entry.actorName }} · {{ formatDateTime(entry.occurredAt) }}</div>
-          </v-timeline-item>
-        </v-timeline>
-        <v-empty-state
-          v-if="recentHistory.length === 0"
-          headline="Sem historico recente"
-          text="Eventos auditaveis do projeto aparecerao aqui."
-        />
-      </v-sheet>
-    </section>
+      <v-window-item value="documents">
+        <section class="project-cockpit__tab-panel">
+          <v-sheet border rounded="lg" class="project-cockpit__panel">
+            <div class="project-cockpit__panel-head">
+              <div>
+                <h2>Documentos</h2>
+                <p>Versoes oficiais, minutas e documentos em revisao vinculados ao projeto.</p>
+              </div>
+              <v-btn color="teal" variant="flat" prepend-icon="$upload" @click="isDocumentModalOpen = true">Novo documento</v-btn>
+            </div>
+            <v-list lines="two" bg-color="transparent">
+              <v-list-item
+                v-for="document in documents"
+                :key="document.id"
+                :title="document.title"
+                :subtitle="document.officialVersion?.revision ? `Oficial ${document.officialVersion.revision}` : document.description || 'Sem versao oficial'"
+              >
+                <template #append>
+                  <BaseStatusBadge :kind="documentBadgeKind(document.status)" size="x-small" />
+                </template>
+              </v-list-item>
+              <v-list-item v-if="documents.length === 0" title="Sem documentos cadastrados" />
+            </v-list>
+          </v-sheet>
+        </section>
+      </v-window-item>
+
+      <v-window-item value="reviews">
+        <section class="project-cockpit__tab-panel">
+          <v-sheet border rounded="lg" class="project-cockpit__panel">
+            <div class="project-cockpit__panel-head">
+              <div>
+                <h2>Revisoes</h2>
+                <p>Pendencias, aprovacoes e reprovacoes tecnicas.</p>
+              </div>
+              <v-btn to="/reviews" size="small" variant="text" color="teal">Abrir revisoes</v-btn>
+            </div>
+            <v-list lines="two" bg-color="transparent">
+              <v-list-item
+                v-for="review in reviews"
+                :key="review.id"
+                :title="review.comment || 'Revisao tecnica'"
+                :subtitle="review.dueDate ? formatRelativeDueDate(review.dueDate) : 'Sem prazo de revisao'"
+              >
+                <template #append>
+                  <BaseStatusBadge :kind="reviewBadgeKind(review.status)" size="x-small" />
+                </template>
+              </v-list-item>
+              <v-list-item v-if="reviews.length === 0" title="Sem revisoes cadastradas" />
+            </v-list>
+          </v-sheet>
+        </section>
+      </v-window-item>
+
+      <v-window-item value="history">
+        <section class="project-cockpit__tab-panel project-cockpit__split">
+          <v-sheet border rounded="lg" class="project-cockpit__panel">
+            <div class="project-cockpit__panel-head">
+              <div>
+                <h2>Riscos e aprendizados</h2>
+                <p>Sinais de retrabalho, atraso ou falta de referencia tecnica.</p>
+              </div>
+            </div>
+            <div class="project-cockpit__risks">
+              <v-alert
+                v-for="risk in riskItems"
+                :key="risk.title"
+                :type="risk.tone"
+                variant="tonal"
+                density="comfortable"
+              >
+                <strong>{{ risk.title }}</strong>
+                <div>{{ risk.description }}</div>
+              </v-alert>
+              <v-alert v-if="riskItems.length === 0" type="success" variant="tonal">
+                Nenhum risco tecnico evidente com os dados atuais.
+              </v-alert>
+            </div>
+          </v-sheet>
+          <v-sheet border rounded="lg" class="project-cockpit__history">
+            <v-timeline density="compact" side="end">
+              <v-timeline-item
+                v-for="entry in recentHistory"
+                :key="entry.id"
+                dot-color="teal"
+                size="small"
+              >
+                <strong>{{ entry.description }}</strong>
+                <div>{{ entry.actorDisplayName || entry.actorName }} · {{ formatDateTime(entry.occurredAt) }}</div>
+              </v-timeline-item>
+            </v-timeline>
+            <v-empty-state
+              v-if="recentHistory.length === 0"
+              headline="Sem historico recente"
+              text="Eventos auditaveis do projeto aparecerao aqui."
+            />
+          </v-sheet>
+        </section>
+      </v-window-item>
+    </v-window>
+
+    <v-dialog v-model="isDocumentModalOpen" max-width="780" scrollable>
+      <DocumentUpload
+        :projects="[project]"
+        :deliverables="deliverables"
+        :saving="isSavingDocument"
+        :initial-project-id="project.id"
+        locked-project
+        @submit="handleDocumentSubmit"
+      />
+    </v-dialog>
   </main>
 </template>
 
@@ -563,12 +755,93 @@ function firstAssignee() {
   color: #1b332c;
 }
 
+.project-cockpit__tag-strip {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  border: 1px solid #c9e7dc;
+  border-radius: 0.95rem;
+  background: rgb(255 255 255 / 0.62);
+  padding: 0.75rem;
+}
+
+.project-cockpit__tag-label {
+  color: #267365;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.project-cockpit__tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.project-cockpit__tag-count {
+  display: inline-grid;
+  min-width: 1.15rem;
+  min-height: 1.15rem;
+  margin-left: 0.35rem;
+  place-items: center;
+  border-radius: 999px;
+  background: rgb(0 150 136 / 0.16);
+  color: #0f5b50;
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.project-cockpit__tag-empty {
+  color: #60716b;
+  font-size: 0.84rem;
+}
+
+.project-cockpit__tag-popover {
+  display: grid;
+  gap: 0.25rem;
+  max-width: 20rem;
+  padding: 0.8rem;
+}
+
+.project-cockpit__tag-popover strong {
+  color: #14231f;
+}
+
+.project-cockpit__tag-popover span {
+  color: #60716b;
+  font-size: 0.86rem;
+}
+
 .project-cockpit__hero-actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.75rem;
   align-items: center;
+}
+
+.project-cockpit__tabs-shell {
+  overflow-x: auto;
+  border-color: #cfe7de;
+  background:
+    linear-gradient(135deg, rgb(232 248 242 / 0.9), #ffffff),
+    #ffffff;
+  padding: 0 0.5rem;
+  box-shadow: 0 12px 26px rgb(15 45 38 / 0.06);
+}
+
+.project-cockpit__tabs {
+  min-width: max-content;
+}
+
+.project-cockpit__window {
+  overflow: visible;
+}
+
+.project-cockpit__tab-panel {
+  display: grid;
+  gap: 1.25rem;
 }
 
 .project-cockpit__metrics {
@@ -760,6 +1033,10 @@ function firstAssignee() {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.project-cockpit__split--wide {
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+}
+
 .project-cockpit__summary-card,
 .project-cockpit__panel,
 .project-cockpit__history {
@@ -784,8 +1061,43 @@ function firstAssignee() {
 
 .project-cockpit__deliverable-cards {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(23rem, 1fr));
   gap: 1rem;
+}
+
+.project-cockpit__focus-list {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.project-cockpit__focus-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.65rem;
+  align-items: start;
+  border-color: #d7e9e2;
+  background:
+    radial-gradient(circle at top right, rgb(0 150 136 / 0.1), transparent 10rem),
+    #ffffff;
+  padding: 0.85rem;
+}
+
+.project-cockpit__focus-card strong {
+  display: block;
+  color: #14231f;
+}
+
+.project-cockpit__focus-card span,
+.project-cockpit__focus-card small {
+  color: #60716b;
+  font-size: 0.86rem;
+}
+
+.project-cockpit__focus-tags {
+  display: flex;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  gap: 0.35rem;
 }
 
 .project-cockpit__flow-panel {
@@ -820,12 +1132,41 @@ function firstAssignee() {
   padding: 0.85rem;
 }
 
+.project-cockpit__recommendation--knowledge {
+  border-color: #9bd9cb;
+  background:
+    radial-gradient(circle at top right, rgb(0 150 136 / 0.16), transparent 12rem),
+    linear-gradient(135deg, #f2fffb, #ffffff 62%);
+  box-shadow: 0 14px 28px rgb(15 45 38 / 0.07);
+}
+
+.project-cockpit__recommendation-head {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.project-cockpit__recommendation-head span {
+  color: #267365;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
 .project-cockpit__recommendation strong {
   color: #14231f;
 }
 
-.project-cockpit__recommendation span {
+.project-cockpit__recommendation span,
+.project-cockpit__recommendation p {
+  margin: 0;
   color: #60716b;
+}
+
+.project-cockpit__recommendation-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
 }
 
 .project-cockpit__history {
@@ -846,6 +1187,7 @@ function firstAssignee() {
   .project-cockpit__hero,
   .project-cockpit__summary-grid,
   .project-cockpit__split,
+  .project-cockpit__split--wide,
   .project-cockpit__value-grid,
   .project-cockpit__deliverable-cards {
     grid-template-columns: 1fr;

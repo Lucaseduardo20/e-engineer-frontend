@@ -8,6 +8,7 @@ import type {
   DocumentSummary,
   Project,
   ProjectKnowledgeItem,
+  ProjectKnowledgeRecommendation,
   ReviewSummary,
 } from '@/shared/types/api-contracts'
 import type { PromoteProjectToKnowledgeDto } from '@/modules/knowledge-base/types/knowledge.types'
@@ -27,6 +28,7 @@ export const useProjectsStore = defineStore('projects', () => {
   const reviews = ref<ReviewSummary[]>([])
   const auditLogs = ref<AuditLogEntry[]>([])
   const projectKnowledge = ref<ProjectKnowledgeItem[]>([])
+  const projectKnowledgeRecommendations = ref<ProjectKnowledgeRecommendation[]>([])
   const total = ref(0)
   const page = ref(1)
   const pageSize = ref(10)
@@ -74,12 +76,21 @@ export const useProjectsStore = defineStore('projects', () => {
     error.value = null
 
     try {
-      const [project, deliverablePage, documentPage, reviewPage, knowledgeResponse, auditPage] = await Promise.all([
+      const [
+        project,
+        deliverablePage,
+        documentPage,
+        reviewPage,
+        knowledgeResponse,
+        knowledgeRecommendationsResponse,
+        auditPage,
+      ] = await Promise.all([
         projectsService.getById(projectId),
         apiClient.deliverables.list({ projectId, page: 1, pageSize: 50 }),
         apiClient.documents.list({ projectId, page: 1, pageSize: 50 }),
         apiClient.reviews.list({ projectId, page: 1, pageSize: 50 }),
         apiClient.projects.listKnowledge(projectId),
+        apiClient.projects.recommendKnowledge(projectId),
         apiClient.audit.list({ entityType: 'project', entityId: projectId, page: 1, pageSize: 20 }),
       ])
       selectedProject.value = project
@@ -87,6 +98,7 @@ export const useProjectsStore = defineStore('projects', () => {
       documents.value = documentPage.items
       reviews.value = reviewPage.items
       projectKnowledge.value = knowledgeResponse.items
+      projectKnowledgeRecommendations.value = knowledgeRecommendationsResponse.items
       auditLogs.value = auditPage.items
     } catch (loadError) {
       error.value = getApiErrorMessage(
@@ -187,6 +199,7 @@ export const useProjectsStore = defineStore('projects', () => {
     reviews,
     auditLogs,
     projectKnowledge,
+    projectKnowledgeRecommendations,
     total,
     page,
     pageSize,

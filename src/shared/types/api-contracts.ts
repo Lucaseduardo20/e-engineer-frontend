@@ -258,6 +258,30 @@ export interface ProjectKnowledgeItem {
   }
 }
 
+export interface KnowledgeRecommendationTag {
+  id: string
+  name: string
+  slug: string
+  category: string
+  status: string
+}
+
+export interface ProjectKnowledgeRecommendation {
+  knowledgeItem: {
+    id: string
+    title: string
+    description?: string | null
+    type: string
+    status: string
+    tags: KnowledgeRecommendationTag[]
+    updatedAt: number
+    publishedAt?: number | null
+  }
+  matchedTags: KnowledgeRecommendationTag[]
+  score: number
+  reason: string
+}
+
 export type TechnicalTagCategory =
   | 'project_type'
   | 'technical_discipline'

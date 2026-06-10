@@ -16,11 +16,15 @@ const props = withDefaults(
     users?: User[]
     document?: DocumentSummary | null
     saving?: boolean
+    initialProjectId?: string
+    lockedProject?: boolean
   }>(),
   {
     deliverables: () => [],
     users: () => [],
     document: null,
+    initialProjectId: '',
+    lockedProject: false,
   },
 )
 
@@ -99,11 +103,15 @@ const isEditing = computed(() => Boolean(props.document))
 const canSubmit = computed(() =>
   Boolean(form.projectId && form.title.trim() && form.type && form.status),
 )
+const isProjectLocked = computed(() => props.lockedProject || isEditing.value)
 
 watch(
-  () => props.document,
-  (document) => {
+  () => [props.document, props.initialProjectId] as const,
+  ([document, initialProjectId]) => {
     form.projectId = document?.projectId ?? ''
+    if (!document && initialProjectId) {
+      form.projectId = initialProjectId
+    }
     form.deliverableId = document?.deliverableId ?? null
     form.title = document?.title ?? ''
     form.description = document?.description ?? ''
@@ -125,7 +133,9 @@ watch(
 watch(
   () => form.projectId,
   (projectId) => {
-    form.deliverableId = null
+    if (!props.lockedProject) {
+      form.deliverableId = null
+    }
     emit('project-change', projectId)
   },
 )
@@ -165,7 +175,7 @@ function submit() {
         label="Projeto tecnico"
         variant="outlined"
         density="comfortable"
-        :disabled="saving || isEditing"
+        :disabled="saving || isProjectLocked"
         :rules="[(value: string) => Boolean(value) || 'Selecione o projeto.']"
       />
       <v-select
