@@ -249,9 +249,10 @@ function submit() {
 
           <TechnicalTagSelector
             v-model="form.tagIds"
-            :allow-create="true"
+            :allow-create="false"
             :max-list-height="300"
             :categories="['technical_discipline','document_type','operational_pain','project_stage','knowledge_purpose']"
+            :allowed-statuses="['active','pending_review','deprecated']"
           />
 
           <v-select

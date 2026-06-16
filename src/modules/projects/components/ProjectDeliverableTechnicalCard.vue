@@ -258,6 +258,21 @@ function normalizeText(value: string) {
       </div>
     </div>
 
+    <div class="deliverable-technical-card__tags">
+      <v-chip
+        v-for="tag in (deliverable.tags ?? []).slice(0, 6)"
+        :key="tag.id"
+        color="teal"
+        variant="tonal"
+        size="small"
+      >
+        {{ tag.name }}
+      </v-chip>
+      <span v-if="!(deliverable.tags ?? []).length" class="deliverable-technical-card__muted">
+        Sem tags governadas neste entregavel.
+      </span>
+    </div>
+
     <div class="deliverable-technical-card__quick-info">
       <div>
         <span>Responsavel</span>
@@ -483,6 +498,12 @@ function normalizeText(value: string) {
   display: grid;
   justify-items: end;
   gap: 0.45rem;
+}
+
+.deliverable-technical-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
 }
 
 .deliverable-technical-card__risk {
