@@ -58,6 +58,21 @@ export type CreateDeliverableRequest = {
 
 export type UpdateDeliverableRequest = Partial<Omit<CreateDeliverableRequest, 'projectId'>>
 
+export interface DeliverableRemovalRequest {
+  id: string
+  organizationId: string
+  projectId: string
+  deliverableId: string
+  deliverableTitle: string
+  requestedBy: string
+  reason: string
+  status: string
+  reviewedBy?: string | null
+  reviewedAt?: number | null
+  reviewComment?: string | null
+  createdAt: number
+}
+
 export interface CreateReviewRequest {
   projectId: string
   deliverableId?: string | null
@@ -215,6 +230,28 @@ function mapDeliverable(deliverable: Deliverable): Deliverable {
   return {
     ...deliverable,
     dueDate: toTimestamp(deliverable.dueDate) ?? undefined,
+    inheritanceReview: deliverable.inheritanceReview
+      ? {
+          ...deliverable.inheritanceReview,
+          reviewedAt: toTimestamp(deliverable.inheritanceReview.reviewedAt) ?? null,
+        }
+      : null,
+    removalRequest: deliverable.removalRequest
+      ? {
+          ...deliverable.removalRequest,
+          reviewedAt: toTimestamp(deliverable.removalRequest.reviewedAt) ?? null,
+        }
+      : null,
+  }
+}
+
+function mapDeliverableRemovalRequest(
+  request: DeliverableRemovalRequest,
+): DeliverableRemovalRequest {
+  return {
+    ...request,
+    reviewedAt: toTimestamp(request.reviewedAt) ?? null,
+    createdAt: toTimestamp(request.createdAt) ?? Date.now(),
   }
 }
 
@@ -498,6 +535,26 @@ export const apiClient = {
           dueDate: toWireDate(payload.dueDate),
         }),
       ).then(mapDeliverable)
+    },
+    markInheritanceReviewed(id: string) {
+      return unwrap<Deliverable>(
+        httpClient.post(`/deliverables/${id}/inheritance-review/mark-reviewed`),
+      ).then(mapDeliverable)
+    },
+    requestRemoval(id: string, payload: { reason: string }) {
+      return unwrap<DeliverableRemovalRequest>(
+        httpClient.post(`/deliverables/${id}/removal-requests`, payload),
+      ).then(mapDeliverableRemovalRequest)
+    },
+    approveRemoval(requestId: string, payload: { comment?: string | null } = {}) {
+      return unwrap<DeliverableRemovalRequest>(
+        httpClient.post(`/deliverables/removal-requests/${requestId}/approve`, payload),
+      ).then(mapDeliverableRemovalRequest)
+    },
+    rejectRemoval(requestId: string, payload: { comment?: string | null } = {}) {
+      return unwrap<DeliverableRemovalRequest>(
+        httpClient.post(`/deliverables/removal-requests/${requestId}/reject`, payload),
+      ).then(mapDeliverableRemovalRequest)
     },
   },
   documents: {

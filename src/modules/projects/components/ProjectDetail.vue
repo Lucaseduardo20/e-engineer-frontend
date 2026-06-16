@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useAuthStore } from '@/modules/auth/stores/auth.store'
 import type {
   AuditLogEntry,
   Deliverable,
@@ -28,6 +29,7 @@ import {
   toTimestamp,
 } from '@/shared/formatters/date.formatter'
 import DeliverablesBoard from './DeliverablesBoard.vue'
+import InheritedDeliverablesReviewBanner from './InheritedDeliverablesReviewBanner.vue'
 import ProjectKnowledgeSection from './ProjectKnowledgeSection.vue'
 import ProjectDeliverableTechnicalCard from './ProjectDeliverableTechnicalCard.vue'
 import DocumentUpload from '@/modules/documents/components/DocumentUpload.vue'
@@ -48,9 +50,16 @@ const emit = defineEmits<{
   refresh: []
 }>()
 
+const authStore = useAuthStore()
 const activeTab = ref('overview')
 const isDocumentModalOpen = ref(false)
 const isSavingDocument = ref(false)
+const inheritanceReviewSavingIds = ref<string[]>([])
+const removalDialog = ref<{
+  deliverable: Deliverable
+  mode: 'request' | 'approve' | 'reject'
+} | null>(null)
+const removalReason = ref('')
 
 const todayStart = computed(() => {
   const today = new Date()
@@ -73,6 +82,16 @@ const rejectedReviews = computed(() =>
 )
 const activeDeliverables = computed(() =>
   props.deliverables.filter((deliverable) => deliverable.status !== 'done'),
+)
+const pendingInheritedDeliverables = computed(() =>
+  props.deliverables.filter(
+    (deliverable) => deliverable.inheritanceReview?.needsReviewAfterInheritance,
+  ),
+)
+const canApproveDeliverableRemoval = computed(
+  () =>
+    authStore.isPlatformAdmin ||
+    (authStore.user?.roles ?? []).some((role) => ['owner', 'admin', 'manager'].includes(role)),
 )
 const nextDueDeliverable = computed(() =>
   [...activeDeliverables.value]
@@ -263,6 +282,13 @@ const metrics = computed(() => [
     detail: recommendationCount.value ? 'acoes sugeridas' : 'sem sugestoes',
     color: 'blue',
   },
+  {
+    label: 'Herdados a revisar',
+    value: pendingInheritedDeliverables.value.length,
+    detail: pendingInheritedDeliverables.value.length ? 'validacao tecnica' : 'revisao concluida',
+    color: pendingInheritedDeliverables.value.length ? 'amber' : 'green',
+    emphasis: pendingInheritedDeliverables.value.length > 0,
+  },
 ])
 const recentHistory = computed(() => props.auditLogs.slice(0, 6))
 const tabItems = computed(() => [
@@ -325,6 +351,67 @@ async function handleDocumentSubmit(payload: {
     emit('refresh')
   } finally {
     isSavingDocument.value = false
+  }
+}
+
+async function markInheritedDeliverableReviewed(deliverable: Deliverable) {
+  if (inheritanceReviewSavingIds.value.includes(deliverable.id)) return
+  inheritanceReviewSavingIds.value = [...inheritanceReviewSavingIds.value, deliverable.id]
+
+  try {
+    await apiClient.deliverables.markInheritanceReviewed(deliverable.id)
+    emit('refresh')
+  } finally {
+    inheritanceReviewSavingIds.value = inheritanceReviewSavingIds.value.filter(
+      (id) => id !== deliverable.id,
+    )
+  }
+}
+
+async function removeInheritedDeliverable(deliverable: Deliverable) {
+  removalDialog.value = { deliverable, mode: 'request' }
+  removalReason.value = ''
+}
+
+async function approveInheritedDeliverableRemoval(deliverable: Deliverable) {
+  removalDialog.value = { deliverable, mode: 'approve' }
+  removalReason.value = ''
+}
+
+async function rejectInheritedDeliverableRemoval(deliverable: Deliverable) {
+  removalDialog.value = { deliverable, mode: 'reject' }
+  removalReason.value = ''
+}
+
+async function submitRemovalDialog() {
+  const dialog = removalDialog.value
+  if (!dialog) return
+  const deliverable = dialog.deliverable
+  if (inheritanceReviewSavingIds.value.includes(deliverable.id)) return
+  inheritanceReviewSavingIds.value = [...inheritanceReviewSavingIds.value, deliverable.id]
+
+  try {
+    if (dialog.mode === 'request') {
+      await apiClient.deliverables.requestRemoval(deliverable.id, {
+        reason: removalReason.value,
+      })
+    } else if (dialog.mode === 'approve' && deliverable.removalRequest) {
+      await apiClient.deliverables.approveRemoval(deliverable.removalRequest.id, {
+        comment: removalReason.value || null,
+      })
+    } else if (dialog.mode === 'reject' && deliverable.removalRequest) {
+      await apiClient.deliverables.rejectRemoval(deliverable.removalRequest.id, {
+        comment: removalReason.value || null,
+      })
+    }
+
+    removalDialog.value = null
+    removalReason.value = ''
+    emit('refresh')
+  } finally {
+    inheritanceReviewSavingIds.value = inheritanceReviewSavingIds.value.filter(
+      (id) => id !== deliverable.id,
+    )
   }
 }
 </script>
@@ -439,6 +526,17 @@ async function handleDocumentSubmit(payload: {
     <v-window v-model="activeTab" class="project-cockpit__window">
       <v-window-item value="overview">
         <section class="project-cockpit__tab-panel">
+          <InheritedDeliverablesReviewBanner
+            :project-id="project.id"
+            :deliverables="deliverables"
+            :can-approve-removal="canApproveDeliverableRemoval"
+            :saving-ids="inheritanceReviewSavingIds"
+            @mark-reviewed="markInheritedDeliverableReviewed"
+            @request-removal="removeInheritedDeliverable"
+            @approve-removal="approveInheritedDeliverableRemoval"
+            @reject-removal="rejectInheritedDeliverableRemoval"
+          />
+
           <section class="project-cockpit__metrics" aria-label="Indicadores rapidos">
             <v-sheet
               v-for="metric in metrics"
@@ -617,6 +715,17 @@ async function handleDocumentSubmit(payload: {
 
       <v-window-item value="deliverables">
         <section class="project-cockpit__tab-panel project-cockpit__section--deliverables">
+          <InheritedDeliverablesReviewBanner
+            :project-id="project.id"
+            :deliverables="deliverables"
+            :can-approve-removal="canApproveDeliverableRemoval"
+            :saving-ids="inheritanceReviewSavingIds"
+            @mark-reviewed="markInheritedDeliverableReviewed"
+            @request-removal="removeInheritedDeliverable"
+            @approve-removal="approveInheritedDeliverableRemoval"
+            @reject-removal="rejectInheritedDeliverableRemoval"
+          />
+
           <div class="project-cockpit__section-title">
             <div>
               <h2>Entregaveis tecnicos</h2>
@@ -756,6 +865,51 @@ async function handleDocumentSubmit(payload: {
         locked-project
         @submit="handleDocumentSubmit"
       />
+    </v-dialog>
+
+    <v-dialog :model-value="Boolean(removalDialog)" max-width="560" @update:model-value="!$event && (removalDialog = null)">
+      <v-card rounded="lg">
+        <v-card-title>
+          {{
+            removalDialog?.mode === 'approve'
+              ? 'Aprovar remocao'
+              : removalDialog?.mode === 'reject'
+                ? 'Rejeitar remocao'
+                : 'Solicitar remocao'
+          }}
+        </v-card-title>
+        <v-card-text class="project-cockpit__removal-dialog">
+          <p>
+            {{ removalDialog?.deliverable.title }}
+          </p>
+          <v-alert type="warning" variant="tonal">
+            Remover entregavel altera a estrutura tecnica deste projeto. A base original nao sera afetada, mas a decisao ficara registrada no historico.
+          </v-alert>
+          <v-textarea
+            v-model="removalReason"
+            :label="removalDialog?.mode === 'request' ? 'Motivo tecnico da remocao' : 'Comentario da decisao'"
+            rows="4"
+            counter="1000"
+            maxlength="1000"
+            variant="outlined"
+            :hint="removalDialog?.mode === 'request' ? 'Explique por que este entregavel nao se aplica ao projeto.' : 'Opcional: registre o criterio usado na decisao.'"
+            persistent-hint
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-btn variant="text" @click="removalDialog = null">Cancelar</v-btn>
+          <v-spacer />
+          <v-btn
+            color="red"
+            variant="flat"
+            :disabled="removalDialog?.mode === 'request' && removalReason.trim().length < 12"
+            :loading="Boolean(removalDialog && inheritanceReviewSavingIds.includes(removalDialog.deliverable.id))"
+            @click="submitRemovalDialog"
+          >
+            Confirmar
+          </v-btn>
+        </v-card-actions>
+      </v-card>
     </v-dialog>
   </main>
 </template>
