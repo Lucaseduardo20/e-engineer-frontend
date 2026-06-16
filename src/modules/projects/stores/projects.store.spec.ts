@@ -9,6 +9,7 @@ vi.mock('@/modules/projects/services/projects.service', () => ({
     create: vi.fn(),
     getById: vi.fn(),
     list: vi.fn(),
+    recommendBases: vi.fn(),
   },
 }))
 
@@ -180,5 +181,35 @@ describe('projects store', () => {
       page: 1,
       pageSize: 10,
     })
+  })
+
+  it('loads project base recommendations by selected tags', async () => {
+    vi.mocked(projectsService.recommendBases).mockResolvedValue({
+      items: [
+        {
+          project: {
+            id: 'base-1',
+            name: 'UBS modelo',
+            status: 'active',
+            progress: 80,
+          },
+          matchedTags: [],
+          deliverablesPreview: [],
+          documentsPreview: [],
+          reviewsCount: 0,
+          score: 10,
+        },
+      ],
+    })
+    const store = useProjectsStore()
+
+    const items = await store.recommendProjectBases(['tag-1'])
+
+    expect(projectsService.recommendBases).toHaveBeenCalledWith({
+      tagIds: ['tag-1'],
+      limit: 6,
+    })
+    expect(items).toHaveLength(1)
+    expect(store.projectBaseRecommendations[0]?.project.name).toBe('UBS modelo')
   })
 })

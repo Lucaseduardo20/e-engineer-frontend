@@ -25,6 +25,7 @@ import type {
   PromoteProjectToKnowledgeDto,
   Project,
   ProjectKnowledgeRecommendation,
+  ProjectTechnicalProfile,
   ReviewComment,
   ReviewDetail,
   ReviewSummary,
@@ -431,6 +432,9 @@ export const apiClient = {
     },
     async detail(id: string) {
       return mapProject(await unwrap<Project>(httpClient.get(`/projects/${id}`)))
+    },
+    technicalProfile(id: string) {
+      return unwrap<ProjectTechnicalProfile>(httpClient.get(`/projects/${id}/technical-profile`))
     },
     async updateStatus(id: string, status: Project['status']) {
       return mapProject(

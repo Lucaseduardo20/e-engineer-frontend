@@ -9,6 +9,7 @@ import type {
   Project,
   ProjectKnowledgeItem,
   ProjectKnowledgeRecommendation,
+  ProjectTechnicalProfile,
   ReviewSummary,
 } from '@/shared/types/api-contracts'
 import { apiClient } from '@/shared/http/api-client'
@@ -38,6 +39,7 @@ const props = defineProps<{
   reviews: ReviewSummary[]
   knowledgeItems: ProjectKnowledgeItem[]
   knowledgeRecommendations: ProjectKnowledgeRecommendation[]
+  technicalProfile?: ProjectTechnicalProfile | null
   auditLogs: AuditLogEntry[]
 }>()
 
@@ -120,6 +122,13 @@ const inheritedTags = computed(() => {
 })
 const visibleInheritedTags = computed(() => inheritedTags.value.slice(0, 8))
 const hiddenInheritedTagsCount = computed(() => Math.max(inheritedTags.value.length - visibleInheritedTags.value.length, 0))
+const visibleProjectTags = computed(() => (props.project.tags ?? []).slice(0, 8))
+const hiddenProjectTagsCount = computed(() => Math.max((props.project.tags ?? []).length - visibleProjectTags.value.length, 0))
+const visibleLegacyProjectTags = computed(() => (props.project.legacyTags ?? []).slice(0, 6))
+const visibleTechnicalProfileTags = computed(() => (props.technicalProfile?.tags ?? []).slice(0, 8))
+const hiddenTechnicalProfileTagsCount = computed(() =>
+  Math.max((props.technicalProfile?.tags.length ?? 0) - visibleTechnicalProfileTags.value.length, 0),
+)
 const recommendationCount = computed(() => recommendations.value.length + props.knowledgeRecommendations.length)
 const knowledgeValueLabel = computed(() =>
   props.knowledgeItems.length
@@ -336,6 +345,37 @@ async function handleDocumentSubmit(payload: {
           <span>Prazo: <strong>{{ nextDueDeliverable ? formatRelativeDueDate(nextDueDeliverable.dueDate) : 'sem prazo critico' }}</strong></span>
         </div>
         <div class="project-cockpit__tag-strip">
+          <span class="project-cockpit__tag-label">Tags do projeto</span>
+          <div v-if="visibleProjectTags.length" class="project-cockpit__tag-list">
+            <v-chip
+              v-for="tag in visibleProjectTags"
+              :key="tag.id"
+              color="teal"
+              variant="tonal"
+              size="small"
+            >
+              {{ tag.name }}
+            </v-chip>
+            <v-chip v-if="hiddenProjectTagsCount" color="teal" variant="outlined" size="small">
+              +{{ hiddenProjectTagsCount }} tag(s)
+            </v-chip>
+          </div>
+          <div v-else-if="visibleLegacyProjectTags.length" class="project-cockpit__tag-list">
+            <v-chip
+              v-for="tag in visibleLegacyProjectTags"
+              :key="tag"
+              color="blue-grey"
+              variant="tonal"
+              size="small"
+            >
+              {{ tag }}
+            </v-chip>
+          </div>
+          <span v-else class="project-cockpit__tag-empty">
+            Selecione tags governadas ao criar o projeto para ativar recomendacoes futuras.
+          </span>
+        </div>
+        <div class="project-cockpit__tag-strip">
           <span class="project-cockpit__tag-label">Tags herdadas dos entregaveis</span>
           <div v-if="visibleInheritedTags.length" class="project-cockpit__tag-list">
             <v-menu
@@ -415,6 +455,32 @@ async function handleDocumentSubmit(payload: {
               <small>{{ metric.detail }}</small>
             </v-sheet>
           </section>
+
+          <v-sheet border rounded="lg" class="project-cockpit__panel project-cockpit__technical-context">
+            <div class="project-cockpit__panel-head">
+              <div>
+                <h2>Contexto tecnico do projeto</h2>
+                <p>Leitura inicial a partir das tags governadas vinculadas ao projeto.</p>
+              </div>
+            </div>
+            <div v-if="visibleTechnicalProfileTags.length" class="project-cockpit__tag-list">
+              <v-chip
+                v-for="tag in visibleTechnicalProfileTags"
+                :key="tag.id"
+                color="teal"
+                variant="tonal"
+                size="small"
+              >
+                {{ tag.name }}
+              </v-chip>
+              <v-chip v-if="hiddenTechnicalProfileTagsCount" color="teal" variant="outlined" size="small">
+                +{{ hiddenTechnicalProfileTagsCount }} tag(s)
+              </v-chip>
+            </div>
+            <span v-else class="project-cockpit__tag-empty">
+              Adicione tags governadas ao projeto para criar contexto tecnico reutilizavel.
+            </span>
+          </v-sheet>
 
           <section class="project-cockpit__value-grid" aria-label="Foco de valor do projeto">
             <v-sheet border rounded="xl" class="project-cockpit__value-card project-cockpit__value-card--knowledge">

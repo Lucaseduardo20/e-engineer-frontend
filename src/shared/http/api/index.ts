@@ -7,4 +7,5 @@ export type {
   CreateProjectResponse,
   ListProjectsParams,
   ProjectDTO,
+  UpdateProjectRequest,
 } from './projects'

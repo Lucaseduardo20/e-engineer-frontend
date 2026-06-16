@@ -31,6 +31,10 @@ const statusOptions: Array<{ title: string; value: Project['status'] }> = [
   { title: 'Concluido', value: 'completed' },
   { title: 'Arquivado', value: 'archived' },
 ]
+
+function visibleProjectTags(project: Project) {
+  return (project.tags ?? []).slice(0, 3)
+}
 </script>
 
 <template>
@@ -83,6 +87,17 @@ const statusOptions: Array<{ title: string; value: Project['status'] }> = [
             }}</RouterLink>
             <div class="text-body-2 text-medium-emphasis">
               {{ item.description || 'Sem cliente informado' }}
+            </div>
+            <div v-if="visibleProjectTags(item).length" class="projects-list__tags">
+              <v-chip
+                v-for="tag in visibleProjectTags(item)"
+                :key="tag.id"
+                size="x-small"
+                color="teal"
+                variant="tonal"
+              >
+                {{ tag.name }}
+              </v-chip>
             </div>
           </div>
         </div>
@@ -161,6 +176,13 @@ const statusOptions: Array<{ title: string; value: Project['status'] }> = [
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+.projects-list__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
 }
 
 .projects-list__project-icon {

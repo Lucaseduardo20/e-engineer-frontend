@@ -5,6 +5,13 @@ Este arquivo registra auditoria, decisoes e contexto de continuidade do frontend
 O guia estavel do produto esta em `../master.md`.
 As instrucoes operacionais especificas do frontend estao em `frontend-agent.md`.
 
+## 2026-06-09 - Novo projeto guiado por tags
+
+- Decisao implementada: o modal de novo projeto foi substituido por um wizard em etapas: nome, tags governadas, recomendacao de base e revisao final.
+- Decisao implementada: as tags selecionadas acionam recomendacoes de projetos base por taxonomia, mostrando estrutura herdada e explicando que responsaveis/revisores nao sao carregados.
+- Decisao implementada: a criacao envia `baseProjectId` opcional e `tagIds`, mantendo o fluxo de projeto como entrada da inteligencia operacional.
+- Validado: testes focados de projetos, type-check e build frontend.
+
 ## 2026-06-09 - Cockpit do projeto em abas e upload contextual
 
 - Decisao implementada: o detalhe do projeto passa a usar abas para reduzir a altura da pagina, mantendo a primeira aba como visao de maior valor com knowledge, recomendacoes, metricas e entregaveis em foco.

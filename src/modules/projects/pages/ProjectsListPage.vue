@@ -2,31 +2,21 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ProjectsList from '@/modules/projects/components/ProjectsList.vue'
+import ProjectCreateWizard from '@/modules/projects/components/ProjectCreateWizard.vue'
 import { useProjectsStore } from '@/modules/projects/stores/projects.store'
 import BasePageHeader from '@/shared/components/BasePageHeader.vue'
 import type { Project } from '@/shared/types/api-contracts'
+import type { CreateProjectRequest } from '@/shared/http/api'
 
 const projectsStore = useProjectsStore()
 const route = useRoute()
 const router = useRouter()
 const isCreateDialogOpen = ref(false)
 const isFiltersOpen = ref(false)
-const projectName = ref('')
-const projectType = ref('')
 const isCreating = ref(false)
 const searchTerm = ref('')
 const selectedStatus = ref<Project['status'] | null>(null)
 
-const projectTypes = [
-  'reforma escolar',
-  'drenagem urbana',
-  'pavimentacao',
-  'unidade de saude',
-  'validacao tecnica',
-]
-const canCreateProject = computed(() =>
-  Boolean(projectName.value.trim() && projectType.value.trim()),
-)
 const activeFiltersCount = computed(
   () => [searchTerm.value.trim(), selectedStatus.value].filter(Boolean).length,
 )
@@ -56,8 +46,7 @@ watch(
 )
 
 function resetCreateForm() {
-  projectName.value = ''
-  projectType.value = ''
+  projectsStore.projectBaseRecommendations = []
 }
 
 function openCreateDialog() {
@@ -88,18 +77,11 @@ function clearFilters() {
   applyFilters()
 }
 
-async function handleCreateProject() {
-  if (!projectName.value.trim() || !projectType.value.trim()) {
-    return
-  }
-
+async function handleCreateProject(payload: CreateProjectRequest) {
   isCreating.value = true
 
   try {
-    const project = await projectsStore.createProject({
-      name: projectName.value.trim(),
-      projectType: projectType.value.trim(),
-    })
+    const project = await projectsStore.createProject(payload)
 
     if (project) {
       closeCreateDialog()
@@ -205,46 +187,12 @@ async function updateProjectStatus(project: Project, status: Project['status']) 
       @update:status="updateProjectStatus"
     />
 
-    <v-dialog v-model="isCreateDialogOpen" max-width="560">
-      <v-card rounded="lg">
-        <v-card-title class="d-flex align-center ga-2">
-          <v-icon icon="$plus" color="teal" size="20" />
-          Novo projeto tecnico
-        </v-card-title>
-        <v-divider />
-        <v-card-text class="d-grid ga-4">
-          <v-text-field
-            v-model="projectName"
-            label="Nome do projeto"
-            maxlength="160"
-            counter
-            variant="outlined"
-            :disabled="isCreating"
-            :rules="[(value: string) => Boolean(value?.trim()) || 'Informe o nome do projeto.']"
-            autofocus
-          />
-          <v-select
-            v-model="projectType"
-            :items="projectTypes"
-            label="Tipo de projeto"
-            variant="outlined"
-            :disabled="isCreating"
-            :rules="[(value: string) => Boolean(value?.trim()) || 'Selecione o tipo de projeto.']"
-          />
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn variant="text" :disabled="isCreating" @click="closeCreateDialog"> Cancelar </v-btn>
-          <v-btn
-            color="teal"
-            :disabled="!canCreateProject"
-            :loading="isCreating"
-            @click="handleCreateProject"
-          >
-            Criar
-          </v-btn>
-        </v-card-actions>
-      </v-card>
+    <v-dialog v-model="isCreateDialogOpen" max-width="980" scrollable>
+      <ProjectCreateWizard
+        :saving="isCreating"
+        @cancel="closeCreateDialog"
+        @create="handleCreateProject"
+      />
     </v-dialog>
   </v-container>
 </template>

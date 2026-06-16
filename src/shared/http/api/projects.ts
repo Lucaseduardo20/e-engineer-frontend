@@ -1,12 +1,19 @@
 import { BaseApiService } from '@/shared/http/api/base'
 import { toTimestamp } from '@/shared/formatters/date.formatter'
-import type { Paginated, Project } from '@/shared/types/api-contracts'
+import type {
+  Paginated,
+  Project,
+  ProjectBaseRecommendation,
+  ProjectTechnicalProfile,
+} from '@/shared/types/api-contracts'
 
 export type ProjectDTO = Project
 
 export interface CreateProjectRequest {
   name: string
   projectType: string
+  baseProjectId?: string
+  tagIds?: string[]
 }
 
 export interface CreateProjectResponse {
@@ -15,6 +22,20 @@ export interface CreateProjectResponse {
   name: string
   projectType: string
   status: Project['status']
+  tagIds?: string[]
+  clonedFromProjectId?: string | null
+  clonedStructure?: {
+    deliverablesCopied: number
+    documentsCopied: number
+    documentVersionsCopied: number
+    reviewsCopied: number
+  } | null
+}
+
+export interface UpdateProjectRequest {
+  name?: string
+  projectType?: string
+  tagIds?: string[]
 }
 
 export interface ListProjectsParams {
@@ -42,6 +63,21 @@ export class ProjectsService extends BaseApiService {
 
   create(request: CreateProjectRequest): Promise<CreateProjectResponse> {
     return this.post<CreateProjectResponse, CreateProjectRequest>('', request)
+  }
+
+  update(id: string, request: UpdateProjectRequest): Promise<ProjectDTO> {
+    return this.patch<ProjectDTO, UpdateProjectRequest>(`/${id}`, request).then(mapProject)
+  }
+
+  getTechnicalProfile(id: string): Promise<ProjectTechnicalProfile> {
+    return this.get<ProjectTechnicalProfile>(`/${id}/technical-profile`)
+  }
+
+  recommendBases(request: { tagIds: string[]; limit?: number }): Promise<{ items: ProjectBaseRecommendation[] }> {
+    return this.post<{ items: ProjectBaseRecommendation[] }, { tagIds: string[]; limit?: number }>(
+      '/recommend-bases',
+      request,
+    )
   }
 }
 

@@ -7,12 +7,14 @@ import type {
   Deliverable,
   DocumentSummary,
   Project,
+  ProjectBaseRecommendation,
   ProjectKnowledgeItem,
   ProjectKnowledgeRecommendation,
+  ProjectTechnicalProfile,
   ReviewSummary,
 } from '@/shared/types/api-contracts'
 import type { PromoteProjectToKnowledgeDto } from '@/modules/knowledge-base/types/knowledge.types'
-import type { CreateProjectRequest } from '@/shared/http/api'
+import type { CreateProjectRequest, UpdateProjectRequest } from '@/shared/http/api'
 import { getApiErrorMessage } from '@/shared/http/api-error'
 
 export type ProjectListFilters = {
@@ -29,6 +31,8 @@ export const useProjectsStore = defineStore('projects', () => {
   const auditLogs = ref<AuditLogEntry[]>([])
   const projectKnowledge = ref<ProjectKnowledgeItem[]>([])
   const projectKnowledgeRecommendations = ref<ProjectKnowledgeRecommendation[]>([])
+  const projectTechnicalProfile = ref<ProjectTechnicalProfile | null>(null)
+  const projectBaseRecommendations = ref<ProjectBaseRecommendation[]>([])
   const total = ref(0)
   const page = ref(1)
   const pageSize = ref(10)
@@ -83,6 +87,7 @@ export const useProjectsStore = defineStore('projects', () => {
         reviewPage,
         knowledgeResponse,
         knowledgeRecommendationsResponse,
+        technicalProfile,
         auditPage,
       ] = await Promise.all([
         projectsService.getById(projectId),
@@ -91,6 +96,7 @@ export const useProjectsStore = defineStore('projects', () => {
         apiClient.reviews.list({ projectId, page: 1, pageSize: 50 }),
         apiClient.projects.listKnowledge(projectId),
         apiClient.projects.recommendKnowledge(projectId),
+        projectsService.getTechnicalProfile(projectId),
         apiClient.audit.list({ entityType: 'project', entityId: projectId, page: 1, pageSize: 20 }),
       ])
       selectedProject.value = project
@@ -99,6 +105,7 @@ export const useProjectsStore = defineStore('projects', () => {
       reviews.value = reviewPage.items
       projectKnowledge.value = knowledgeResponse.items
       projectKnowledgeRecommendations.value = knowledgeRecommendationsResponse.items
+      projectTechnicalProfile.value = technicalProfile
       auditLogs.value = auditPage.items
     } catch (loadError) {
       error.value = getApiErrorMessage(
@@ -123,6 +130,26 @@ export const useProjectsStore = defineStore('projects', () => {
       return null
     } finally {
       isLoading.value = false
+    }
+  }
+
+  async function recommendProjectBases(tagIds: string[]) {
+    if (!tagIds.length) {
+      projectBaseRecommendations.value = []
+      return []
+    }
+
+    try {
+      const response = await projectsService.recommendBases({ tagIds, limit: 6 })
+      projectBaseRecommendations.value = response.items
+      return response.items
+    } catch (recommendError) {
+      error.value = getApiErrorMessage(
+        recommendError,
+        'Nao foi possivel recomendar projetos base.',
+      )
+      projectBaseRecommendations.value = []
+      return []
     }
   }
 
@@ -177,6 +204,32 @@ export const useProjectsStore = defineStore('projects', () => {
     }
   }
 
+  async function updateProject(projectId: string, payload: UpdateProjectRequest) {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const updated = await projectsService.update(projectId, payload)
+      projects.value = projects.value.map((project) =>
+        project.id === projectId ? { ...project, ...updated } : project,
+      )
+
+      if (selectedProject.value?.id === projectId) {
+        selectedProject.value = { ...selectedProject.value, ...updated }
+      }
+
+      return updated
+    } catch (updateError) {
+      error.value = getApiErrorMessage(
+        updateError,
+        'Nao foi possivel atualizar o projeto tecnico.',
+      )
+      return null
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   async function promoteProjectToKnowledge(projectId: string, payload: PromoteProjectToKnowledgeDto) {
     try {
       const created = await apiClient.knowledgeBase.promoteProject(projectId, payload)
@@ -200,6 +253,8 @@ export const useProjectsStore = defineStore('projects', () => {
     auditLogs,
     projectKnowledge,
     projectKnowledgeRecommendations,
+    projectTechnicalProfile,
+    projectBaseRecommendations,
     total,
     page,
     pageSize,
@@ -210,8 +265,10 @@ export const useProjectsStore = defineStore('projects', () => {
     loadProjects,
     loadProjectDetail,
     createProject,
+    recommendProjectBases,
     linkKnowledgeItem,
     unlinkKnowledgeRelation,
+    updateProject,
     updateProjectStatus,
     promoteProjectToKnowledge,
   }

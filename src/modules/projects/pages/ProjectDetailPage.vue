@@ -43,6 +43,7 @@ async function updateDeliverableStatus(deliverable: Deliverable, status: Deliver
       :reviews="projectsStore.reviews"
       :knowledge-items="projectsStore.projectKnowledge"
       :knowledge-recommendations="projectsStore.projectKnowledgeRecommendations"
+      :technical-profile="projectsStore.projectTechnicalProfile"
       :audit-logs="projectsStore.auditLogs"
       @update:deliverable-status="updateDeliverableStatus"
       @refresh="projectsStore.loadProjectDetail(String(route.params.id))"
