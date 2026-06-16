@@ -47,6 +47,7 @@ watch(
 
 function resetCreateForm() {
   projectsStore.projectBaseRecommendations = []
+  projectsStore.similarProjectRecommendations = []
 }
 
 function openCreateDialog() {

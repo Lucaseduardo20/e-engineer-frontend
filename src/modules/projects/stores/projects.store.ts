@@ -10,6 +10,7 @@ import type {
   ProjectBaseRecommendation,
   ProjectKnowledgeItem,
   ProjectKnowledgeRecommendation,
+  ProjectSimilarRecommendation,
   ProjectTechnicalProfile,
   ReviewSummary,
 } from '@/shared/types/api-contracts'
@@ -33,6 +34,7 @@ export const useProjectsStore = defineStore('projects', () => {
   const projectKnowledgeRecommendations = ref<ProjectKnowledgeRecommendation[]>([])
   const projectTechnicalProfile = ref<ProjectTechnicalProfile | null>(null)
   const projectBaseRecommendations = ref<ProjectBaseRecommendation[]>([])
+  const similarProjectRecommendations = ref<ProjectSimilarRecommendation[]>([])
   const total = ref(0)
   const page = ref(1)
   const pageSize = ref(10)
@@ -153,6 +155,26 @@ export const useProjectsStore = defineStore('projects', () => {
     }
   }
 
+  async function recommendSimilarProjects(tagIds: string[]) {
+    if (!tagIds.length) {
+      similarProjectRecommendations.value = []
+      return []
+    }
+
+    try {
+      const response = await projectsService.similar({ tagIds, limit: 6 })
+      similarProjectRecommendations.value = response.items
+      return response.items
+    } catch (recommendError) {
+      error.value = getApiErrorMessage(
+        recommendError,
+        'Nao foi possivel recomendar projetos semelhantes.',
+      )
+      similarProjectRecommendations.value = []
+      return []
+    }
+  }
+
   async function linkKnowledgeItem(
     projectId: string,
     payload: { knowledgeItemId: string; relationType: string; deliverableId?: string },
@@ -255,6 +277,7 @@ export const useProjectsStore = defineStore('projects', () => {
     projectKnowledgeRecommendations,
     projectTechnicalProfile,
     projectBaseRecommendations,
+    similarProjectRecommendations,
     total,
     page,
     pageSize,
@@ -266,6 +289,7 @@ export const useProjectsStore = defineStore('projects', () => {
     loadProjectDetail,
     createProject,
     recommendProjectBases,
+    recommendSimilarProjects,
     linkKnowledgeItem,
     unlinkKnowledgeRelation,
     updateProject,

@@ -340,6 +340,26 @@ export interface ProjectBaseRecommendation {
   score: number
 }
 
+export interface ProjectSimilarRecommendation {
+  project: {
+    id: string
+    name: string
+    client?: string | null
+    projectType?: string | null
+    status: string
+    progress: number
+  }
+  matchedTags: KnowledgeRecommendationTag[]
+  reason: string
+  counters: {
+    matchedTags: number
+    deliverables: number
+    documents: number
+    reviews: number
+  }
+  score: number
+}
+
 export type TechnicalTagCategory =
   | 'project_type'
   | 'technical_discipline'

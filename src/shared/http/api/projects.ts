@@ -4,6 +4,7 @@ import type {
   Paginated,
   Project,
   ProjectBaseRecommendation,
+  ProjectSimilarRecommendation,
   ProjectTechnicalProfile,
 } from '@/shared/types/api-contracts'
 
@@ -76,6 +77,13 @@ export class ProjectsService extends BaseApiService {
   recommendBases(request: { tagIds: string[]; limit?: number }): Promise<{ items: ProjectBaseRecommendation[] }> {
     return this.post<{ items: ProjectBaseRecommendation[] }, { tagIds: string[]; limit?: number }>(
       '/recommend-bases',
+      request,
+    )
+  }
+
+  similar(request: { tagIds: string[]; limit?: number }): Promise<{ items: ProjectSimilarRecommendation[] }> {
+    return this.post<{ items: ProjectSimilarRecommendation[] }, { tagIds: string[]; limit?: number }>(
+      '/similar',
       request,
     )
   }

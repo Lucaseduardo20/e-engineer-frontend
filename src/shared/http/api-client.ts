@@ -25,6 +25,7 @@ import type {
   PromoteProjectToKnowledgeDto,
   Project,
   ProjectKnowledgeRecommendation,
+  ProjectSimilarRecommendation,
   ProjectTechnicalProfile,
   ReviewComment,
   ReviewDetail,
@@ -456,6 +457,11 @@ export const apiClient = {
       return {
         items: response.items.map(mapProjectKnowledgeRecommendation),
       }
+    },
+    similar(payload: { tagIds: string[]; limit?: number }) {
+      return unwrap<{ items: ProjectSimilarRecommendation[] }>(
+        httpClient.post('/projects/similar', payload),
+      )
     },
     linkKnowledge(
       projectId: string,

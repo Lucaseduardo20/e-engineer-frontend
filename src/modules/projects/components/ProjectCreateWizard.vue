@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import TechnicalTagSelector from '@/modules/technical-taxonomy/components/TechnicalTagSelector.vue'
-import { useProjectsStore } from '@/modules/projects/stores/projects.store'
-import type { ProjectBaseRecommendation } from '@/shared/types/api-contracts'
+import { projectsService } from '@/modules/projects/services/projects.service'
+import type { ProjectSimilarRecommendation } from '@/shared/types/api-contracts'
 import type { CreateProjectRequest } from '@/shared/http/api'
 
 const props = defineProps<{
@@ -13,16 +13,15 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
-const projectsStore = useProjectsStore()
 const step = ref(1)
 const projectName = ref('')
 const tagIds = ref<string[]>([])
 const selectedBaseId = ref<string | null>(null)
+const recommendations = ref<ProjectSimilarRecommendation[]>([])
 const isLoadingRecommendations = ref(false)
 let recommendationTimeout: ReturnType<typeof setTimeout> | undefined
 
-const recommendations = computed(() => projectsStore.projectBaseRecommendations)
-const selectedBase = computed<ProjectBaseRecommendation | null>(
+const selectedBase = computed<ProjectSimilarRecommendation | null>(
   () => recommendations.value.find((item) => item.project.id === selectedBaseId.value) ?? null,
 )
 const canGoNext = computed(() => {
@@ -37,7 +36,7 @@ const structureSummary = computed(() => {
   const base = selectedBase.value
   if (!base) return 'Projeto criado do zero, com tags para guiar recomendacoes futuras.'
 
-  return `${base.deliverablesPreview.length} entregavel(is) em preview, ${base.documentsPreview.length} documento(s) em preview e ${base.reviewsCount} revisao(oes) herdadas sem responsaveis.`
+  return `${base.counters.deliverables} entregavel(is), ${base.counters.documents} documento(s) e ${base.counters.reviews} revisao(oes) encontrados no projeto semelhante.`
 })
 
 watch(
@@ -46,13 +45,14 @@ watch(
     selectedBaseId.value = null
     if (recommendationTimeout) clearTimeout(recommendationTimeout)
     if (!ids.length) {
-      projectsStore.projectBaseRecommendations = []
+      recommendations.value = []
       return
     }
     recommendationTimeout = setTimeout(async () => {
       isLoadingRecommendations.value = true
       try {
-        await projectsStore.recommendProjectBases(ids)
+        const response = await projectsService.similar({ tagIds: ids, limit: 6 })
+        recommendations.value = response.items
       } finally {
         isLoadingRecommendations.value = false
       }
@@ -152,8 +152,8 @@ function submit() {
       <section v-else-if="step === 3" class="project-create-wizard__panel">
         <v-sheet border rounded="lg" class="project-create-wizard__hero">
           <span>Passo 3</span>
-          <h3>Escolha um projeto base para ganhar tempo.</h3>
-          <p>A base importa entregaveis, documentos com versoes/arquivos e revisoes sem responsaveis.</p>
+          <h3>Projetos semelhantes encontrados</h3>
+          <p>Use um projeto parecido como base para reaproveitar estrutura tecnica do mesmo tenant.</p>
         </v-sheet>
         <v-progress-linear v-if="isLoadingRecommendations" indeterminate color="teal" />
         <div v-if="recommendations.length" class="project-create-wizard__recommendations">
@@ -173,7 +173,8 @@ function submit() {
               </div>
               <v-chip color="teal" variant="tonal" size="small">{{ recommendation.score }} pts</v-chip>
             </div>
-            <p>{{ recommendation.deliverablesPreview.length }} entregavel(is), {{ recommendation.documentsPreview.length }} documento(s) e {{ recommendation.reviewsCount }} revisao(oes) em preview.</p>
+            <p>{{ recommendation.reason }}</p>
+            <small>{{ recommendation.counters.deliverables }} entregavel(is), {{ recommendation.counters.documents }} documento(s) e {{ recommendation.counters.reviews }} revisao(oes) encontrados.</small>
             <div class="project-create-wizard__chips">
               <v-chip
                 v-for="tag in recommendation.matchedTags.slice(0, 5)"
@@ -185,12 +186,19 @@ function submit() {
                 {{ tag.name }}
               </v-chip>
             </div>
-            <small>Responsaveis e revisores nao serao importados.</small>
+            <v-btn
+              size="small"
+              color="teal"
+              variant="tonal"
+              @click.stop="selectedBaseId = recommendation.project.id"
+            >
+              Usar como base
+            </v-btn>
           </v-sheet>
         </div>
         <v-empty-state
           v-else-if="!isLoadingRecommendations"
-          headline="Nenhum projeto base encontrado"
+          headline="Nenhum projeto semelhante encontrado"
           text="Voce ainda pode criar do zero. As tags ficarao como contexto para recomendacoes futuras."
         />
       </section>
@@ -209,7 +217,7 @@ function submit() {
           </div>
         </v-sheet>
         <v-alert type="info" variant="tonal">
-          Documentos, versoes, arquivos e revisoes serao herdados da base selecionada. Entregaveis, revisoes e documentos ficam sem novos responsaveis atribuídos para voce redistribuir depois.
+          Se um projeto semelhante for usado como base, documentos, versoes, arquivos e revisoes serao herdados. Entregaveis, revisoes e documentos ficam sem novos responsaveis atribuidos para voce redistribuir depois.
         </v-alert>
       </section>
     </v-card-text>
