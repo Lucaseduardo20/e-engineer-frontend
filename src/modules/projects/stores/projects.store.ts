@@ -15,7 +15,11 @@ import type {
   ReviewSummary,
 } from '@/shared/types/api-contracts'
 import type { PromoteProjectToKnowledgeDto } from '@/modules/knowledge-base/types/knowledge.types'
-import type { CreateProjectRequest, UpdateProjectRequest } from '@/shared/http/api'
+import type {
+  CreateProjectFromBaseRequest,
+  CreateProjectRequest,
+  UpdateProjectRequest,
+} from '@/shared/http/api'
 import { getApiErrorMessage } from '@/shared/http/api-error'
 
 export type ProjectListFilters = {
@@ -129,6 +133,25 @@ export const useProjectsStore = defineStore('projects', () => {
       return createdProject
     } catch (createError) {
       error.value = getApiErrorMessage(createError, 'Nao foi possivel criar o projeto tecnico.')
+      return null
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  async function createProjectFromBase(input: CreateProjectFromBaseRequest) {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const createdProject = await projectsService.createFromBase(input)
+      await loadProjects(1)
+      return createdProject
+    } catch (createError) {
+      error.value = getApiErrorMessage(
+        createError,
+        'Nao foi possivel criar o projeto a partir da base selecionada.',
+      )
       return null
     } finally {
       isLoading.value = false
@@ -288,6 +311,7 @@ export const useProjectsStore = defineStore('projects', () => {
     loadProjects,
     loadProjectDetail,
     createProject,
+    createProjectFromBase,
     recommendProjectBases,
     recommendSimilarProjects,
     linkKnowledgeItem,

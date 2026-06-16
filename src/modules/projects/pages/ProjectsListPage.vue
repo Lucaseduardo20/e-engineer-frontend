@@ -6,7 +6,7 @@ import ProjectCreateWizard from '@/modules/projects/components/ProjectCreateWiza
 import { useProjectsStore } from '@/modules/projects/stores/projects.store'
 import BasePageHeader from '@/shared/components/BasePageHeader.vue'
 import type { Project } from '@/shared/types/api-contracts'
-import type { CreateProjectRequest } from '@/shared/http/api'
+import type { CreateProjectFromBaseRequest, CreateProjectRequest } from '@/shared/http/api'
 
 const projectsStore = useProjectsStore()
 const route = useRoute()
@@ -87,6 +87,22 @@ async function handleCreateProject(payload: CreateProjectRequest) {
     if (project) {
       closeCreateDialog()
       resetCreateForm()
+    }
+  } finally {
+    isCreating.value = false
+  }
+}
+
+async function handleCreateProjectFromBase(payload: CreateProjectFromBaseRequest) {
+  isCreating.value = true
+
+  try {
+    const project = await projectsStore.createProjectFromBase(payload)
+
+    if (project) {
+      closeCreateDialog()
+      resetCreateForm()
+      void router.push(`/projects/${project.id}`)
     }
   } finally {
     isCreating.value = false
@@ -193,6 +209,7 @@ async function updateProjectStatus(project: Project, status: Project['status']) 
         :saving="isCreating"
         @cancel="closeCreateDialog"
         @create="handleCreateProject"
+        @create-from-base="handleCreateProjectFromBase"
       />
     </v-dialog>
   </v-container>

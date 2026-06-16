@@ -3,13 +3,14 @@ import { computed, ref, watch } from 'vue'
 import TechnicalTagSelector from '@/modules/technical-taxonomy/components/TechnicalTagSelector.vue'
 import { projectsService } from '@/modules/projects/services/projects.service'
 import type { ProjectSimilarRecommendation } from '@/shared/types/api-contracts'
-import type { CreateProjectRequest } from '@/shared/http/api'
+import type { CreateProjectFromBaseRequest, CreateProjectRequest } from '@/shared/http/api'
 
 const props = defineProps<{
   saving?: boolean
 }>()
 const emit = defineEmits<{
   create: [payload: CreateProjectRequest]
+  'create-from-base': [payload: CreateProjectFromBaseRequest]
   cancel: []
 }>()
 
@@ -18,6 +19,8 @@ const projectName = ref('')
 const tagIds = ref<string[]>([])
 const selectedBaseId = ref<string | null>(null)
 const recommendations = ref<ProjectSimilarRecommendation[]>([])
+const inheritTags = ref(true)
+const inheritDeliverables = ref(false)
 const isLoadingRecommendations = ref(false)
 let recommendationTimeout: ReturnType<typeof setTimeout> | undefined
 
@@ -73,12 +76,28 @@ function previousStep() {
 function submit() {
   if (!projectName.value.trim()) return
 
+  if (selectedBase.value) {
+    emit('create-from-base', {
+      baseProjectId: selectedBase.value.project.id,
+      name: projectName.value.trim(),
+      projectType: selectedBase.value.project.projectType || 'projeto tecnico',
+      tagIds: tagIds.value,
+      inheritTags: inheritTags.value,
+      inheritDeliverables: inheritDeliverables.value,
+    })
+    return
+  }
+
   emit('create', {
     name: projectName.value.trim(),
     projectType: finalProjectType.value,
     tagIds: tagIds.value,
-    baseProjectId: selectedBase.value?.project.id,
   })
+}
+
+function useRecommendationAsBase(projectId: string) {
+  selectedBaseId.value = projectId
+  step.value = 4
 }
 </script>
 
@@ -190,7 +209,7 @@ function submit() {
               size="small"
               color="teal"
               variant="tonal"
-              @click.stop="selectedBaseId = recommendation.project.id"
+              @click.stop="useRecommendationAsBase(recommendation.project.id)"
             >
               Usar como base
             </v-btn>
@@ -216,8 +235,26 @@ function submit() {
             <v-chip v-else color="blue-grey" variant="tonal">Sem projeto base</v-chip>
           </div>
         </v-sheet>
+        <v-sheet v-if="selectedBase" border rounded="lg" class="project-create-wizard__review-card">
+          <span>Uso da base</span>
+          <h3>Reaproveitar sem copiar historico</h3>
+          <v-checkbox
+            v-model="inheritTags"
+            color="teal"
+            density="comfortable"
+            hide-details
+            label="Manter tags tecnicas da base"
+          />
+          <v-checkbox
+            v-model="inheritDeliverables"
+            color="teal"
+            density="comfortable"
+            hide-details
+            label="Trazer apenas entregaveis para revisao posterior"
+          />
+        </v-sheet>
         <v-alert type="info" variant="tonal">
-          Se um projeto semelhante for usado como base, documentos, versoes, arquivos e revisoes serao herdados. Entregaveis, revisoes e documentos ficam sem novos responsaveis atribuidos para voce redistribuir depois.
+          A base registra a origem e ajuda a reaproveitar contexto. Documentos, versoes, revisoes, historico, responsaveis e prazos antigos nao serao copiados automaticamente.
         </v-alert>
       </section>
     </v-card-text>

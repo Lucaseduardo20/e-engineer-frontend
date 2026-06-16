@@ -33,6 +33,31 @@ export interface CreateProjectResponse {
   } | null
 }
 
+export interface CreateProjectFromBaseRequest {
+  baseProjectId: string
+  name: string
+  client?: string | null
+  description?: string | null
+  projectType?: string
+  tagIds?: string[]
+  inheritTags?: boolean
+  inheritDeliverables?: boolean
+}
+
+export interface CreateProjectFromBaseResponse {
+  id: string
+  organizationId: string
+  name: string
+  projectType: string
+  status: Project['status']
+  client?: string | null
+  baseProjectId: string
+  inheritedTags: boolean
+  inheritedDeliverables: boolean
+  tagIds: string[]
+  deliverablesCopied: number
+}
+
 export interface UpdateProjectRequest {
   name?: string
   projectType?: string
@@ -64,6 +89,10 @@ export class ProjectsService extends BaseApiService {
 
   create(request: CreateProjectRequest): Promise<CreateProjectResponse> {
     return this.post<CreateProjectResponse, CreateProjectRequest>('', request)
+  }
+
+  createFromBase(request: CreateProjectFromBaseRequest): Promise<CreateProjectFromBaseResponse> {
+    return this.post<CreateProjectFromBaseResponse, CreateProjectFromBaseRequest>('/from-base', request)
   }
 
   update(id: string, request: UpdateProjectRequest): Promise<ProjectDTO> {
