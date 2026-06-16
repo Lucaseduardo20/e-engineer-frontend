@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import TechnicalTagSelector from '@/modules/technical-taxonomy/components/TechnicalTagSelector.vue'
 import { projectsService } from '@/modules/projects/services/projects.service'
-import type { ProjectSimilarRecommendation } from '@/shared/types/api-contracts'
+import type { ProjectBaseRecommendation } from '@/shared/types/api-contracts'
 import type { CreateProjectFromBaseRequest, CreateProjectRequest } from '@/shared/http/api'
 
 const props = defineProps<{
@@ -18,13 +18,13 @@ const step = ref(1)
 const projectName = ref('')
 const tagIds = ref<string[]>([])
 const selectedBaseId = ref<string | null>(null)
-const recommendations = ref<ProjectSimilarRecommendation[]>([])
+const selectedDeliverableIds = ref<string[]>([])
+const recommendations = ref<ProjectBaseRecommendation[]>([])
 const inheritTags = ref(true)
-const inheritDeliverables = ref(false)
 const isLoadingRecommendations = ref(false)
 let recommendationTimeout: ReturnType<typeof setTimeout> | undefined
 
-const selectedBase = computed<ProjectSimilarRecommendation | null>(
+const selectedBase = computed<ProjectBaseRecommendation | null>(
   () => recommendations.value.find((item) => item.project.id === selectedBaseId.value) ?? null,
 )
 const canGoNext = computed(() => {
@@ -39,7 +39,7 @@ const structureSummary = computed(() => {
   const base = selectedBase.value
   if (!base) return 'Projeto criado do zero, com tags para guiar recomendacoes futuras.'
 
-  return `${base.counters.deliverables} entregavel(is), ${base.counters.documents} documento(s) e ${base.counters.reviews} revisao(oes) encontrados no projeto semelhante.`
+  return `${selectedDeliverableIds.value.length} de ${base.deliverablesPreview.length} entregavel(is) selecionado(s). Documentos e revisoes da base ficam apenas como referencia visual.`
 })
 
 watch(
@@ -54,7 +54,7 @@ watch(
     recommendationTimeout = setTimeout(async () => {
       isLoadingRecommendations.value = true
       try {
-        const response = await projectsService.similar({ tagIds: ids, limit: 6 })
+        const response = await projectsService.recommendBases({ tagIds: ids, limit: 6 })
         recommendations.value = response.items
       } finally {
         isLoadingRecommendations.value = false
@@ -63,6 +63,10 @@ watch(
   },
   { deep: true },
 )
+
+watch(selectedBaseId, () => {
+  selectedDeliverableIds.value = []
+})
 
 function nextStep() {
   if (!canGoNext.value) return
@@ -83,7 +87,8 @@ function submit() {
       projectType: selectedBase.value.project.projectType || 'projeto tecnico',
       tagIds: tagIds.value,
       inheritTags: inheritTags.value,
-      inheritDeliverables: inheritDeliverables.value,
+      inheritDeliverables: false,
+      deliverablesToInherit: selectedDeliverableIds.value,
     })
     return
   }
@@ -97,7 +102,20 @@ function submit() {
 
 function useRecommendationAsBase(projectId: string) {
   selectedBaseId.value = projectId
+  selectedDeliverableIds.value = []
   step.value = 4
+}
+
+function toggleDeliverable(deliverableId: string, checked: boolean | null) {
+  const current = new Set(selectedDeliverableIds.value)
+
+  if (checked) {
+    current.add(deliverableId)
+  } else {
+    current.delete(deliverableId)
+  }
+
+  selectedDeliverableIds.value = [...current]
 }
 </script>
 
@@ -192,8 +210,8 @@ function useRecommendationAsBase(projectId: string) {
               </div>
               <v-chip color="teal" variant="tonal" size="small">{{ recommendation.score }} pts</v-chip>
             </div>
-            <p>{{ recommendation.reason }}</p>
-            <small>{{ recommendation.counters.deliverables }} entregavel(is), {{ recommendation.counters.documents }} documento(s) e {{ recommendation.counters.reviews }} revisao(oes) encontrados.</small>
+            <p>Combina com as tags tecnicas selecionadas.</p>
+            <small>{{ recommendation.deliverablesPreview.length }} entregavel(is), {{ recommendation.documentsPreview.length }} documento(s) e {{ recommendation.reviewsCount }} revisao(oes) encontrados.</small>
             <div class="project-create-wizard__chips">
               <v-chip
                 v-for="tag in recommendation.matchedTags.slice(0, 5)"
@@ -204,6 +222,14 @@ function useRecommendationAsBase(projectId: string) {
               >
                 {{ tag.name }}
               </v-chip>
+            </div>
+            <div v-if="recommendation.deliverablesPreview.length" class="project-create-wizard__deliverables-preview">
+              <span
+                v-for="deliverable in recommendation.deliverablesPreview.slice(0, 4)"
+                :key="deliverable.id"
+              >
+                {{ deliverable.title }}
+              </span>
             </div>
             <v-btn
               size="small"
@@ -245,13 +271,43 @@ function useRecommendationAsBase(projectId: string) {
             hide-details
             label="Manter tags tecnicas da base"
           />
-          <v-checkbox
-            v-model="inheritDeliverables"
-            color="teal"
-            density="comfortable"
-            hide-details
-            label="Trazer apenas entregaveis para revisao posterior"
-          />
+        </v-sheet>
+        <v-sheet v-if="selectedBase" border rounded="lg" class="project-create-wizard__review-card">
+          <span>Entregaveis da base</span>
+          <h3>Escolha o que faz sentido neste novo projeto</h3>
+          <div v-if="selectedBase.deliverablesPreview.length" class="project-create-wizard__deliverables-list">
+            <label
+              v-for="deliverable in selectedBase.deliverablesPreview"
+              :key="deliverable.id"
+              class="project-create-wizard__deliverable-option"
+            >
+              <v-checkbox
+                :model-value="selectedDeliverableIds.includes(deliverable.id)"
+                color="teal"
+                density="compact"
+                hide-details
+                @update:model-value="toggleDeliverable(deliverable.id, $event)"
+              />
+              <span>
+                <strong>{{ deliverable.title }}</strong>
+                <small>{{ deliverable.type }} · {{ deliverable.status }}</small>
+              </span>
+              <span class="project-create-wizard__deliverable-tags">
+                <v-chip
+                  v-for="tag in deliverable.tags.slice(0, 3)"
+                  :key="tag.id"
+                  size="x-small"
+                  color="teal"
+                  variant="tonal"
+                >
+                  {{ tag.name }}
+                </v-chip>
+              </span>
+            </label>
+          </div>
+          <v-alert v-else type="info" variant="tonal">
+            O projeto base nao possui entregaveis disponiveis para heranca.
+          </v-alert>
         </v-sheet>
         <v-alert type="info" variant="tonal">
           A base registra a origem e ajuda a reaproveitar contexto. Documentos, versoes, revisoes, historico, responsaveis e prazos antigos nao serao copiados automaticamente.
@@ -409,6 +465,48 @@ function useRecommendationAsBase(projectId: string) {
   gap: 0.35rem;
 }
 
+.project-create-wizard__deliverables-preview,
+.project-create-wizard__deliverables-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.project-create-wizard__deliverables-preview span {
+  overflow: hidden;
+  border: 1px solid #d4e8e1;
+  border-radius: 0.45rem;
+  padding: 0.4rem 0.55rem;
+  color: #32554c;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-create-wizard__deliverable-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.7rem;
+  align-items: center;
+  border: 1px solid #d4e8e1;
+  border-radius: 0.55rem;
+  padding: 0.55rem 0.7rem;
+}
+
+.project-create-wizard__deliverable-option strong,
+.project-create-wizard__deliverable-option small {
+  display: block;
+}
+
+.project-create-wizard__deliverable-option small {
+  color: #60716b;
+}
+
+.project-create-wizard__deliverable-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
+
 .project-create-wizard__actions {
   padding: 0.85rem 1.25rem 1.15rem;
 }
@@ -416,6 +514,15 @@ function useRecommendationAsBase(projectId: string) {
 @media (max-width: 720px) {
   .project-create-wizard__steps {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .project-create-wizard__deliverable-option {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .project-create-wizard__deliverable-tags {
+    grid-column: 2;
+    justify-content: flex-start;
   }
 }
 </style>

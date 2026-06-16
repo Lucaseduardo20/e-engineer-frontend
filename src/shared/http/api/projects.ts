@@ -42,6 +42,7 @@ export interface CreateProjectFromBaseRequest {
   tagIds?: string[]
   inheritTags?: boolean
   inheritDeliverables?: boolean
+  deliverablesToInherit?: string[]
 }
 
 export interface CreateProjectFromBaseResponse {
