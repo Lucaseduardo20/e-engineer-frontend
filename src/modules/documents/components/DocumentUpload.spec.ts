@@ -55,6 +55,7 @@ describe('DocumentUpload', () => {
           VSwitch: InputStub,
           VTextField: InputStub,
           VTextarea: InputStub,
+          TechnicalTagSelector: PassthroughStub,
         },
       },
     })
@@ -107,6 +108,7 @@ describe('DocumentUpload', () => {
           VSwitch: InputStub,
           VTextField: InputStub,
           VTextarea: InputStub,
+          TechnicalTagSelector: PassthroughStub,
         },
       },
     })

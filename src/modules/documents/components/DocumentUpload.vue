@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
+import TechnicalTagSelector from '@/modules/technical-taxonomy/components/TechnicalTagSelector.vue'
 import type {
   Deliverable,
   DocumentStatus,
@@ -42,6 +43,7 @@ const emit = defineEmits<{
       isOfficial: boolean
       notes?: string | null
       reviewerId?: string | null
+      tagIds?: string[]
     },
   ]
   'project-change': [projectId: string]
@@ -81,6 +83,7 @@ const form = reactive({
   isOfficial: false,
   notes: '',
   reviewerId: null as string | null,
+  tagIds: [] as string[],
 })
 const selectedFile = ref<File | null>(null)
 
@@ -98,6 +101,12 @@ const reviewerOptions = computed(() =>
     title: `${user.fullName} (${user.email})`,
     value: user.id,
   })),
+)
+const selectedProject = computed(() =>
+  props.projects.find((project) => project.id === form.projectId) ?? null,
+)
+const selectedDeliverable = computed(() =>
+  props.deliverables.find((deliverable) => deliverable.id === form.deliverableId) ?? null,
 )
 const isEditing = computed(() => Boolean(props.document))
 const canSubmit = computed(() =>
@@ -121,6 +130,7 @@ watch(
     form.isOfficial = document?.status === 'approved'
     form.notes = ''
     form.reviewerId = null
+    form.tagIds = document?.tagIds ? [...document.tagIds] : []
     selectedFile.value = null
 
     if (form.projectId) {
@@ -137,6 +147,26 @@ watch(
       form.deliverableId = null
     }
     emit('project-change', projectId)
+  },
+)
+
+watch(
+  () => form.deliverableId,
+  () => {
+    if (isEditing.value) return
+    const contextualTags = selectedDeliverable.value?.tagIds ?? selectedDeliverable.value?.tags?.map((tag) => tag.id) ?? []
+    if (!contextualTags.length) return
+
+    form.tagIds = [...new Set([...form.tagIds, ...contextualTags])]
+  },
+)
+
+watch(
+  () => form.projectId,
+  () => {
+    if (isEditing.value || form.tagIds.length) return
+    const contextualTags = selectedProject.value?.tagIds ?? selectedProject.value?.tags?.map((tag) => tag.id) ?? []
+    form.tagIds = [...new Set(contextualTags)]
   },
 )
 
@@ -157,6 +187,7 @@ function submit() {
     isOfficial: form.isOfficial,
     notes: form.notes.trim() || null,
     reviewerId: form.reviewerId,
+    tagIds: form.tagIds,
   })
 }
 </script>
@@ -222,6 +253,20 @@ function submit() {
           variant="outlined"
           density="comfortable"
           :disabled="saving"
+        />
+      </div>
+      <div class="document-upload__tag-section">
+        <div class="document-upload__tag-head">
+          <span>Classificacao tecnica</span>
+          <v-chip v-if="form.tagIds.length" color="teal" variant="flat">{{ form.tagIds.length }} tag(s)</v-chip>
+        </div>
+        <TechnicalTagSelector
+          v-model="form.tagIds"
+          :allow-create="false"
+          :categories="['document_type', 'technical_discipline', 'project_stage', 'knowledge_purpose', 'operational_pain']"
+          :allowed-statuses="['active', 'pending_review', 'deprecated']"
+          :disabled="saving"
+          :max-list-height="300"
         />
       </div>
       <v-file-input
@@ -303,6 +348,21 @@ function submit() {
   display: grid;
   gap: 0.75rem;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.document-upload__tag-section {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.document-upload__tag-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: #123c32;
+  font-size: 0.86rem;
+  font-weight: 800;
 }
 
 @media (max-width: 720px) {

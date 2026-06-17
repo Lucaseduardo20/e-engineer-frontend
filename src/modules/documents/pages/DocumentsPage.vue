@@ -216,6 +216,7 @@ async function handleSubmit(payload: {
   isOfficial: boolean
   notes?: string | null
   reviewerId?: string | null
+  tagIds?: string[]
 }) {
   const document = editingDocument.value
     ? await documentsStore.updateDocument(editingDocument.value.id, {
@@ -224,6 +225,7 @@ async function handleSubmit(payload: {
         description: payload.description,
         type: payload.type,
         status: payload.status,
+        tagIds: payload.tagIds,
       })
     : await documentsStore.createDocument({
         projectId: payload.projectId,
@@ -232,6 +234,7 @@ async function handleSubmit(payload: {
         description: payload.description,
         type: payload.type,
         status: payload.status,
+        tagIds: payload.tagIds,
       })
 
   if (document && payload.file) {

@@ -147,6 +147,7 @@ export interface CreateDocumentRequest {
   description?: string | null
   type: DocumentType
   status?: DocumentStatus
+  tagIds?: string[]
 }
 
 export interface UpdateDocumentRequest {
@@ -155,6 +156,7 @@ export interface UpdateDocumentRequest {
   description?: string | null
   type?: DocumentType
   status?: DocumentStatus
+  tagIds?: string[]
 }
 export interface SaveDocumentAsModelRequest {
   title: string

@@ -92,6 +92,12 @@ function userName(userId?: string | null) {
       {{ document.description }}
     </p>
 
+    <div v-if="document.tags?.length" class="document-card__tags">
+      <v-chip v-for="tag in document.tags" :key="tag.id" color="teal" size="small" variant="tonal">
+        {{ tag.name }}
+      </v-chip>
+    </div>
+
     <div class="document-card__meta">
       <span>
         <v-icon icon="$calendar" size="15" />
@@ -207,6 +213,12 @@ function userName(userId?: string | null) {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
+}
+
+.document-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
 }
 
 .document-card__meta span {

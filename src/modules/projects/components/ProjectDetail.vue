@@ -324,6 +324,7 @@ async function handleDocumentSubmit(payload: {
   revision?: string
   isOfficial: boolean
   notes?: string | null
+  tagIds?: string[]
 }) {
   isSavingDocument.value = true
 
@@ -335,6 +336,7 @@ async function handleDocumentSubmit(payload: {
       description: payload.description,
       type: payload.type,
       status: payload.status,
+      tagIds: payload.tagIds,
     })
 
     if (payload.file) {

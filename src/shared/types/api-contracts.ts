@@ -42,7 +42,7 @@ export interface Project {
 }
 
 export interface ProjectTechnicalProfileSource {
-  type: 'project_tag' | 'deliverable_tag'
+  type: 'project_tag' | 'deliverable_tag' | 'document_tag' | 'official_document'
   score: number
 }
 
@@ -151,6 +151,8 @@ export interface DocumentSummary {
   officialRevision?: string | null
   status: DocumentStatus
   updatedAt: number
+  tagIds?: string[]
+  tags?: TechnicalTag[]
   latestVersion?: DocumentVersion | null
   officialVersion?: DocumentVersion | null
 }
