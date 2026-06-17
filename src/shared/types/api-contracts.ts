@@ -316,6 +316,7 @@ export interface KnowledgeRecommendationTag {
 }
 
 export interface ProjectKnowledgeRecommendation {
+  type: 'knowledge_item' | 'document_model' | 'review_checklist' | 'project_reference'
   knowledgeItem: {
     id: string
     title: string
@@ -329,6 +330,7 @@ export interface ProjectKnowledgeRecommendation {
   matchedTags: KnowledgeRecommendationTag[]
   score: number
   reason: string
+  alreadyApplied: boolean
 }
 
 export interface ProjectBaseRecommendation {

@@ -54,6 +54,7 @@ describe('ProjectDetail', () => {
     ]
     const knowledgeRecommendations: ProjectKnowledgeRecommendation[] = [
       {
+        type: 'review_checklist',
         knowledgeItem: {
           id: 'knowledge-1',
           title: 'Checklist de orcamento',
@@ -73,6 +74,7 @@ describe('ProjectDetail', () => {
         ],
         score: 13,
         reason: 'Combina com tags tecnicas dos entregaveis.',
+        alreadyApplied: false,
       },
     ]
 

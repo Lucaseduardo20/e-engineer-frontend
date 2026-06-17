@@ -63,8 +63,8 @@ function closeForm() {
 
     <KnowledgeItemsList />
 
-    <v-dialog v-model="isFormOpen" max-width="760">
-      <v-card>
+    <v-dialog v-model="isFormOpen" max-width="760" scrollable>
+      <v-card class="knowledge-page__dialog">
         <v-card-title>{{ dialogTitle }}</v-card-title>
         <v-card-text>
           <KnowledgeItemForm :loading="store.isSaving" @submit="create" @cancel="closeForm" />
@@ -77,22 +77,41 @@ function closeForm() {
 <style scoped>
 .knowledge-page {
   display: grid;
-  gap: 1.25rem;
+  gap: 1rem;
+  min-width: 0;
 }
 
 .knowledge-page__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
   gap: 1rem;
 }
 
 h1 {
+  margin: 0;
   color: #15231f;
-  font-size: 2rem;
+  font-size: clamp(1.55rem, 6vw, 2rem);
+  line-height: 1.1;
 }
 
 p {
+  max-width: 58rem;
+  margin: 0.5rem 0 0;
   color: #596963;
+  line-height: 1.45;
+}
+
+.knowledge-page__dialog {
+  max-height: calc(100dvh - 2rem);
+}
+
+@media (min-width: 720px) {
+  .knowledge-page {
+    gap: 1.25rem;
+  }
+
+  .knowledge-page__header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+  }
 }
 </style>

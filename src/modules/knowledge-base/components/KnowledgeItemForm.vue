@@ -145,15 +145,15 @@ function buildContent(): Record<string, unknown> {
 
     <v-alert v-if="validationError.message" type="warning" variant="tonal" class="mb-3">{{ validationError.message }}</v-alert>
 
-    <v-text-field v-model="form.title" label="Titulo" variant="outlined" />
-    <v-select v-model="form.type" :items="typeOptions" label="Tipo" variant="outlined" />
+    <v-text-field v-model="form.title" label="Titulo" variant="outlined" density="comfortable" />
+    <v-select v-model="form.type" :items="typeOptions" label="Tipo" variant="outlined" density="comfortable" />
 
     <v-alert type="info" variant="outlined" density="compact" class="mb-3">{{ typeHint }}</v-alert>
 
-    <v-textarea v-model="form.description" label="Descricao" variant="outlined" rows="3" />
-    <v-textarea v-model="form.summary" label="Conteudo principal / resumo" variant="outlined" rows="3" />
-    <v-textarea v-model="form.whenToUse" label="Quando usar (opcional)" variant="outlined" rows="2" />
-    <v-textarea v-model="form.notes" label="Cuidados e observacoes (opcional)" variant="outlined" rows="2" />
+    <v-textarea v-model="form.description" label="Descricao" variant="outlined" density="comfortable" rows="3" />
+    <v-textarea v-model="form.summary" label="Conteudo principal / resumo" variant="outlined" density="comfortable" rows="3" />
+    <v-textarea v-model="form.whenToUse" label="Quando usar (opcional)" variant="outlined" density="comfortable" rows="2" />
+    <v-textarea v-model="form.notes" label="Cuidados e observacoes (opcional)" variant="outlined" density="comfortable" rows="2" />
     <TechnicalTagSelector v-model="form.tagIds" :allow-create="true" />
 
     <div class="knowledge-form__actions">
@@ -164,6 +164,21 @@ function buildContent(): Record<string, unknown> {
 </template>
 
 <style scoped>
-.knowledge-form { display: grid; gap: 0.75rem; }
-.knowledge-form__actions { display: flex; justify-content: flex-end; gap: 0.75rem; }
+.knowledge-form {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.knowledge-form__actions {
+  display: grid;
+  gap: 0.75rem;
+}
+
+@media (min-width: 560px) {
+  .knowledge-form__actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+}
 </style>

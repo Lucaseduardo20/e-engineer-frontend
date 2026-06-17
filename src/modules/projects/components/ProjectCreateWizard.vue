@@ -16,6 +16,7 @@ const emit = defineEmits<{
 
 const step = ref(1)
 const projectName = ref('')
+const projectType = ref('projeto tecnico')
 const tagIds = ref<string[]>([])
 const selectedBaseId = ref<string | null>(null)
 const selectedDeliverableIds = ref<string[]>([])
@@ -29,11 +30,13 @@ const selectedBase = computed<ProjectBaseRecommendation | null>(
 )
 const canGoNext = computed(() => {
   if (step.value === 1) return Boolean(projectName.value.trim())
-  if (step.value === 2) return tagIds.value.length > 0
+  if (step.value === 4 && selectedBase.value?.deliverablesPreview.length) {
+    return selectedDeliverableIds.value.length > 0
+  }
   return true
 })
 const finalProjectType = computed(
-  () => selectedBase.value?.project.projectType || 'projeto tecnico',
+  () => selectedBase.value?.project.projectType || projectType.value.trim() || 'projeto tecnico',
 )
 const structureSummary = computed(() => {
   const base = selectedBase.value
@@ -41,6 +44,10 @@ const structureSummary = computed(() => {
 
   return `${selectedDeliverableIds.value.length} de ${base.deliverablesPreview.length} entregavel(is) selecionado(s). Documentos e revisoes da base ficam apenas como referencia visual.`
 })
+const canUseBase = computed(() => Boolean(selectedBase.value))
+const selectedBaseMatchedTagNames = computed(() =>
+  (selectedBase.value?.matchedTags ?? []).slice(0, 4).map((tag) => tag.name).join(', '),
+)
 
 watch(
   tagIds,
@@ -65,12 +72,12 @@ watch(
 )
 
 watch(selectedBaseId, () => {
-  selectedDeliverableIds.value = []
+  selectedDeliverableIds.value = selectedBase.value?.deliverablesPreview.map((item) => item.id) ?? []
 })
 
 function nextStep() {
   if (!canGoNext.value) return
-  step.value = Math.min(step.value + 1, 4)
+  step.value = Math.min(step.value + 1, 5)
 }
 
 function previousStep() {
@@ -102,8 +109,21 @@ function submit() {
 
 function useRecommendationAsBase(projectId: string) {
   selectedBaseId.value = projectId
-  selectedDeliverableIds.value = []
   step.value = 4
+}
+
+function startFromScratch() {
+  selectedBaseId.value = null
+  selectedDeliverableIds.value = []
+  step.value = 5
+}
+
+function selectAllDeliverables() {
+  selectedDeliverableIds.value = selectedBase.value?.deliverablesPreview.map((item) => item.id) ?? []
+}
+
+function clearDeliverables() {
+  selectedDeliverableIds.value = []
 }
 
 function toggleDeliverable(deliverableId: string, checked: boolean | null) {
@@ -133,10 +153,11 @@ function toggleDeliverable(deliverableId: string, checked: boolean | null) {
       <div class="project-create-wizard__steps">
         <button
           v-for="item in [
-            { value: 1, label: 'Nome' },
-            { value: 2, label: 'Tags' },
-            { value: 3, label: 'Base' },
-            { value: 4, label: 'Revisao' },
+            { value: 1, label: 'Dados' },
+            { value: 2, label: 'Contexto' },
+            { value: 3, label: 'Partida' },
+            { value: 4, label: 'Entregaveis' },
+            { value: 5, label: 'Confirmar' },
           ]"
           :key="item.value"
           type="button"
@@ -153,25 +174,35 @@ function toggleDeliverable(deliverableId: string, checked: boolean | null) {
         <v-sheet border rounded="lg" class="project-create-wizard__hero">
           <span>Passo 1</span>
           <h3>Qual projeto tecnico vamos iniciar?</h3>
-          <p>Informe apenas o nome agora. O tipo tecnico sera inferido pela base escolhida ou criado como projeto tecnico geral.</p>
+          <p>Comece com poucos dados. O contexto tecnico e a base escolhida refinam a estrutura depois.</p>
         </v-sheet>
-        <v-text-field
-          v-model="projectName"
-          label="Nome do projeto"
-          maxlength="160"
-          counter
-          variant="outlined"
-          density="comfortable"
-          :disabled="saving"
-          autofocus
-        />
+        <div class="project-create-wizard__field-grid">
+          <v-text-field
+            v-model="projectName"
+            label="Nome do projeto"
+            maxlength="160"
+            counter
+            variant="outlined"
+            density="comfortable"
+            :disabled="saving"
+            autofocus
+          />
+          <v-text-field
+            v-model="projectType"
+            label="Tipo tecnico"
+            maxlength="120"
+            variant="outlined"
+            density="comfortable"
+            :disabled="saving"
+          />
+        </div>
       </section>
 
       <section v-else-if="step === 2" class="project-create-wizard__panel">
         <v-sheet border rounded="lg" class="project-create-wizard__hero">
           <span>Passo 2</span>
           <h3>Escolha as tags que descrevem o raciocinio tecnico.</h3>
-          <p>As tags governadas acionam recomendacoes de projetos base do mesmo tenant.</p>
+          <p>As tags acionam sugestoes, mas voce sempre pode continuar sem recomendacoes.</p>
         </v-sheet>
         <TechnicalTagSelector
           v-model="tagIds"
@@ -189,10 +220,25 @@ function toggleDeliverable(deliverableId: string, checked: boolean | null) {
       <section v-else-if="step === 3" class="project-create-wizard__panel">
         <v-sheet border rounded="lg" class="project-create-wizard__hero">
           <span>Passo 3</span>
-          <h3>Projetos semelhantes encontrados</h3>
-          <p>Use um projeto parecido como base para reaproveitar estrutura tecnica do mesmo tenant.</p>
+          <h3>Escolha o ponto de partida.</h3>
+          <p>Use uma base quando fizer sentido ou comece do zero mantendo o contexto tecnico selecionado.</p>
         </v-sheet>
         <v-progress-linear v-if="isLoadingRecommendations" indeterminate color="teal" />
+        <div class="project-create-wizard__start-options">
+          <v-sheet
+            border
+            rounded="lg"
+            class="project-create-wizard__start-card"
+            :class="{ 'project-create-wizard__start-card--selected': !selectedBaseId }"
+            @click="selectedBaseId = null"
+          >
+            <strong>Comecar do zero</strong>
+            <p>Cria o projeto com as tags selecionadas e sem herdar estrutura.</p>
+            <v-btn size="small" color="teal" variant="tonal" @click.stop="startFromScratch">
+              Escolher esta opcao
+            </v-btn>
+          </v-sheet>
+        </div>
         <div v-if="recommendations.length" class="project-create-wizard__recommendations">
           <v-sheet
             v-for="recommendation in recommendations"
@@ -208,9 +254,11 @@ function toggleDeliverable(deliverableId: string, checked: boolean | null) {
                 <strong>{{ recommendation.project.name }}</strong>
                 <span>{{ recommendation.project.projectType || 'Projeto tecnico' }}</span>
               </div>
-              <v-chip color="teal" variant="tonal" size="small">{{ recommendation.score }} pts</v-chip>
+              <v-chip color="teal" variant="tonal" size="small">
+                Aderencia {{ recommendation.score }}
+              </v-chip>
             </div>
-            <p>Combina com as tags tecnicas selecionadas.</p>
+            <p>Combina com o contexto tecnico selecionado.</p>
             <small>{{ recommendation.deliverablesPreview.length }} entregavel(is), {{ recommendation.documentsPreview.length }} documento(s) e {{ recommendation.reviewsCount }} revisao(oes) encontrados.</small>
             <div class="project-create-wizard__chips">
               <v-chip
@@ -248,6 +296,72 @@ function toggleDeliverable(deliverableId: string, checked: boolean | null) {
         />
       </section>
 
+      <section v-else-if="step === 4" class="project-create-wizard__panel">
+        <v-sheet border rounded="lg" class="project-create-wizard__hero">
+          <span>Passo 4</span>
+          <h3>Revise os entregaveis herdados.</h3>
+          <p>Escolha apenas o que realmente ajuda este novo projeto. A base original nao sera alterada.</p>
+        </v-sheet>
+        <v-alert v-if="!selectedBase" type="info" variant="tonal">
+          Sem projeto base selecionado. O projeto sera criado do zero com o contexto tecnico escolhido.
+        </v-alert>
+        <template v-else>
+          <v-sheet border rounded="lg" class="project-create-wizard__review-card">
+            <span>Base selecionada</span>
+            <h3>{{ selectedBase.project.name }}</h3>
+            <p v-if="selectedBaseMatchedTagNames">Semelhante por {{ selectedBaseMatchedTagNames }}.</p>
+            <v-chip color="teal" variant="tonal" size="small">
+              Aderencia {{ selectedBase.score }}
+            </v-chip>
+            <div class="project-create-wizard__inline-actions">
+              <v-btn size="small" variant="tonal" color="teal" @click="selectAllDeliverables">
+                Selecionar todos
+              </v-btn>
+              <v-btn size="small" variant="text" color="teal" @click="clearDeliverables">
+                Limpar selecao
+              </v-btn>
+            </div>
+          </v-sheet>
+          <v-sheet border rounded="lg" class="project-create-wizard__review-card">
+            <span>Entregaveis da base</span>
+            <h3>Escolha o que entra no novo projeto</h3>
+            <div v-if="selectedBase.deliverablesPreview.length" class="project-create-wizard__deliverables-list">
+              <label
+                v-for="deliverable in selectedBase.deliverablesPreview"
+                :key="deliverable.id"
+                class="project-create-wizard__deliverable-option"
+              >
+                <v-checkbox
+                  :model-value="selectedDeliverableIds.includes(deliverable.id)"
+                  color="teal"
+                  density="compact"
+                  hide-details
+                  @update:model-value="toggleDeliverable(deliverable.id, $event)"
+                />
+                <span>
+                  <strong>{{ deliverable.title }}</strong>
+                  <small>{{ deliverable.type }} · {{ deliverable.status }}</small>
+                </span>
+                <span class="project-create-wizard__deliverable-tags">
+                  <v-chip
+                    v-for="tag in deliverable.tags.slice(0, 3)"
+                    :key="tag.id"
+                    size="x-small"
+                    color="teal"
+                    variant="tonal"
+                  >
+                    {{ tag.name }}
+                  </v-chip>
+                </span>
+              </label>
+            </div>
+            <v-alert v-else type="info" variant="tonal">
+              O projeto base nao possui entregaveis disponiveis para heranca.
+            </v-alert>
+          </v-sheet>
+        </template>
+      </section>
+
       <section v-else class="project-create-wizard__panel">
         <v-sheet border rounded="lg" class="project-create-wizard__review-card">
           <span>Resumo</span>
@@ -272,43 +386,6 @@ function toggleDeliverable(deliverableId: string, checked: boolean | null) {
             label="Manter tags tecnicas da base"
           />
         </v-sheet>
-        <v-sheet v-if="selectedBase" border rounded="lg" class="project-create-wizard__review-card">
-          <span>Entregaveis da base</span>
-          <h3>Escolha o que faz sentido neste novo projeto</h3>
-          <div v-if="selectedBase.deliverablesPreview.length" class="project-create-wizard__deliverables-list">
-            <label
-              v-for="deliverable in selectedBase.deliverablesPreview"
-              :key="deliverable.id"
-              class="project-create-wizard__deliverable-option"
-            >
-              <v-checkbox
-                :model-value="selectedDeliverableIds.includes(deliverable.id)"
-                color="teal"
-                density="compact"
-                hide-details
-                @update:model-value="toggleDeliverable(deliverable.id, $event)"
-              />
-              <span>
-                <strong>{{ deliverable.title }}</strong>
-                <small>{{ deliverable.type }} · {{ deliverable.status }}</small>
-              </span>
-              <span class="project-create-wizard__deliverable-tags">
-                <v-chip
-                  v-for="tag in deliverable.tags.slice(0, 3)"
-                  :key="tag.id"
-                  size="x-small"
-                  color="teal"
-                  variant="tonal"
-                >
-                  {{ tag.name }}
-                </v-chip>
-              </span>
-            </label>
-          </div>
-          <v-alert v-else type="info" variant="tonal">
-            O projeto base nao possui entregaveis disponiveis para heranca.
-          </v-alert>
-        </v-sheet>
         <v-alert type="info" variant="tonal">
           A base registra a origem e ajuda a reaproveitar contexto. Documentos, versoes, revisoes, historico, responsaveis e prazos antigos nao serao copiados automaticamente.
         </v-alert>
@@ -320,7 +397,7 @@ function toggleDeliverable(deliverableId: string, checked: boolean | null) {
         {{ step === 1 ? 'Cancelar' : 'Voltar' }}
       </v-btn>
       <v-spacer />
-      <v-btn v-if="step < 4" color="teal" :disabled="!canGoNext || saving" @click="nextStep">
+      <v-btn v-if="step < 5" color="teal" :disabled="!canGoNext || saving" @click="nextStep">
         Continuar
       </v-btn>
       <v-btn v-else color="teal" :loading="saving" :disabled="!projectName.trim()" @click="submit">
@@ -371,7 +448,7 @@ function toggleDeliverable(deliverableId: string, checked: boolean | null) {
 
 .project-create-wizard__steps {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.65rem;
 }
 
@@ -412,6 +489,28 @@ function toggleDeliverable(deliverableId: string, checked: boolean | null) {
   padding: 1rem;
 }
 
+.project-create-wizard__field-grid,
+.project-create-wizard__start-options {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.project-create-wizard__start-card {
+  display: grid;
+  gap: 0.65rem;
+  cursor: pointer;
+  border-color: #d4e8e1;
+  padding: 0.9rem;
+  transition: 0.16s ease;
+}
+
+.project-create-wizard__start-card:hover,
+.project-create-wizard__start-card--selected {
+  border-color: #009688;
+  background: #f2fffb;
+  box-shadow: 0 14px 30px rgb(0 150 136 / 0.1);
+}
+
 .project-create-wizard__hero span,
 .project-create-wizard__review-card span {
   color: #267365;
@@ -420,10 +519,15 @@ function toggleDeliverable(deliverableId: string, checked: boolean | null) {
 .project-create-wizard__hero p,
 .project-create-wizard__review-card p,
 .project-create-wizard__base-card p,
+.project-create-wizard__start-card p,
 .project-create-wizard__base-card small,
 .project-create-wizard__base-head span {
   margin: 0;
   color: #60716b;
+}
+
+.project-create-wizard__start-card strong {
+  color: #14231f;
 }
 
 .project-create-wizard__recommendations {
@@ -463,6 +567,13 @@ function toggleDeliverable(deliverableId: string, checked: boolean | null) {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
+}
+
+.project-create-wizard__inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
 }
 
 .project-create-wizard__deliverables-preview,
@@ -516,6 +627,10 @@ function toggleDeliverable(deliverableId: string, checked: boolean | null) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .project-create-wizard__step {
+    padding: 0.6rem;
+  }
+
   .project-create-wizard__deliverable-option {
     grid-template-columns: auto minmax(0, 1fr);
   }
@@ -523,6 +638,27 @@ function toggleDeliverable(deliverableId: string, checked: boolean | null) {
   .project-create-wizard__deliverable-tags {
     grid-column: 2;
     justify-content: flex-start;
+  }
+}
+
+@media (min-width: 760px) {
+  .project-create-wizard__field-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(12rem, 0.42fr);
+  }
+}
+
+@media (max-width: 520px) {
+  .project-create-wizard__title {
+    display: grid;
+  }
+
+  .project-create-wizard__actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .project-create-wizard__actions :deep(.v-spacer) {
+    display: none;
   }
 }
 </style>

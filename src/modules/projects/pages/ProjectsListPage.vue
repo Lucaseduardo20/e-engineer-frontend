@@ -87,6 +87,7 @@ async function handleCreateProject(payload: CreateProjectRequest) {
     if (project) {
       closeCreateDialog()
       resetCreateForm()
+      void router.push(`/projects/${project.id}`)
     }
   } finally {
     isCreating.value = false

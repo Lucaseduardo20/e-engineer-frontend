@@ -53,54 +53,60 @@ function updateStatus(value: KnowledgeItemStatus | null) {
 <template>
   <section class="knowledge-list">
     <div class="knowledge-list__toolbar">
-      <v-text-field
-        v-model="filters.searchQuery"
-        label="Buscar"
-        placeholder="Buscar padroes, modelos, referencias ou licoes aprendidas..."
-        density="comfortable"
-        variant="outlined"
-        prepend-inner-icon="$search"
-        hide-details
-        clearable
-        @keyup.enter="store.searchItems(filters.searchQuery)"
-      />
-      <v-select
-        :model-value="filters.type"
-        :items="typeOptions"
-        label="Todos os tipos"
-        density="comfortable"
-        variant="outlined"
-        hide-details
-        clearable
-        @update:model-value="updateType"
-      />
-      <v-select
-        :model-value="filters.status"
-        :items="statusOptions"
-        label="Todos os status"
-        density="comfortable"
-        variant="outlined"
-        hide-details
-        clearable
-        @update:model-value="updateStatus"
-      />
-      <v-checkbox
-        v-model="filters.includeArchived"
-        label="Incluir arquivados"
-        density="comfortable"
-        hide-details
-        @update:model-value="applyFilters"
-      />
-      <v-btn color="teal" variant="flat" prepend-icon="$search" @click="applyFilters">Buscar</v-btn>
-      <v-btn
-        v-if="auth.can('knowledge.create')"
-        to="/knowledge-base?new=1"
-        color="teal"
-        variant="tonal"
-        prepend-icon="$success"
-      >
-        Novo item
-      </v-btn>
+      <div class="knowledge-list__filters">
+        <v-text-field
+          v-model="filters.searchQuery"
+          class="knowledge-list__search"
+          label="Buscar"
+          placeholder="Buscar padroes, modelos, referencias ou licoes aprendidas..."
+          density="comfortable"
+          variant="outlined"
+          prepend-inner-icon="$search"
+          hide-details
+          clearable
+          @keyup.enter="store.searchItems(filters.searchQuery)"
+        />
+        <v-select
+          :model-value="filters.type"
+          :items="typeOptions"
+          label="Todos os tipos"
+          density="comfortable"
+          variant="outlined"
+          hide-details
+          clearable
+          @update:model-value="updateType"
+        />
+        <v-select
+          :model-value="filters.status"
+          :items="statusOptions"
+          label="Todos os status"
+          density="comfortable"
+          variant="outlined"
+          hide-details
+          clearable
+          @update:model-value="updateStatus"
+        />
+        <v-checkbox
+          v-model="filters.includeArchived"
+          class="knowledge-list__archive-toggle"
+          label="Incluir arquivados"
+          density="comfortable"
+          hide-details
+          @update:model-value="applyFilters"
+        />
+      </div>
+      <div class="knowledge-list__actions">
+        <v-btn color="teal" variant="flat" prepend-icon="$search" @click="applyFilters">Buscar</v-btn>
+        <v-btn
+          v-if="auth.can('knowledge.create')"
+          to="/knowledge-base?new=1"
+          color="teal"
+          variant="tonal"
+          prepend-icon="$success"
+        >
+          Novo item
+        </v-btn>
+      </div>
     </div>
 
     <v-alert v-if="error" type="error" variant="tonal" class="mb-4">{{ error }}</v-alert>
@@ -141,30 +147,76 @@ function updateStatus(value: KnowledgeItemStatus | null) {
 <style scoped>
 .knowledge-list__toolbar {
   display: grid;
-  grid-template-columns: minmax(16rem, 1fr) minmax(12rem, 0.55fr) minmax(10rem, 0.45fr) auto auto auto;
-  gap: 0.75rem;
+  gap: 0.85rem;
   margin-bottom: 1rem;
+  border: 1px solid #cfe5de;
+  border-radius: 0.75rem;
+  background: #fbfffd;
+  padding: 0.85rem;
+}
+
+.knowledge-list__filters {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: 1fr;
+  min-width: 0;
+}
+
+.knowledge-list__search,
+.knowledge-list__filters :deep(.v-field),
+.knowledge-list__filters :deep(.v-selection-control) {
+  min-width: 0;
+}
+
+.knowledge-list__archive-toggle {
+  align-self: center;
+}
+
+.knowledge-list__archive-toggle :deep(.v-label) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.knowledge-list__actions {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: 1fr;
 }
 
 .knowledge-list__grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
   gap: 1rem;
 }
 
-@media (max-width: 900px) {
-  .knowledge-list__toolbar {
-    grid-template-columns: 1fr;
+@media (min-width: 680px) {
+  .knowledge-list__filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .knowledge-list__grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .knowledge-list__search {
+    grid-column: 1 / -1;
+  }
+
+  .knowledge-list__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 }
 
-@media (max-width: 680px) {
-  .knowledge-list__grid {
-    grid-template-columns: 1fr;
+@media (min-width: 1100px) {
+  .knowledge-list__toolbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+  }
+
+  .knowledge-list__filters {
+    grid-template-columns: minmax(18rem, 1fr) minmax(11rem, 0.55fr) minmax(10rem, 0.5fr) minmax(9rem, auto);
+  }
+
+  .knowledge-list__search {
+    grid-column: auto;
   }
 }
 </style>

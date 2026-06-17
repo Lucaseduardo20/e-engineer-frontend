@@ -157,8 +157,8 @@ async function saveEdit(payload: CreateKnowledgeItemDto) {
 
       <KnowledgeDetailsPanel :item="store.selectedItem" :loading="store.isLoading" :activities="itemActivities" />
 
-      <v-dialog v-model="showEdit" max-width="760">
-        <v-card>
+      <v-dialog v-model="showEdit" max-width="760" scrollable>
+        <v-card class="knowledge-detail-page__dialog">
           <v-card-title>Editar item de conhecimento</v-card-title>
           <v-card-text>
             <KnowledgeItemForm mode="edit" :status="store.selectedItem?.status" :model-value="store.selectedItem" :loading="store.isSaving" @submit="saveEdit" @cancel="showEdit = false" />
@@ -183,6 +183,35 @@ async function saveEdit(payload: CreateKnowledgeItemDto) {
 
 <style scoped>
 .knowledge-detail-page { display: grid; gap: 1rem; }
-.knowledge-detail-page__topbar { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
-.knowledge-detail-page__actions { display: flex; justify-content: flex-end; gap: 0.5rem; flex-wrap: wrap; }
+.knowledge-detail-page__topbar {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.knowledge-detail-page__topbar :deep(.v-breadcrumbs) {
+  min-width: 0;
+  padding-inline: 0;
+}
+
+.knowledge-detail-page__actions {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.knowledge-detail-page__dialog {
+  max-height: calc(100dvh - 2rem);
+}
+
+@media (min-width: 680px) {
+  .knowledge-detail-page__topbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .knowledge-detail-page__actions {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+}
 </style>

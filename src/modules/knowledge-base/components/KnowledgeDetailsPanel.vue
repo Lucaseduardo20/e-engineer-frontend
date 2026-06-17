@@ -229,8 +229,7 @@ function linksFromMetadata(metadata: Record<string, unknown> | undefined) {
 
 <style scoped>
 .knowledge-detail__header {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
   gap: 1rem;
   margin-bottom: 1rem;
 }
@@ -238,11 +237,15 @@ function linksFromMetadata(metadata: Record<string, unknown> | undefined) {
 .knowledge-detail h1 {
   margin: 0.75rem 0 0.35rem;
   color: #15231f;
-  font-size: 1.8rem;
+  font-size: clamp(1.35rem, 5vw, 1.8rem);
+  line-height: 1.15;
+  overflow-wrap: anywhere;
 }
 
 .knowledge-detail__subtitle {
+  margin: 0;
   color: #53625d;
+  line-height: 1.45;
 }
 
 .knowledge-detail__chips,
@@ -256,6 +259,7 @@ function linksFromMetadata(metadata: Record<string, unknown> | undefined) {
   border: 1px solid #d7e4df;
   border-radius: 0.5rem;
   padding: 1rem;
+  overflow: hidden;
 }
 
 .knowledge-detail__section h2 {
@@ -287,5 +291,25 @@ function linksFromMetadata(metadata: Record<string, unknown> | undefined) {
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem;
+}
+
+.knowledge-detail :deep(.v-row) {
+  margin: -0.5rem;
+}
+
+.knowledge-detail :deep(.v-col) {
+  padding: 0.5rem;
+}
+
+.knowledge-detail :deep(.v-list-item-title),
+.knowledge-detail :deep(.v-list-item-subtitle) {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+@media (min-width: 900px) {
+  .knowledge-detail__header {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
 }
 </style>

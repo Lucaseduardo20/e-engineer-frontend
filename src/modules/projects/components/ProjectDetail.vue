@@ -55,6 +55,7 @@ const activeTab = ref('overview')
 const isDocumentModalOpen = ref(false)
 const isSavingDocument = ref(false)
 const inheritanceReviewSavingIds = ref<string[]>([])
+const contextualRecommendationSavingIds = ref<string[]>([])
 const removalDialog = ref<{
   deliverable: Deliverable
   mode: 'request' | 'approve' | 'reject'
@@ -311,6 +312,44 @@ function inheritedTagOrigin(tag: { deliverables: string[] }) {
   return tag.deliverables.length
     ? `Incluida via ${tag.deliverables.slice(0, 3).join(', ')}${tag.deliverables.length > 3 ? ` +${tag.deliverables.length - 3}` : ''}`
     : 'Sem origem operacional'
+}
+
+function recommendationTypeLabel(type: ProjectKnowledgeRecommendation['type']) {
+  if (type === 'document_model') return 'Modelo de documento'
+  if (type === 'review_checklist') return 'Checklist'
+  if (type === 'project_reference') return 'Projeto de referencia'
+  return 'Conhecimento'
+}
+
+async function applyKnowledgeRecommendation(recommendation: ProjectKnowledgeRecommendation) {
+  if (
+    recommendation.alreadyApplied ||
+    contextualRecommendationSavingIds.value.includes(recommendation.knowledgeItem.id)
+  ) {
+    return
+  }
+
+  contextualRecommendationSavingIds.value = [
+    ...contextualRecommendationSavingIds.value,
+    recommendation.knowledgeItem.id,
+  ]
+
+  try {
+    await apiClient.projects.linkKnowledge(props.project.id, {
+      knowledgeItemId: recommendation.knowledgeItem.id,
+      relationType:
+        recommendation.type === 'review_checklist'
+          ? 'checklist_for'
+          : recommendation.type === 'document_model'
+            ? 'model_for'
+            : 'reference_for',
+    })
+    emit('refresh')
+  } finally {
+    contextualRecommendationSavingIds.value = contextualRecommendationSavingIds.value.filter(
+      (id) => id !== recommendation.knowledgeItem.id,
+    )
+  }
 }
 
 async function handleDocumentSubmit(payload: {
@@ -655,8 +694,8 @@ async function submitRemovalDialog() {
             <v-sheet border rounded="lg" class="project-cockpit__panel">
               <div class="project-cockpit__panel-head">
                 <div>
-                  <h2>Recomendacoes</h2>
-                  <p>Inteligencia simples por tags: a taxonomia aponta referencias que combinam com os entregaveis.</p>
+                  <h2>Recomendacoes contextuais</h2>
+                  <p>Sugestoes baseadas no contexto tecnico deste projeto.</p>
                 </div>
               </div>
               <div class="project-cockpit__recommendations">
@@ -666,10 +705,16 @@ async function submitRemovalDialog() {
                   border
                   rounded="lg"
                   class="project-cockpit__recommendation project-cockpit__recommendation--knowledge"
+                  :class="{ 'project-cockpit__recommendation--applied': recommendation.alreadyApplied }"
                 >
                   <div class="project-cockpit__recommendation-head">
-                    <span>Recomendado por tags</span>
-                    <strong>{{ recommendation.knowledgeItem.title }}</strong>
+                    <div>
+                      <span>{{ recommendationTypeLabel(recommendation.type) }}</span>
+                      <strong>{{ recommendation.knowledgeItem.title }}</strong>
+                    </div>
+                    <v-chip color="teal" variant="tonal" size="small">
+                      Forca {{ recommendation.score }}
+                    </v-chip>
                   </div>
                   <p>{{ recommendation.reason }}</p>
                   <div class="project-cockpit__recommendation-tags">
@@ -683,9 +728,24 @@ async function submitRemovalDialog() {
                       {{ tag.name }}
                     </v-chip>
                   </div>
-                  <v-btn :to="`/knowledge-base/${recommendation.knowledgeItem.id}`" size="small" color="teal" variant="flat">
-                    Ver referencia
-                  </v-btn>
+                  <div class="project-cockpit__recommendation-actions">
+                    <v-chip v-if="recommendation.alreadyApplied" color="green" variant="tonal" size="small">
+                      Ja aplicado
+                    </v-chip>
+                    <v-btn
+                      v-else
+                      size="small"
+                      color="teal"
+                      variant="flat"
+                      :loading="contextualRecommendationSavingIds.includes(recommendation.knowledgeItem.id)"
+                      @click="applyKnowledgeRecommendation(recommendation)"
+                    >
+                      Aplicar ao projeto
+                    </v-btn>
+                    <v-btn :to="`/knowledge-base/${recommendation.knowledgeItem.id}`" size="small" color="teal" variant="tonal">
+                      Abrir detalhe
+                    </v-btn>
+                  </div>
                 </v-sheet>
                 <v-sheet
                   v-for="recommendation in recommendations"
@@ -1371,8 +1431,23 @@ async function submitRemovalDialog() {
   box-shadow: 0 14px 28px rgb(15 45 38 / 0.07);
 }
 
+.project-cockpit__recommendation--applied {
+  border-color: #badfca;
+  background:
+    linear-gradient(135deg, #f5fff8, #ffffff 68%),
+    #ffffff;
+}
+
 .project-cockpit__recommendation-head {
   display: grid;
+  gap: 0.5rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.project-cockpit__recommendation-head > div {
+  display: grid;
+  min-width: 0;
   gap: 0.2rem;
 }
 
@@ -1386,6 +1461,7 @@ async function submitRemovalDialog() {
 
 .project-cockpit__recommendation strong {
   color: #14231f;
+  overflow-wrap: anywhere;
 }
 
 .project-cockpit__recommendation span,
@@ -1398,6 +1474,13 @@ async function submitRemovalDialog() {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
+}
+
+.project-cockpit__recommendation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
 }
 
 .project-cockpit__history {

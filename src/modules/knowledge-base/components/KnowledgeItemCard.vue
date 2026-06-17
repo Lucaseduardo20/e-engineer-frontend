@@ -125,6 +125,13 @@ const creatorLabel = computed(() => props.item.creatorName || props.item.created
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 
+.knowledge-card :deep(.v-card-text) {
+  display: grid;
+  gap: 0.75rem;
+  height: 100%;
+  padding: 1rem;
+}
+
 .knowledge-card:hover {
   border-color: #b8d5cc;
   transform: translateY(-2px);
@@ -133,10 +140,18 @@ const creatorLabel = computed(() => props.item.creatorName || props.item.created
 
 .knowledge-card__top,
 .knowledge-card__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
   gap: 0.75rem;
+}
+
+.knowledge-card__top {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+}
+
+.knowledge-card__footer {
+  align-items: end;
+  margin-top: auto;
 }
 
 .knowledge-card__header-meta {
@@ -147,13 +162,16 @@ const creatorLabel = computed(() => props.item.creatorName || props.item.created
 }
 
 h3 {
-  margin: 1rem 0 0.35rem;
+  margin: 0;
   color: #17231f;
   font-size: 1rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .knowledge-card__description {
-  min-height: 2.8rem;
+  min-height: 0;
+  margin: 0;
   color: #53625d;
   font-size: 0.875rem;
   line-height: 1.4;
@@ -165,10 +183,9 @@ h3 {
 
 .knowledge-card__tags {
   display: flex;
-  min-height: 1.5rem;
   flex-wrap: wrap;
   gap: 0.35rem;
-  margin: 0.75rem 0;
+  margin: 0;
 }
 
 .knowledge-card__footer span {
@@ -180,7 +197,7 @@ h3 {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin-bottom: 0.6rem;
+  margin: 0;
 }
 
 .knowledge-card__hint {
@@ -196,5 +213,11 @@ h3 {
 .knowledge-card__meta-sub {
   color: #72817d;
   font-size: 0.74rem;
+}
+
+@media (min-width: 520px) {
+  .knowledge-card__footer {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
 }
 </style>
