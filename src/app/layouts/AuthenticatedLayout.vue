@@ -273,7 +273,7 @@ function goBack() {
 }
 
 .app-shell__org {
-  width: min(22rem, 42vw);
+  width: clamp(14rem, 34vw, 22rem);
   margin-left: 1rem;
 }
 
@@ -297,7 +297,7 @@ function goBack() {
 .app-shell__main {
   width: min(100%, 92rem);
   margin: 0 auto;
-  padding: 1.5rem;
+  padding: clamp(1rem, 2vw, 1.5rem);
 }
 
 .app-shell__back {
@@ -307,12 +307,25 @@ function goBack() {
   box-shadow: 0 8px 18px rgb(17 92 76 / 0.08);
 }
 
-@media (max-width: 720px) {
-  .app-shell__org {
+@media (max-width: 1180px) {
+  .app-shell__account-copy {
     display: none;
   }
 
-  .app-shell__account-copy {
+  .app-shell__session-chip {
+    margin-right: 0.35rem;
+  }
+}
+
+@media (max-width: 840px) {
+  .app-shell__org {
+    width: min(16rem, 46vw);
+    margin-left: 0.5rem;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-shell__org {
     display: none;
   }
 

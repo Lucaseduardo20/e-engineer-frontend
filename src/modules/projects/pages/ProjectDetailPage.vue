@@ -24,7 +24,7 @@ async function updateDeliverableStatus(deliverable: Deliverable, status: Deliver
 </script>
 
 <template>
-  <v-container fluid class="pa-0">
+  <v-container fluid class="project-detail-page">
     <v-btn to="/projects" variant="text" class="mb-3">Voltar para projetos</v-btn>
 
     <v-alert v-if="projectsStore.error" type="error" variant="tonal" class="mb-4">
@@ -50,3 +50,15 @@ async function updateDeliverableStatus(deliverable: Deliverable, status: Deliver
     />
   </v-container>
 </template>
+
+<style scoped>
+.project-detail-page {
+  padding: 0;
+}
+
+@media (max-width: 720px) {
+  .project-detail-page {
+    padding: 0;
+  }
+}
+</style>

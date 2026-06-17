@@ -779,7 +779,8 @@ function goToPromoteStep(step: number) {
 
 .project-knowledge__summary {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: 'copy score actions';
+  grid-template-columns: minmax(18rem, 1fr) minmax(8.5rem, auto) minmax(13rem, auto);
   gap: 1.25rem;
   align-items: center;
   border: 1px solid #72c7b6;
@@ -789,6 +790,11 @@ function goToPromoteStep(step: number) {
     linear-gradient(135deg, #10231f, #145246 58%, #e5fbf3);
   padding: 1.25rem;
   box-shadow: 0 18px 42px rgb(15 45 38 / 0.14);
+}
+
+.project-knowledge__copy {
+  grid-area: copy;
+  min-width: 0;
 }
 
 .project-knowledge__eyebrow {
@@ -820,6 +826,7 @@ function goToPromoteStep(step: number) {
 }
 
 .project-knowledge__score {
+  grid-area: score;
   display: grid;
   justify-items: center;
   min-width: 8.5rem;
@@ -843,15 +850,22 @@ function goToPromoteStep(step: number) {
 }
 
 .project-knowledge__actions {
+  grid-area: actions;
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.75rem;
+  min-width: 0;
+}
+
+.project-knowledge__actions :deep(.v-btn) {
+  max-width: 100%;
+  min-width: 0;
 }
 
 .project-knowledge__insights {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
   gap: 0.75rem;
 }
 
@@ -1253,10 +1267,17 @@ function goToPromoteStep(step: number) {
   background: #ffffff;
 }
 
-@media (max-width: 980px) {
-  .project-knowledge__summary,
-  .project-knowledge-modal__form-grid {
-    grid-template-columns: 1fr;
+@media (max-width: 1180px) {
+  .project-knowledge__summary {
+    grid-template-areas:
+      'copy copy'
+      'score actions';
+    grid-template-columns: minmax(8.5rem, auto) minmax(0, 1fr);
+    align-items: end;
+  }
+
+  .project-knowledge__copy h2 {
+    max-width: 44rem;
   }
 
   .project-knowledge__actions {
@@ -1264,7 +1285,33 @@ function goToPromoteStep(step: number) {
   }
 }
 
+@media (max-width: 980px) {
+  .project-knowledge-modal__form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 760px) {
+  .project-knowledge__summary {
+    grid-template-areas:
+      'copy'
+      'score'
+      'actions';
+    grid-template-columns: 1fr;
+    padding: 1rem;
+  }
+
+  .project-knowledge__score {
+    justify-items: start;
+    width: min(100%, 16rem);
+  }
+
+  .project-knowledge__actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
   .project-knowledge__insights,
   .project-knowledge-modal__stats,
   .project-knowledge-modal__target-grid,

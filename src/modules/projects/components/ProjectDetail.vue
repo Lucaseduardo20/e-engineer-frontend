@@ -924,7 +924,7 @@ async function submitRemovalDialog() {
 
 .project-cockpit__hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 18rem);
   gap: 1.25rem;
   align-items: center;
   border: 1px solid #b9ddd2;
@@ -934,6 +934,10 @@ async function submitRemovalDialog() {
     linear-gradient(135deg, #ffffff, #f4fbf8 62%, #e8f7f1);
   padding: 1.25rem;
   box-shadow: 0 18px 42px rgb(15 45 38 / 0.09);
+}
+
+.project-cockpit__hero-copy {
+  min-width: 0;
 }
 
 .project-cockpit__eyebrow {
@@ -1041,6 +1045,11 @@ async function submitRemovalDialog() {
   justify-content: flex-end;
   gap: 0.75rem;
   align-items: center;
+  min-width: 0;
+}
+
+.project-cockpit__hero-actions :deep(.v-btn) {
+  max-width: 100%;
 }
 
 .project-cockpit__tabs-shell {
@@ -1068,7 +1077,7 @@ async function submitRemovalDialog() {
 
 .project-cockpit__metrics {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
   gap: 0.75rem;
 }
 
@@ -1076,7 +1085,7 @@ async function submitRemovalDialog() {
   position: relative;
   display: grid;
   gap: 0.28rem;
-  min-height: 7rem;
+  min-height: 6.6rem;
   overflow: hidden;
   border-color: color-mix(in srgb, var(--metric-accent) 28%, #d8e5df);
   background:
@@ -1161,7 +1170,7 @@ async function submitRemovalDialog() {
 
 .project-cockpit__value-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  grid-template-columns: minmax(0, 1.15fr) minmax(18rem, 0.85fr);
   gap: 1rem;
 }
 
@@ -1283,7 +1292,7 @@ async function submitRemovalDialog() {
 
 .project-cockpit__deliverable-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(23rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 21rem), 1fr));
   gap: 1rem;
 }
 
@@ -1396,17 +1405,28 @@ async function submitRemovalDialog() {
 }
 
 @media (max-width: 1280px) {
-  .project-cockpit__metrics {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
   .project-cockpit__deliverable-cards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 960px) {
+@media (max-width: 1120px) {
   .project-cockpit__hero,
+  .project-cockpit__value-grid,
+  .project-cockpit__split--wide {
+    grid-template-columns: 1fr;
+  }
+
+  .project-cockpit__hero {
+    align-items: start;
+  }
+
+  .project-cockpit__hero-actions {
+    justify-content: start;
+  }
+}
+
+@media (max-width: 960px) {
   .project-cockpit__summary-grid,
   .project-cockpit__split,
   .project-cockpit__split--wide,
@@ -1425,9 +1445,43 @@ async function submitRemovalDialog() {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .project-cockpit__hero {
+    padding: 1rem;
+  }
+
+  .project-cockpit__title-row h1 {
+    font-size: 1.55rem;
+  }
+
+  .project-cockpit__hero-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .project-cockpit__hero-actions :deep(.v-progress-circular) {
+    justify-self: start;
+  }
+
   .project-cockpit__section-title,
   .project-cockpit__panel-head {
     display: grid;
+  }
+}
+
+@media (max-width: 520px) {
+  .project-cockpit {
+    gap: 1rem;
+  }
+
+  .project-cockpit__metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .project-cockpit__tag-strip,
+  .project-cockpit__panel,
+  .project-cockpit__summary-card,
+  .project-cockpit__history,
+  .project-cockpit__section--deliverables {
+    padding: 0.85rem;
   }
 }
 </style>
