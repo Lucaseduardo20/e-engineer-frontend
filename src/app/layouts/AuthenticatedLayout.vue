@@ -1,31 +1,72 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import OrgSwitcher from '@/modules/organizations/components/OrgSwitcher.vue'
 import { useAuthStore } from '@/modules/auth/stores/auth.store'
 import { useUiStore } from '@/modules/ui/stores/ui.store'
+import { apiClient } from '@/shared/http/api-client'
+import { permissions } from '@/shared/auth/rbac'
+import type { Permission } from '@/shared/auth/rbac'
+import { formatDateTime } from '@/shared/formatters/date.formatter'
+import type { AuditLogEntry } from '@/shared/types/api-contracts'
 
 type NavigationItem = {
   label: string
   path: string
   icon: string
+  permission: Permission
 }
 
 const navigationItems: NavigationItem[] = [
-  { label: 'Dashboard', path: '/dashboard', icon: '$info' },
-  { label: 'Projetos', path: '/projects', icon: '$file' },
-  { label: 'Documentos', path: '/documents', icon: '$upload' },
-  { label: 'Revisoes', path: '/reviews', icon: '$search' },
-  { label: 'Base de Conhecimento', path: '/knowledge-base', icon: '$command' },
-  { label: 'Equipe', path: '/team', icon: '$success' },
+  { label: 'Dashboard', path: '/dashboard', icon: '$info', permission: permissions.dashboard.read },
+  { label: 'Projetos', path: '/projects', icon: '$file', permission: permissions.projects.read },
+  {
+    label: 'Documentos',
+    path: '/documents',
+    icon: '$upload',
+    permission: permissions.documents.read,
+  },
+  { label: 'Revisoes', path: '/reviews', icon: '$search', permission: permissions.reviews.read },
+  {
+    label: 'Base de Conhecimento',
+    path: '/knowledge-base',
+    icon: '$command',
+    permission: permissions.knowledge.read,
+  },
+  {
+    label: 'Tags',
+    path: '/technical-tags',
+    icon: '$edit',
+    permission: permissions.knowledge.read,
+  },
+  {
+    label: 'Organizacao',
+    path: '/organizations',
+    icon: '$success',
+    permission: permissions.organization.read,
+  },
 ]
 
 const route = useRoute()
+const router = useRouter()
 const authStore = useAuthStore()
 const uiStore = useUiStore()
+const notifications = ref<AuditLogEntry[]>([])
+const isLoadingNotifications = ref(false)
 
 const userName = computed(() => authStore.user?.fullName ?? 'Usuario')
 const userEmail = computed(() => authStore.user?.email ?? 'Sessao ativa')
+const sessionLabel = computed(() => {
+  if (authStore.isImpersonating) {
+    return 'Incorporando usuario'
+  }
+
+  if (authStore.isPlatformAdmin) {
+    return 'Super-admin'
+  }
+
+  return null
+})
 const userInitials = computed(() => {
   const words = userName.value.trim().split(/\s+/).filter(Boolean)
   return words.length
@@ -35,6 +76,49 @@ const userInitials = computed(() => {
         .join('')
     : 'EE'
 })
+const canShowBack = computed(() => route.path !== '/dashboard')
+const visibleNavigationItems = computed(() =>
+  navigationItems.filter((item) => authStore.can(item.permission)),
+)
+const userNotifications = computed(() => {
+  const userId = authStore.user?.id
+  const name = authStore.user?.fullName
+
+  if (!userId && !name) {
+    return notifications.value
+  }
+
+  return notifications.value.filter(
+    (item) =>
+      item.actorName === userId ||
+      item.actorName === name ||
+      item.description.includes(userId ?? '') ||
+      item.description.includes(name ?? ''),
+  )
+})
+
+onMounted(() => {
+  void loadNotifications()
+})
+
+async function loadNotifications() {
+  isLoadingNotifications.value = true
+
+  try {
+    notifications.value = (await apiClient.audit.list({ page: 1, pageSize: 30 })).items
+  } finally {
+    isLoadingNotifications.value = false
+  }
+}
+
+function goBack() {
+  if (window.history.length > 1) {
+    router.back()
+    return
+  }
+
+  void router.push('/dashboard')
+}
 </script>
 
 <template>
@@ -56,7 +140,7 @@ const userInitials = computed(() => {
 
       <v-list nav density="comfortable" aria-label="Navegacao principal">
         <v-list-item
-          v-for="item in navigationItems"
+          v-for="item in visibleNavigationItems"
           :key="item.path"
           :to="item.path"
           :active="route.path === item.path"
@@ -83,6 +167,44 @@ const userInitials = computed(() => {
       </v-tooltip>
       <div class="app-shell__org"><OrgSwitcher /></div>
       <v-spacer />
+      <v-chip
+        v-if="sessionLabel"
+        class="app-shell__session-chip"
+        color="warning"
+        variant="tonal"
+        size="small"
+      >
+        {{ sessionLabel }}
+      </v-chip>
+      <v-menu max-width="420">
+        <template #activator="{ props }">
+          <v-btn
+            v-bind="props"
+            icon="$info"
+            variant="tonal"
+            color="teal"
+            size="small"
+            aria-label="Notificacoes"
+          />
+        </template>
+        <v-card class="app-shell__notifications" rounded="lg">
+          <v-card-title>Meus movimentos</v-card-title>
+          <v-progress-linear v-if="isLoadingNotifications" indeterminate color="teal" />
+          <v-list lines="three">
+            <v-list-item
+              v-for="notification in userNotifications"
+              :key="notification.id"
+              :title="notification.description"
+              :subtitle="`${notification.actorName} · ${formatDateTime(notification.occurredAt)}`"
+            />
+            <v-list-item
+              v-if="!isLoadingNotifications && userNotifications.length === 0"
+              title="Sem movimentos recentes"
+              subtitle="As acoes ligadas ao seu usuario aparecerao aqui."
+            />
+          </v-list>
+        </v-card>
+      </v-menu>
       <v-menu>
         <template #activator="{ props }">
           <v-btn v-bind="props" variant="text" class="app-shell__account">
@@ -101,6 +223,16 @@ const userInitials = computed(() => {
 
     <v-main>
       <div class="app-shell__main">
+        <v-btn
+          v-if="canShowBack"
+          class="app-shell__back"
+          color="teal"
+          variant="tonal"
+          prepend-icon="$prev"
+          @click="goBack"
+        >
+          Voltar
+        </v-btn>
         <slot />
       </div>
     </v-main>
@@ -141,12 +273,20 @@ const userInitials = computed(() => {
 }
 
 .app-shell__org {
-  width: min(22rem, 42vw);
+  width: clamp(14rem, 34vw, 22rem);
   margin-left: 1rem;
 }
 
 .app-shell__account {
   min-height: 3rem;
+}
+
+.app-shell__notifications {
+  border: 1px solid #d7e4df;
+}
+
+.app-shell__session-chip {
+  margin-right: 0.75rem;
 }
 
 .app-shell__account-copy {
@@ -157,15 +297,35 @@ const userInitials = computed(() => {
 .app-shell__main {
   width: min(100%, 92rem);
   margin: 0 auto;
-  padding: 1.5rem;
+  padding: clamp(1rem, 2vw, 1.5rem);
+}
+
+.app-shell__back {
+  justify-self: start;
+  margin-bottom: 0.85rem;
+  border: 1px solid #8ccbbd;
+  box-shadow: 0 8px 18px rgb(17 92 76 / 0.08);
+}
+
+@media (max-width: 1180px) {
+  .app-shell__account-copy {
+    display: none;
+  }
+
+  .app-shell__session-chip {
+    margin-right: 0.35rem;
+  }
+}
+
+@media (max-width: 840px) {
+  .app-shell__org {
+    width: min(16rem, 46vw);
+    margin-left: 0.5rem;
+  }
 }
 
 @media (max-width: 720px) {
   .app-shell__org {
-    display: none;
-  }
-
-  .app-shell__account-copy {
     display: none;
   }
 

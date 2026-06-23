@@ -21,7 +21,20 @@ withDefaults(
 
 const emit = defineEmits<{
   'update:page': [page: number]
+  'update:status': [project: Project, status: Project['status']]
 }>()
+
+const statusOptions: Array<{ title: string; value: Project['status'] }> = [
+  { title: 'Rascunho', value: 'draft' },
+  { title: 'Ativo', value: 'active' },
+  { title: 'Pausado', value: 'paused' },
+  { title: 'Concluido', value: 'completed' },
+  { title: 'Arquivado', value: 'archived' },
+]
+
+function visibleProjectTags(project: Project) {
+  return (project.tags ?? []).slice(0, 3)
+}
 </script>
 
 <template>
@@ -75,12 +88,35 @@ const emit = defineEmits<{
             <div class="text-body-2 text-medium-emphasis">
               {{ item.description || 'Sem cliente informado' }}
             </div>
+            <div v-if="visibleProjectTags(item).length" class="projects-list__tags">
+              <v-chip
+                v-for="tag in visibleProjectTags(item)"
+                :key="tag.id"
+                size="x-small"
+                color="teal"
+                variant="tonal"
+              >
+                {{ tag.name }}
+              </v-chip>
+            </div>
           </div>
         </div>
       </template>
 
       <template #item.status="{ item }">
-        <BaseStatusBadge :kind="projectBadgeKind(item.status)" />
+        <v-select
+          :model-value="item.status"
+          :items="statusOptions"
+          density="compact"
+          variant="outlined"
+          hide-details
+          class="projects-list__status-select"
+          @update:model-value="emit('update:status', item, $event)"
+        >
+          <template #selection>
+            <BaseStatusBadge :kind="projectBadgeKind(item.status)" />
+          </template>
+        </v-select>
       </template>
 
       <template #item.progress="{ item }">
@@ -142,6 +178,13 @@ const emit = defineEmits<{
   gap: 0.75rem;
 }
 
+.projects-list__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+
 .projects-list__project-icon {
   display: grid;
   flex: 0 0 auto;
@@ -171,5 +214,9 @@ const emit = defineEmits<{
   color: #51615d;
   font-size: 0.8rem;
   font-weight: 750;
+}
+
+.projects-list__status-select {
+  width: 10.5rem;
 }
 </style>

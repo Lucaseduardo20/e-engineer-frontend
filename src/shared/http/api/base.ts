@@ -34,6 +34,14 @@ export class BaseApiService {
     return this.unwrap(httpClient.put<ApiResponse<T>>(this.getUrl(path), payload, config))
   }
 
+  protected patch<T, TPayload = unknown>(
+    path = '',
+    payload?: TPayload,
+    config?: AxiosRequestConfig,
+  ): Promise<T> {
+    return this.unwrap(httpClient.patch<ApiResponse<T>>(this.getUrl(path), payload, config))
+  }
+
   protected async delete<T = void>(path = '', config?: AxiosRequestConfig): Promise<T> {
     return this.unwrap(httpClient.delete<ApiResponse<T>>(this.getUrl(path), config))
   }

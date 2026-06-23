@@ -42,7 +42,7 @@ defineProps<{
   gap: 0.375rem;
   color: #667085;
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 520;
 }
 
 .base-page-header__content {
@@ -56,15 +56,16 @@ defineProps<{
   margin: 0 0 0.375rem;
   color: #1d6f61;
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0;
   text-transform: uppercase;
 }
 
 h1 {
   margin: 0;
-  color: #172033;
-  font-size: clamp(1.75rem, 2.4vw, 2.35rem);
+  color: #123c32;
+  font-size: clamp(1.55rem, 2.1vw, 2.05rem);
+  font-weight: 740;
   line-height: 1.08;
 }
 

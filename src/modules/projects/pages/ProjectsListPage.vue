@@ -1,27 +1,24 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import ProjectsList from '@/modules/projects/components/ProjectsList.vue'
+import ProjectCreateWizard from '@/modules/projects/components/ProjectCreateWizard.vue'
 import { useProjectsStore } from '@/modules/projects/stores/projects.store'
 import BasePageHeader from '@/shared/components/BasePageHeader.vue'
 import type { Project } from '@/shared/types/api-contracts'
+import type { CreateProjectFromBaseRequest, CreateProjectRequest } from '@/shared/http/api'
 
 const projectsStore = useProjectsStore()
+const route = useRoute()
+const router = useRouter()
 const isCreateDialogOpen = ref(false)
-const projectName = ref('')
-const projectType = ref('')
+const isFiltersOpen = ref(false)
 const isCreating = ref(false)
 const searchTerm = ref('')
 const selectedStatus = ref<Project['status'] | null>(null)
 
-const projectTypes = [
-  'reforma escolar',
-  'drenagem urbana',
-  'pavimentacao',
-  'unidade de saude',
-  'validacao tecnica',
-]
-const canCreateProject = computed(() =>
-  Boolean(projectName.value.trim() && projectType.value.trim()),
+const activeFiltersCount = computed(
+  () => [searchTerm.value.trim(), selectedStatus.value].filter(Boolean).length,
 )
 const statusOptions: Array<{ title: string; value: Project['status'] }> = [
   { title: 'Rascunho', value: 'draft' },
@@ -33,16 +30,39 @@ const statusOptions: Array<{ title: string; value: Project['status'] }> = [
 
 onMounted(() => {
   void projectsStore.loadProjects()
+
+  if (route.query.new === '1') {
+    openCreateDialog()
+  }
 })
 
+watch(
+  () => route.query.new,
+  (value) => {
+    if (value === '1') {
+      openCreateDialog()
+    }
+  },
+)
+
 function resetCreateForm() {
-  projectName.value = ''
-  projectType.value = ''
+  projectsStore.projectBaseRecommendations = []
+  projectsStore.similarProjectRecommendations = []
 }
 
 function openCreateDialog() {
   resetCreateForm()
   isCreateDialogOpen.value = true
+}
+
+function closeCreateDialog() {
+  isCreateDialogOpen.value = false
+
+  if (route.query.new) {
+    const query = { ...route.query }
+    delete query.new
+    void router.replace({ query })
+  }
 }
 
 function applyFilters() {
@@ -58,26 +78,44 @@ function clearFilters() {
   applyFilters()
 }
 
-async function handleCreateProject() {
-  if (!projectName.value.trim() || !projectType.value.trim()) {
-    return
-  }
-
+async function handleCreateProject(payload: CreateProjectRequest) {
   isCreating.value = true
 
   try {
-    const project = await projectsStore.createProject({
-      name: projectName.value.trim(),
-      projectType: projectType.value.trim(),
-    })
+    const project = await projectsStore.createProject(payload)
 
     if (project) {
-      isCreateDialogOpen.value = false
+      closeCreateDialog()
       resetCreateForm()
+      void router.push(`/projects/${project.id}`)
     }
   } finally {
     isCreating.value = false
   }
+}
+
+async function handleCreateProjectFromBase(payload: CreateProjectFromBaseRequest) {
+  isCreating.value = true
+
+  try {
+    const project = await projectsStore.createProjectFromBase(payload)
+
+    if (project) {
+      closeCreateDialog()
+      resetCreateForm()
+      void router.push(`/projects/${project.id}`)
+    }
+  } finally {
+    isCreating.value = false
+  }
+}
+
+async function updateProjectStatus(project: Project, status: Project['status']) {
+  if (project.status === status) {
+    return
+  }
+
+  await projectsStore.updateProjectStatus(project.id, status)
 }
 </script>
 
@@ -98,35 +136,63 @@ async function handleCreateProject() {
       {{ projectsStore.error }}
     </v-alert>
 
-    <v-sheet class="projects-page__filters" border rounded="lg">
-      <v-text-field
-        v-model="searchTerm"
-        label="Buscar por nome"
-        density="comfortable"
-        variant="outlined"
-        prepend-inner-icon="$search"
-        hide-details
-        clearable
-        @keyup.enter="applyFilters"
-        @click:clear="clearFilters"
-      />
-      <v-select
-        v-model="selectedStatus"
-        :items="statusOptions"
-        label="Status"
-        density="comfortable"
-        variant="outlined"
-        hide-details
-        clearable
-      />
-      <div class="projects-page__filter-actions">
-        <v-btn variant="outlined" :disabled="projectsStore.isLoading" @click="clearFilters">
+    <v-sheet class="projects-page__filter-shell" border rounded="lg">
+      <div class="projects-page__filter-bar">
+        <v-btn
+          size="small"
+          variant="tonal"
+          color="teal"
+          prepend-icon="$search"
+          @click="isFiltersOpen = !isFiltersOpen"
+        >
+          Filtros da tabela
+        </v-btn>
+        <v-chip v-if="activeFiltersCount" color="teal" variant="tonal" size="small">
+          {{ activeFiltersCount }} ativo(s)
+        </v-chip>
+        <v-spacer />
+        <v-btn
+          v-if="activeFiltersCount"
+          variant="text"
+          :disabled="projectsStore.isLoading"
+          @click="clearFilters"
+        >
           Limpar
         </v-btn>
-        <v-btn color="teal" :loading="projectsStore.isLoading" @click="applyFilters">
-          Filtrar
-        </v-btn>
       </div>
+
+      <v-expand-transition>
+        <div v-if="isFiltersOpen" class="projects-page__filters">
+          <v-text-field
+            v-model="searchTerm"
+            label="Buscar por nome"
+            density="comfortable"
+            variant="outlined"
+            prepend-inner-icon="$search"
+            hide-details
+            clearable
+            @keyup.enter="applyFilters"
+            @click:clear="clearFilters"
+          />
+          <v-select
+            v-model="selectedStatus"
+            :items="statusOptions"
+            label="Status"
+            density="comfortable"
+            variant="outlined"
+            hide-details
+            clearable
+          />
+          <div class="projects-page__filter-actions">
+            <v-btn variant="outlined" :disabled="projectsStore.isLoading" @click="clearFilters">
+              Limpar
+            </v-btn>
+            <v-btn color="teal" :loading="projectsStore.isLoading" @click="applyFilters">
+              Filtrar
+            </v-btn>
+          </div>
+        </div>
+      </v-expand-transition>
     </v-sheet>
 
     <ProjectsList
@@ -136,50 +202,16 @@ async function handleCreateProject() {
       :page-size="projectsStore.pageSize"
       :total="projectsStore.total"
       @update:page="projectsStore.loadProjects"
+      @update:status="updateProjectStatus"
     />
 
-    <v-dialog v-model="isCreateDialogOpen" max-width="560">
-      <v-card rounded="lg">
-        <v-card-title class="d-flex align-center ga-2">
-          <v-icon icon="$plus" color="teal" size="20" />
-          Novo projeto tecnico
-        </v-card-title>
-        <v-divider />
-        <v-card-text class="d-grid ga-4">
-          <v-text-field
-            v-model="projectName"
-            label="Nome do projeto"
-            maxlength="160"
-            counter
-            variant="outlined"
-            :disabled="isCreating"
-            :rules="[(value: string) => Boolean(value?.trim()) || 'Informe o nome do projeto.']"
-            autofocus
-          />
-          <v-select
-            v-model="projectType"
-            :items="projectTypes"
-            label="Tipo de projeto"
-            variant="outlined"
-            :disabled="isCreating"
-            :rules="[(value: string) => Boolean(value?.trim()) || 'Selecione o tipo de projeto.']"
-          />
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn variant="text" :disabled="isCreating" @click="isCreateDialogOpen = false">
-            Cancelar
-          </v-btn>
-          <v-btn
-            color="teal"
-            :disabled="!canCreateProject"
-            :loading="isCreating"
-            @click="handleCreateProject"
-          >
-            Criar
-          </v-btn>
-        </v-card-actions>
-      </v-card>
+    <v-dialog v-model="isCreateDialogOpen" max-width="980" scrollable>
+      <ProjectCreateWizard
+        :saving="isCreating"
+        @cancel="closeCreateDialog"
+        @create="handleCreateProject"
+        @create-from-base="handleCreateProjectFromBase"
+      />
     </v-dialog>
   </v-container>
 </template>
@@ -190,12 +222,24 @@ async function handleCreateProject() {
   gap: 1rem;
 }
 
+.projects-page__filter-shell {
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.projects-page__filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+}
+
 .projects-page__filters {
   display: grid;
   align-items: center;
   gap: 0.75rem;
   grid-template-columns: minmax(14rem, 1fr) minmax(12rem, 16rem) auto;
-  background: #ffffff;
+  border-top: 1px solid #d8e1de;
   padding: 0.875rem;
 }
 

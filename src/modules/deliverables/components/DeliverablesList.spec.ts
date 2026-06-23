@@ -10,6 +10,12 @@ const PassthroughStub = defineComponent({
   },
 })
 
+const SelectStub = defineComponent({
+  setup(_, { slots }) {
+    return () => h('div', [slots.selection?.(), slots.default?.()])
+  },
+})
+
 const DataTableStub = defineComponent({
   props: {
     items: {
@@ -24,6 +30,7 @@ const DataTableStub = defineComponent({
         props.items.flatMap((item) => [
           slots['item.title']?.({ item }),
           slots['item.type']?.({ item }),
+          slots['item.intelligence']?.({ item }),
           slots['item.status']?.({ item }),
           slots['item.dueDate']?.({ item }),
           slots['item.actions']?.({ item }),
@@ -42,8 +49,18 @@ describe('DeliverablesList', () => {
         description: 'Compatibilizado com memorial',
         status: 'in_progress',
         type: 'architectural_project',
-        dueDate: '2026-06-12',
+        dueDate: 1781222400000,
         assignees: ['Lucas Eduardo'],
+        tags: [
+          {
+            id: 'tag-1',
+            name: 'Arquitetura',
+            slug: 'arquitetura',
+            category: 'technical_discipline',
+            status: 'active',
+          },
+        ],
+        tagIds: ['tag-1'],
       },
     ]
 
@@ -56,7 +73,13 @@ describe('DeliverablesList', () => {
           VCardTitle: PassthroughStub,
           VDataTable: DataTableStub,
           VIcon: PassthroughStub,
-          VSelect: PassthroughStub,
+          VSheet: PassthroughStub,
+          VSelect: SelectStub,
+          VChip: PassthroughStub,
+          VAlert: PassthroughStub,
+          VExpandTransition: PassthroughStub,
+          VMenu: PassthroughStub,
+          ExpandTransition: PassthroughStub,
           BasePagination: PassthroughStub,
           BaseStatusBadge: {
             template: '<span>Em producao</span>',
@@ -68,6 +91,8 @@ describe('DeliverablesList', () => {
     expect(wrapper.text()).toContain('Projeto arquitetonico')
     expect(wrapper.text()).toContain('Projeto arquitetonico')
     expect(wrapper.text()).toContain('Lucas Eduardo')
+    expect(wrapper.text()).toContain('Com tags')
+    expect(wrapper.text()).toContain('Arquitetura')
     expect(wrapper.text()).toContain('Em producao')
     expect(wrapper.text()).toContain('Editar')
   })
