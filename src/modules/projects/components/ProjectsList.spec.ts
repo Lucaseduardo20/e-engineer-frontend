@@ -10,6 +10,12 @@ const PassthroughStub = defineComponent({
   },
 })
 
+const SelectStub = defineComponent({
+  setup(_, { slots }) {
+    return () => h('div', [slots.selection?.(), slots.default?.()])
+  },
+})
+
 const DataTableStub = defineComponent({
   props: {
     items: {
@@ -53,6 +59,7 @@ describe('ProjectsList', () => {
           VChip: PassthroughStub,
           VDataTable: DataTableStub,
           VIcon: PassthroughStub,
+          VSelect: SelectStub,
           BasePagination: PassthroughStub,
           BaseStatusBadge: {
             template: '<span>Ativo</span>',

@@ -7,6 +7,8 @@ import {
 } from '@/modules/auth/constants/auth-storage.constants'
 import { authService } from '@/modules/auth/services/auth.service'
 import type { LoginCredentials, User } from '@/modules/auth/types/auth.types'
+import { hasAllPermissions, hasPermission, permissionsForUser } from '@/shared/auth/rbac'
+import type { Permission } from '@/shared/auth/rbac'
 import { getApiErrorMessage } from '@/shared/http/api-error'
 
 function readStoredUser(): User | null {
@@ -22,6 +24,8 @@ function readStoredUser(): User | null {
       ...parsed,
       fullName: parsed.fullName ?? parsed.name ?? 'Usuario',
       roles: parsed.roles ?? [],
+      isPlatformAdmin: parsed.isPlatformAdmin ?? false,
+      impersonatedBy: parsed.impersonatedBy ?? null,
     }
   } catch {
     localStorage.removeItem(AUTH_USER_STORAGE_KEY)
@@ -53,6 +57,9 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => Boolean(token.value && user.value))
   const organizationId = computed(() => user.value?.organizationId ?? null)
   const userName = computed(() => user.value?.fullName ?? null)
+  const isPlatformAdmin = computed(() => user.value?.isPlatformAdmin === true)
+  const isImpersonating = computed(() => Boolean(user.value?.impersonatedBy))
+  const permissions = computed(() => permissionsForUser(user.value))
 
   function persistSession(nextToken: string, nextUser: User) {
     token.value = nextToken
@@ -93,6 +100,10 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, nextToken)
   }
 
+  function replaceSession(nextToken: string, nextUser: User) {
+    persistSession(nextToken, nextUser)
+  }
+
   function restoreSession() {
     if (hasRestoredSession.value) {
       return
@@ -115,6 +126,14 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
   }
 
+  function can(permission: Permission) {
+    return hasPermission(user.value, permission)
+  }
+
+  function canAll(requiredPermissions: Permission[]) {
+    return hasAllPermissions(user.value, requiredPermissions)
+  }
+
   return {
     user,
     token,
@@ -124,10 +143,16 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     organizationId,
     userName,
+    isPlatformAdmin,
+    isImpersonating,
+    permissions,
     login,
     logout,
     replaceToken,
+    replaceSession,
     restoreSession,
     clearError,
+    can,
+    canAll,
   }
 })

@@ -1,0 +1,373 @@
+<script setup lang="ts">
+import { computed, reactive, ref, watch } from 'vue'
+import TechnicalTagSelector from '@/modules/technical-taxonomy/components/TechnicalTagSelector.vue'
+import type {
+  Deliverable,
+  DocumentStatus,
+  DocumentSummary,
+  DocumentType,
+  Project,
+  User,
+} from '@/shared/types/api-contracts'
+
+const props = withDefaults(
+  defineProps<{
+    projects: Project[]
+    deliverables?: Deliverable[]
+    users?: User[]
+    document?: DocumentSummary | null
+    saving?: boolean
+    initialProjectId?: string
+    lockedProject?: boolean
+  }>(),
+  {
+    deliverables: () => [],
+    users: () => [],
+    document: null,
+    initialProjectId: '',
+    lockedProject: false,
+  },
+)
+
+const emit = defineEmits<{
+  submit: [
+    payload: {
+      projectId: string
+      deliverableId?: string | null
+      title: string
+      description?: string | null
+      type: DocumentType
+      status: DocumentStatus
+      file?: File
+      revision?: string
+      isOfficial: boolean
+      notes?: string | null
+      reviewerId?: string | null
+      tagIds?: string[]
+    },
+  ]
+  'project-change': [projectId: string]
+}>()
+
+const documentTypeOptions: Array<{ title: string; value: DocumentType }> = [
+  { title: 'Memorial descritivo', value: 'memorial_descritivo' },
+  { title: 'Projeto estrutural', value: 'projeto_estrutural' },
+  { title: 'Projeto arquitetonico', value: 'projeto_arquitetonico' },
+  { title: 'Projeto eletrico', value: 'projeto_eletrico' },
+  { title: 'Projeto hidrossanitario', value: 'projeto_hidrossanitario' },
+  { title: 'Orcamento', value: 'orcamento' },
+  { title: 'Cronograma', value: 'cronograma' },
+  { title: 'Laudo tecnico', value: 'laudo' },
+  { title: 'Relatorio fotografico', value: 'relatorio_fotografico' },
+  { title: 'ART/RRT', value: 'art_rrt' },
+  { title: 'Levantamento topografico', value: 'levantamento_topografico' },
+  { title: 'Especificacao tecnica', value: 'especificacao_tecnica' },
+  { title: 'Outro', value: 'outro' },
+]
+
+const statusOptions: Array<{ title: string; value: DocumentStatus }> = [
+  { title: 'Minuta', value: 'draft' },
+  { title: 'Em revisao', value: 'in_review' },
+  { title: 'Aprovado/oficial', value: 'approved' },
+  { title: 'Substituido', value: 'superseded' },
+]
+
+const form = reactive({
+  projectId: '',
+  deliverableId: null as string | null,
+  title: '',
+  description: '',
+  type: 'memorial_descritivo' as DocumentType,
+  status: 'draft' as DocumentStatus,
+  revision: '',
+  isOfficial: false,
+  notes: '',
+  reviewerId: null as string | null,
+  tagIds: [] as string[],
+})
+const selectedFile = ref<File | null>(null)
+
+const projectOptions = computed(() =>
+  props.projects.map((project) => ({ title: project.name, value: project.id })),
+)
+const deliverableOptions = computed(() =>
+  props.deliverables.map((deliverable) => ({
+    title: deliverable.title,
+    value: deliverable.id,
+  })),
+)
+const reviewerOptions = computed(() =>
+  props.users.map((user) => ({
+    title: `${user.fullName} (${user.email})`,
+    value: user.id,
+  })),
+)
+const selectedProject = computed(() =>
+  props.projects.find((project) => project.id === form.projectId) ?? null,
+)
+const selectedDeliverable = computed(() =>
+  props.deliverables.find((deliverable) => deliverable.id === form.deliverableId) ?? null,
+)
+const isEditing = computed(() => Boolean(props.document))
+const canSubmit = computed(() =>
+  Boolean(form.projectId && form.title.trim() && form.type && form.status),
+)
+const isProjectLocked = computed(() => props.lockedProject || isEditing.value)
+
+watch(
+  () => [props.document, props.initialProjectId] as const,
+  ([document, initialProjectId]) => {
+    form.projectId = document?.projectId ?? ''
+    if (!document && initialProjectId) {
+      form.projectId = initialProjectId
+    }
+    form.deliverableId = document?.deliverableId ?? null
+    form.title = document?.title ?? ''
+    form.description = document?.description ?? ''
+    form.type = document?.type ?? 'memorial_descritivo'
+    form.status = document?.status ?? 'draft'
+    form.revision = ''
+    form.isOfficial = document?.status === 'approved'
+    form.notes = ''
+    form.reviewerId = null
+    form.tagIds = document?.tagIds ? [...document.tagIds] : []
+    selectedFile.value = null
+
+    if (form.projectId) {
+      emit('project-change', form.projectId)
+    }
+  },
+  { immediate: true },
+)
+
+watch(
+  () => form.projectId,
+  (projectId) => {
+    if (!props.lockedProject) {
+      form.deliverableId = null
+    }
+    emit('project-change', projectId)
+  },
+)
+
+watch(
+  () => form.deliverableId,
+  () => {
+    if (isEditing.value) return
+    const contextualTags = selectedDeliverable.value?.tagIds ?? selectedDeliverable.value?.tags?.map((tag) => tag.id) ?? []
+    if (!contextualTags.length) return
+
+    form.tagIds = [...new Set([...form.tagIds, ...contextualTags])]
+  },
+)
+
+watch(
+  () => form.projectId,
+  () => {
+    if (isEditing.value || form.tagIds.length) return
+    const contextualTags = selectedProject.value?.tagIds ?? selectedProject.value?.tags?.map((tag) => tag.id) ?? []
+    form.tagIds = [...new Set(contextualTags)]
+  },
+)
+
+function submit() {
+  if (!canSubmit.value) {
+    return
+  }
+
+  emit('submit', {
+    projectId: form.projectId,
+    deliverableId: form.deliverableId,
+    title: form.title.trim(),
+    description: form.description.trim() || null,
+    type: form.type,
+    status: form.status,
+    file: selectedFile.value ?? undefined,
+    revision: form.revision.trim() || undefined,
+    isOfficial: form.isOfficial,
+    notes: form.notes.trim() || null,
+    reviewerId: form.reviewerId,
+    tagIds: form.tagIds,
+  })
+}
+</script>
+
+<template>
+  <v-card class="document-upload" variant="flat" rounded="lg">
+    <v-card-title class="document-upload__title">
+      <v-icon :icon="isEditing ? '$edit' : '$upload'" color="teal" size="20" />
+      {{ isEditing ? 'Atualizar documento' : 'Novo documento' }}
+    </v-card-title>
+    <v-divider />
+    <v-card-text class="document-upload__form">
+      <v-select
+        v-model="form.projectId"
+        :items="projectOptions"
+        label="Projeto tecnico"
+        variant="outlined"
+        density="comfortable"
+        :disabled="saving || isProjectLocked"
+        :rules="[(value: string) => Boolean(value) || 'Selecione o projeto.']"
+      />
+      <v-select
+        v-model="form.deliverableId"
+        :items="deliverableOptions"
+        label="Entregavel vinculado"
+        variant="outlined"
+        density="comfortable"
+        clearable
+        :disabled="saving || !form.projectId"
+      />
+      <v-text-field
+        v-model="form.title"
+        label="Titulo tecnico"
+        maxlength="180"
+        counter
+        variant="outlined"
+        density="comfortable"
+        :disabled="saving"
+        :rules="[(value: string) => Boolean(value?.trim()) || 'Informe o titulo.']"
+      />
+      <v-textarea
+        v-model="form.description"
+        label="Descricao"
+        rows="3"
+        maxlength="2000"
+        variant="outlined"
+        density="comfortable"
+        :disabled="saving"
+      />
+      <div class="document-upload__pair">
+        <v-select
+          v-model="form.type"
+          :items="documentTypeOptions"
+          label="Tipo de documento"
+          variant="outlined"
+          density="comfortable"
+          :disabled="saving"
+        />
+        <v-select
+          v-model="form.status"
+          :items="statusOptions"
+          label="Status"
+          variant="outlined"
+          density="comfortable"
+          :disabled="saving"
+        />
+      </div>
+      <div class="document-upload__tag-section">
+        <div class="document-upload__tag-head">
+          <span>Classificacao tecnica</span>
+          <v-chip v-if="form.tagIds.length" color="teal" variant="flat">{{ form.tagIds.length }} tag(s)</v-chip>
+        </div>
+        <TechnicalTagSelector
+          v-model="form.tagIds"
+          :allow-create="false"
+          :categories="['document_type', 'technical_discipline', 'project_stage', 'knowledge_purpose', 'operational_pain']"
+          :allowed-statuses="['active', 'pending_review', 'deprecated']"
+          :disabled="saving"
+          :max-list-height="300"
+        />
+      </div>
+      <v-file-input
+        v-model="selectedFile"
+        label="Arquivo da versao"
+        variant="outlined"
+        density="comfortable"
+        prepend-icon=""
+        prepend-inner-icon="$upload"
+        show-size
+        :disabled="saving"
+      />
+      <v-select
+        v-model="form.reviewerId"
+        :items="reviewerOptions"
+        label="Responsavel pela revisao"
+        variant="outlined"
+        density="comfortable"
+        clearable
+        :disabled="saving"
+      />
+      <div class="document-upload__pair">
+        <v-text-field
+          v-model="form.revision"
+          label="Revisao"
+          maxlength="20"
+          variant="outlined"
+          density="comfortable"
+          :disabled="saving"
+        />
+        <v-switch
+          v-model="form.isOfficial"
+          color="teal"
+          label="Versao oficial"
+          :disabled="saving"
+          hide-details
+        />
+      </div>
+      <v-textarea
+        v-model="form.notes"
+        label="Notas da versao"
+        rows="2"
+        maxlength="2000"
+        variant="outlined"
+        density="comfortable"
+        :disabled="saving"
+      />
+    </v-card-text>
+    <v-card-actions>
+      <v-spacer />
+      <v-btn color="teal" :loading="saving" :disabled="!canSubmit" @click="submit">
+        {{ isEditing ? 'Salvar' : 'Cadastrar' }}
+      </v-btn>
+    </v-card-actions>
+  </v-card>
+</template>
+
+<style scoped>
+.document-upload {
+  border: 1px solid #d7e4df;
+  background: #ffffff;
+  box-shadow: 0 12px 28px rgb(15 45 38 / 0.06);
+}
+
+.document-upload__title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #123c32;
+  font-weight: 850;
+}
+
+.document-upload__form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.document-upload__pair {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.document-upload__tag-section {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.document-upload__tag-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: #123c32;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+@media (max-width: 720px) {
+  .document-upload__pair {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

@@ -21,6 +21,7 @@ const deliverableId = computed(() =>
 const isCreateRoute = computed(() => route.name === 'deliverable-create')
 const isEditRoute = computed(() => route.name === 'deliverable-edit')
 const showForm = computed(() => isCreateRoute.value || isEditRoute.value)
+const formTitle = computed(() => (isEditRoute.value ? 'Editar entregável técnico' : 'Novo entregável técnico'))
 const pageTitle = computed(() => projectsStore.selectedProject?.name ?? 'Entregaveis')
 const selectedStatus = computed({
   get: () => deliverablesStore.filters.status ?? null,
@@ -47,6 +48,7 @@ async function loadPage() {
   await Promise.all([
     projectsStore.loadProjectDetail(projectId.value),
     deliverablesStore.loadDeliverables(projectId.value),
+    deliverablesStore.loadUsers(),
   ])
 
   if (isEditRoute.value && deliverableId.value) {
@@ -66,22 +68,60 @@ function closeForm() {
   void router.push(`/projects/${projectId.value}/deliverables`)
 }
 
-async function saveDeliverable(payload: CreateDeliverableRequest) {
+async function saveDeliverable(payload: CreateDeliverableRequest & { knowledgeItemIds?: string[] }) {
+  const { knowledgeItemIds = [], ...deliverablePayload } = payload
   const saved =
     isEditRoute.value && deliverableId.value
       ? await deliverablesStore.updateDeliverable(deliverableId.value, projectId.value, {
-          title: payload.title,
-          description: payload.description,
-          dueDate: payload.dueDate,
-          status: payload.status,
-          type: payload.type,
-          assignees: payload.assignees,
+          title: deliverablePayload.title,
+          description: deliverablePayload.description,
+          dueDate: deliverablePayload.dueDate,
+          status: deliverablePayload.status,
+          type: deliverablePayload.type,
+          assignees: deliverablePayload.assignees,
+          tagIds: deliverablePayload.tagIds,
         })
-      : await deliverablesStore.createDeliverable(payload)
+      : await deliverablesStore.createDeliverable(deliverablePayload)
 
   if (saved) {
+    await syncDeliverableKnowledge(saved.id, knowledgeItemIds)
     closeForm()
   }
+}
+
+async function syncDeliverableKnowledge(deliverableTargetId: string, knowledgeItemIds: string[]) {
+  const selected = new Set(knowledgeItemIds)
+  const existing = projectsStore.projectKnowledge.filter(
+    (entry) => entry.targetType === 'deliverable' && entry.targetId === deliverableTargetId,
+  )
+
+  await Promise.all(
+    existing
+      .filter((entry) => !selected.has(entry.knowledgeItem.id))
+      .map((entry) => projectsStore.unlinkKnowledgeRelation(projectId.value, entry.relationId)),
+  )
+
+  await Promise.all(
+    [...selected]
+      .filter((knowledgeItemId) => !existing.some((entry) => entry.knowledgeItem.id === knowledgeItemId))
+      .map((knowledgeItemId) =>
+        projectsStore.linkKnowledgeItem(projectId.value, {
+          knowledgeItemId,
+          relationType: 'reference_for',
+          deliverableId: deliverableTargetId,
+        }),
+      ),
+  )
+
+  await projectsStore.loadProjectDetail(projectId.value)
+}
+
+async function updateDeliverableStatus(deliverable: Deliverable, status: Deliverable['status']) {
+  if (deliverable.status === status) {
+    return
+  }
+
+  await deliverablesStore.updateDeliverable(deliverable.id, projectId.value, { status })
 }
 </script>
 
@@ -103,16 +143,7 @@ async function saveDeliverable(payload: CreateDeliverableRequest) {
       {{ deliverablesStore.error }}
     </v-alert>
 
-    <div class="deliverables-page__content" :class="{ 'deliverables-page__content--form': showForm }">
-      <DeliverableForm
-        v-if="showForm"
-        :project-id="projectId"
-        :deliverable="isEditRoute ? deliverablesStore.selectedDeliverable : null"
-        :loading="deliverablesStore.isSaving"
-        @submit="saveDeliverable"
-        @cancel="closeForm"
-      />
-
+    <div class="deliverables-page__content">
       <DeliverablesList
         :deliverables="deliverablesStore.deliverables"
         :loading="deliverablesStore.isLoading"
@@ -120,12 +151,42 @@ async function saveDeliverable(payload: CreateDeliverableRequest) {
         :page-size="deliverablesStore.pageSize"
         :total="deliverablesStore.total"
         :status="selectedStatus"
+        :users="deliverablesStore.users"
         @create="goToCreate"
         @edit="goToEdit"
+        @update:item-status="updateDeliverableStatus"
         @update:page="deliverablesStore.loadDeliverables(projectId, $event)"
         @update:status="selectedStatus = $event"
       />
     </div>
+
+    <v-dialog
+      :model-value="showForm"
+      max-width="820"
+      scrollable
+      content-class="deliverables-page__dialog"
+      @update:model-value="(open) => { if (!open) closeForm() }"
+    >
+      <v-card class="deliverables-page__modal" style="max-height: calc(100dvh - 2rem);">
+        <v-card-title class="deliverables-page__modal-title">
+          <div>
+            <span>{{ formTitle }}</span>
+            <small>Organize prazo, responsável e tipo técnico sem sair do cockpit.</small>
+          </div>
+          <v-btn icon="$close" variant="text" aria-label="Fechar" @click="closeForm" />
+        </v-card-title>
+        <v-card-text class="deliverables-page__modal-body">
+          <DeliverableForm
+            :project-id="projectId"
+            :deliverable="isEditRoute ? deliverablesStore.selectedDeliverable : null"
+            :knowledge-items="projectsStore.projectKnowledge"
+            :loading="deliverablesStore.isSaving"
+            @submit="saveDeliverable"
+            @cancel="closeForm"
+          />
+        </v-card-text>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -140,14 +201,43 @@ async function saveDeliverable(payload: CreateDeliverableRequest) {
   gap: 1rem;
 }
 
-.deliverables-page__content--form {
-  grid-template-columns: minmax(20rem, 0.42fr) minmax(0, 1fr);
-  align-items: start;
+.deliverables-page__modal {
+  overflow: hidden;
+  border: 1px solid #b9ddd2;
+  background: #f4faf7;
 }
 
-@media (max-width: 1100px) {
-  .deliverables-page__content--form {
-    grid-template-columns: 1fr;
-  }
+.deliverables-page__modal-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  background:
+    linear-gradient(135deg, #10231f, #143d33 56%, #267365),
+    #10231f;
+  padding: 1rem 1.25rem;
+}
+
+.deliverables-page__modal-title > div {
+  display: grid;
+}
+
+.deliverables-page__modal-title span {
+  color: #ffffff;
+  font-weight: 850;
+}
+
+.deliverables-page__modal-title small {
+  color: #d7f2e7;
+}
+
+.deliverables-page__modal-title :deep(.v-btn) {
+  color: #ffffff;
+}
+
+.deliverables-page__modal-body {
+  overflow-y: auto;
+  padding: 1rem;
+  scrollbar-color: #8ccbbd #eef7f3;
+  scrollbar-width: thin;
 }
 </style>

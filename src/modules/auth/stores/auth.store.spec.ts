@@ -6,6 +6,7 @@ import {
   AUTH_USER_STORAGE_KEY,
 } from '@/modules/auth/constants/auth-storage.constants'
 import { authService } from '@/modules/auth/services/auth.service'
+import { permissions } from '@/shared/auth/rbac'
 import { useAuthStore } from './auth.store'
 
 vi.mock('@/modules/auth/services/auth.service', () => ({
@@ -29,6 +30,7 @@ describe('auth store', () => {
         fullName: 'Marina Azevedo',
         email: 'marina@empresa.com',
         roles: [],
+        isPlatformAdmin: true,
         organizationId: 'org-1',
       },
     })
@@ -38,6 +40,7 @@ describe('auth store', () => {
 
     expect(store.isAuthenticated).toBe(true)
     expect(store.userName).toBe('Marina Azevedo')
+    expect(store.isPlatformAdmin).toBe(true)
     expect(localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)).toBe('signed-token')
   })
 
@@ -79,7 +82,43 @@ describe('auth store', () => {
 
     expect(store.user?.fullName).toBe('Marina Azevedo')
     expect(store.user?.roles).toEqual([])
+    expect(store.user?.isPlatformAdmin).toBe(false)
     expect(store.token).toBe('fresh-token')
     expect(localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)).toBe('fresh-token')
+  })
+
+  it('replaces the full session for tenant switch or impersonation', () => {
+    const store = useAuthStore()
+
+    store.replaceSession('impersonated-token', {
+      id: 'user-2',
+      fullName: 'Rafael',
+      email: 'rafael@engflow.local',
+      roles: ['member'],
+      isPlatformAdmin: false,
+      impersonatedBy: 'user-1',
+      organizationId: 'org-2',
+    })
+
+    expect(store.isAuthenticated).toBe(true)
+    expect(store.isImpersonating).toBe(true)
+    expect(store.organizationId).toBe('org-2')
+    expect(localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)).toBe('impersonated-token')
+  })
+
+  it('checks route permissions from the active RBAC role', () => {
+    const store = useAuthStore()
+
+    store.replaceSession('member-token', {
+      id: 'user-3',
+      fullName: 'Membro',
+      email: 'membro@engflow.local',
+      roles: ['member'],
+      isPlatformAdmin: false,
+      organizationId: 'org-1',
+    })
+
+    expect(store.can(permissions.documents.read)).toBe(true)
+    expect(store.can(permissions.organization.membersManage)).toBe(false)
   })
 })

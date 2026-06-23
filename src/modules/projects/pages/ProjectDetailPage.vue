@@ -3,6 +3,8 @@ import { onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import ProjectDetail from '@/modules/projects/components/ProjectDetail.vue'
 import { useProjectsStore } from '@/modules/projects/stores/projects.store'
+import { apiClient } from '@/shared/http/api-client'
+import type { Deliverable } from '@/shared/types/api-contracts'
 
 const route = useRoute()
 const projectsStore = useProjectsStore()
@@ -10,10 +12,19 @@ const projectsStore = useProjectsStore()
 onMounted(() => {
   void projectsStore.loadProjectDetail(String(route.params.id))
 })
+
+async function updateDeliverableStatus(deliverable: Deliverable, status: Deliverable['status']) {
+  if (deliverable.status === status) {
+    return
+  }
+
+  await apiClient.deliverables.update(deliverable.id, { status })
+  await projectsStore.loadProjectDetail(String(route.params.id))
+}
 </script>
 
 <template>
-  <v-container fluid class="pa-0">
+  <v-container fluid class="project-detail-page">
     <v-btn to="/projects" variant="text" class="mb-3">Voltar para projetos</v-btn>
 
     <v-alert v-if="projectsStore.error" type="error" variant="tonal" class="mb-4">
@@ -28,6 +39,26 @@ onMounted(() => {
       v-else-if="projectsStore.selectedProject"
       :project="projectsStore.selectedProject"
       :deliverables="projectsStore.deliverables"
+      :documents="projectsStore.documents"
+      :reviews="projectsStore.reviews"
+      :knowledge-items="projectsStore.projectKnowledge"
+      :knowledge-recommendations="projectsStore.projectKnowledgeRecommendations"
+      :technical-profile="projectsStore.projectTechnicalProfile"
+      :audit-logs="projectsStore.auditLogs"
+      @update:deliverable-status="updateDeliverableStatus"
+      @refresh="projectsStore.loadProjectDetail(String(route.params.id))"
     />
   </v-container>
 </template>
+
+<style scoped>
+.project-detail-page {
+  padding: 0;
+}
+
+@media (max-width: 720px) {
+  .project-detail-page {
+    padding: 0;
+  }
+}
+</style>
