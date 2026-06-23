@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useAuthStore } from '@/modules/auth/stores/auth.store'
 import type {
   AuditLogEntry,
@@ -12,15 +12,16 @@ import type {
   ProjectKnowledgeRecommendation,
   ProjectTechnicalProfile,
   ReviewSummary,
+  User,
 } from '@/shared/types/api-contracts'
 import { apiClient } from '@/shared/http/api-client'
 import BaseStatusBadge from '@/shared/components/BaseStatusBadge.vue'
 import TraceableLinkButton from '@/shared/components/TraceableLinkButton.vue'
+import DocumentCard from '@/modules/documents/components/DocumentCard.vue'
+import ReviewCard from '@/modules/reviews/components/ReviewCard.vue'
 import {
   deliverableBadgeKind,
-  documentBadgeKind,
   projectBadgeKind,
-  reviewBadgeKind,
 } from '@/shared/ui/status-badges'
 import {
   formatDateTime,
@@ -28,6 +29,7 @@ import {
   formatShortDate,
   toTimestamp,
 } from '@/shared/formatters/date.formatter'
+import { displayActorName } from '@/shared/formatters/user.formatter'
 import DeliverablesBoard from './DeliverablesBoard.vue'
 import InheritedDeliverablesReviewBanner from './InheritedDeliverablesReviewBanner.vue'
 import ProjectKnowledgeSection from './ProjectKnowledgeSection.vue'
@@ -54,6 +56,11 @@ const authStore = useAuthStore()
 const activeTab = ref('overview')
 const isDocumentModalOpen = ref(false)
 const isSavingDocument = ref(false)
+const documentModalDocument = ref<DocumentSummary | null>(null)
+const organizationUsers = ref<User[]>([])
+const pendingReviewDecision = ref<{ review: ReviewSummary; decision: 'approve' | 'reject' } | null>(null)
+const reviewDecisionComment = ref('')
+const isSavingReviewDecision = ref(false)
 const inheritanceReviewSavingIds = ref<string[]>([])
 const contextualRecommendationSavingIds = ref<string[]>([])
 const removalDialog = ref<{
@@ -94,6 +101,15 @@ const canApproveDeliverableRemoval = computed(
     authStore.isPlatformAdmin ||
     (authStore.user?.roles ?? []).some((role) => ['owner', 'admin', 'manager'].includes(role)),
 )
+const canManageProjectWork = computed(
+  () =>
+    authStore.isPlatformAdmin ||
+    (authStore.user?.roles ?? []).some((role) =>
+      ['owner', 'admin', 'manager', 'project_manager', 'member', 'estimator'].includes(role),
+    ),
+)
+const canViewDocuments = computed(() => authStore.can('documents.read'))
+const canViewReviews = computed(() => authStore.can('reviews.read'))
 const nextDueDeliverable = computed(() =>
   [...activeDeliverables.value]
     .filter((deliverable) => Boolean(deliverable.dueDate))
@@ -299,8 +315,16 @@ const tabItems = computed(() => [
   { title: 'Revisoes', value: 'reviews', count: props.reviews.length },
   { title: 'Historico', value: 'history', count: props.auditLogs.length },
 ])
+onMounted(async () => {
+  try {
+    organizationUsers.value = await apiClient.organizations.users()
+  } catch {
+    organizationUsers.value = []
+  }
+})
 
 function updateDeliverableStatus(deliverable: Deliverable, status: Deliverable['status']) {
+  if (!canManageProjectWork.value) return
   emit('update:deliverable-status', deliverable, status)
 }
 
@@ -319,6 +343,52 @@ function recommendationTypeLabel(type: ProjectKnowledgeRecommendation['type']) {
   if (type === 'review_checklist') return 'Checklist'
   if (type === 'project_reference') return 'Projeto de referencia'
   return 'Conhecimento'
+}
+
+function openNewDocumentModal() {
+  documentModalDocument.value = null
+  isDocumentModalOpen.value = true
+}
+
+function openDocumentEditor(document: DocumentSummary) {
+  if (!canManageProjectWork.value) return
+  documentModalDocument.value = document
+  isDocumentModalOpen.value = true
+}
+
+function closeDocumentModal() {
+  isDocumentModalOpen.value = false
+  documentModalDocument.value = null
+}
+
+function historyActor(entry: AuditLogEntry) {
+  return displayActorName(entry, organizationUsers.value)
+}
+
+function openReviewDecision(review: ReviewSummary, decision: 'approve' | 'reject') {
+  if (!canManageProjectWork.value) return
+  pendingReviewDecision.value = { review, decision }
+  reviewDecisionComment.value = ''
+}
+
+async function confirmReviewDecision() {
+  if (!pendingReviewDecision.value) return
+  isSavingReviewDecision.value = true
+
+  try {
+    const payload = { comment: reviewDecisionComment.value.trim() || null }
+    if (pendingReviewDecision.value.decision === 'approve') {
+      await apiClient.reviews.approve(pendingReviewDecision.value.review.id, payload)
+    } else {
+      await apiClient.reviews.reject(pendingReviewDecision.value.review.id, payload)
+    }
+
+    pendingReviewDecision.value = null
+    reviewDecisionComment.value = ''
+    emit('refresh')
+  } finally {
+    isSavingReviewDecision.value = false
+  }
 }
 
 async function applyKnowledgeRecommendation(recommendation: ProjectKnowledgeRecommendation) {
@@ -368,15 +438,24 @@ async function handleDocumentSubmit(payload: {
   isSavingDocument.value = true
 
   try {
-    const document = await apiClient.documents.create({
-      projectId: props.project.id,
-      deliverableId: payload.deliverableId,
-      title: payload.title,
-      description: payload.description,
-      type: payload.type,
-      status: payload.status,
-      tagIds: payload.tagIds,
-    })
+    const document = documentModalDocument.value
+      ? await apiClient.documents.update(documentModalDocument.value.id, {
+          deliverableId: payload.deliverableId,
+          title: payload.title,
+          description: payload.description,
+          type: payload.type,
+          status: payload.status,
+          tagIds: payload.tagIds,
+        })
+      : await apiClient.documents.create({
+          projectId: props.project.id,
+          deliverableId: payload.deliverableId,
+          title: payload.title,
+          description: payload.description,
+          type: payload.type,
+          status: payload.status,
+          tagIds: payload.tagIds,
+        })
 
     if (payload.file) {
       await apiClient.documents.uploadVersion(document.id, {
@@ -388,7 +467,7 @@ async function handleDocumentSubmit(payload: {
       })
     }
 
-    isDocumentModalOpen.value = false
+    closeDocumentModal()
     emit('refresh')
   } finally {
     isSavingDocument.value = false
@@ -545,7 +624,13 @@ async function submitRemovalDialog() {
         >
           Gerenciar knowledge
         </v-btn>
-        <v-btn color="teal" variant="tonal" prepend-icon="$upload" @click="isDocumentModalOpen = true">
+        <v-btn
+          v-if="canManageProjectWork"
+          color="teal"
+          variant="tonal"
+          prepend-icon="$upload"
+          @click="openNewDocumentModal"
+        >
           Novo documento
         </v-btn>
         <v-btn :to="`/projects/${project.id}/deliverables`" color="indigo" variant="tonal" prepend-icon="$calendar">
@@ -797,18 +882,57 @@ async function submitRemovalDialog() {
               Gerenciar entregaveis
             </v-btn>
           </div>
-          <div v-if="deliverables.length" class="project-cockpit__deliverable-cards">
-            <ProjectDeliverableTechnicalCard
-              v-for="deliverable in deliverables"
-              :key="deliverable.id"
-              :deliverable="deliverable"
-              :documents="documents"
-              :reviews="reviews"
-              :knowledge-items="knowledgeItems"
+          <div class="project-cockpit__metrics project-cockpit__metrics--compact">
+            <v-sheet
+              v-for="metric in metrics.slice(0, 6)"
+              :key="metric.label"
+              border
+              rounded="lg"
+              class="project-cockpit__metric"
+              :class="{ 'project-cockpit__metric--emphasis': metric.emphasis }"
+              :data-color="metric.color"
+            >
+              <i aria-hidden="true" />
+              <span>{{ metric.label }}</span>
+              <strong>{{ metric.value }}</strong>
+              <small>{{ metric.detail }}</small>
+            </v-sheet>
+          </div>
+
+          <v-sheet v-if="deliverables.length" border rounded="lg" class="project-cockpit__flow-board">
+            <div class="project-cockpit__section-title">
+              <div>
+                <h3>Fluxo por status</h3>
+                <p>Arraste cards para atualizar o andamento e manter o cockpit vivo.</p>
+              </div>
+            </div>
+            <DeliverablesBoard
+              :deliverables="deliverables"
+              :users="organizationUsers"
               @update:status="updateDeliverableStatus"
             />
-          </div>
-          <DeliverablesBoard v-if="deliverables.length" :deliverables="deliverables" @update:status="updateDeliverableStatus" />
+          </v-sheet>
+
+          <v-expansion-panels v-if="deliverables.length" variant="accordion" class="project-cockpit__flow-panel">
+            <v-expansion-panel>
+              <v-expansion-panel-title>
+                Ver leitura técnica detalhada dos entregáveis
+              </v-expansion-panel-title>
+              <v-expansion-panel-text>
+                <div class="project-cockpit__deliverable-cards">
+                  <ProjectDeliverableTechnicalCard
+                    v-for="deliverable in deliverables"
+                    :key="deliverable.id"
+                    :deliverable="deliverable"
+                    :documents="documents"
+                    :reviews="reviews"
+                    :knowledge-items="knowledgeItems"
+                    @update:status="updateDeliverableStatus"
+                  />
+                </div>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+          </v-expansion-panels>
           <v-empty-state
             v-else
             headline="Sem entregaveis tecnicos"
@@ -818,34 +942,52 @@ async function submitRemovalDialog() {
       </v-window-item>
 
       <v-window-item value="documents">
-        <section class="project-cockpit__tab-panel">
+        <section v-if="canViewDocuments" class="project-cockpit__tab-panel">
           <v-sheet border rounded="lg" class="project-cockpit__panel">
             <div class="project-cockpit__panel-head">
               <div>
                 <h2>Documentos</h2>
                 <p>Versoes oficiais, minutas e documentos em revisao vinculados ao projeto.</p>
               </div>
-              <v-btn color="teal" variant="flat" prepend-icon="$upload" @click="isDocumentModalOpen = true">Novo documento</v-btn>
+              <v-btn
+                v-if="canManageProjectWork"
+                color="teal"
+                variant="flat"
+                prepend-icon="$upload"
+                @click="openNewDocumentModal"
+              >
+                Novo documento
+              </v-btn>
             </div>
-            <v-list lines="two" bg-color="transparent">
-              <v-list-item
+            <div v-if="documents.length" class="project-cockpit__document-grid">
+              <DocumentCard
                 v-for="document in documents"
                 :key="document.id"
-                :title="document.title"
-                :subtitle="document.officialVersion?.revision ? `Oficial ${document.officialVersion.revision}` : document.description || 'Sem versao oficial'"
-              >
-                <template #append>
-                  <BaseStatusBadge :kind="documentBadgeKind(document.status)" size="x-small" />
-                </template>
-              </v-list-item>
-              <v-list-item v-if="documents.length === 0" title="Sem documentos cadastrados" />
-            </v-list>
+                :document="document"
+                :users="organizationUsers"
+                :can-manage="canManageProjectWork"
+                :can-assign-reviewers="false"
+                :can-save-model="canManageProjectWork"
+                @upload="openDocumentEditor"
+                @edit="openDocumentEditor"
+              />
+            </div>
+            <v-empty-state
+              v-else
+              headline="Sem documentos cadastrados"
+              text="Suba documentos para conectar entregáveis, versões oficiais, revisões e tags técnicas."
+            />
           </v-sheet>
         </section>
+        <v-empty-state
+          v-else
+          headline="Acesso restrito"
+          text="Seu perfil nao possui permissao para visualizar documentos deste projeto."
+        />
       </v-window-item>
 
       <v-window-item value="reviews">
-        <section class="project-cockpit__tab-panel">
+        <section v-if="canViewReviews" class="project-cockpit__tab-panel">
           <v-sheet border rounded="lg" class="project-cockpit__panel">
             <div class="project-cockpit__panel-head">
               <div>
@@ -854,21 +996,31 @@ async function submitRemovalDialog() {
               </div>
               <v-btn to="/reviews" size="small" variant="text" color="teal">Abrir revisoes</v-btn>
             </div>
-            <v-list lines="two" bg-color="transparent">
-              <v-list-item
+            <div v-if="reviews.length" class="project-cockpit__review-grid">
+              <ReviewCard
                 v-for="review in reviews"
                 :key="review.id"
-                :title="review.comment || 'Revisao tecnica'"
-                :subtitle="review.dueDate ? formatRelativeDueDate(review.dueDate) : 'Sem prazo de revisao'"
-              >
-                <template #append>
-                  <BaseStatusBadge :kind="reviewBadgeKind(review.status)" size="x-small" />
-                </template>
-              </v-list-item>
-              <v-list-item v-if="reviews.length === 0" title="Sem revisoes cadastradas" />
-            </v-list>
+                :review="review"
+                :users="organizationUsers"
+                :saving="isSavingReviewDecision"
+                :can-decide-review="canManageProjectWork"
+                :can-register-lesson="authStore.can('knowledge.register_lesson')"
+                @approve="openReviewDecision($event, 'approve')"
+                @reject="openReviewDecision($event, 'reject')"
+              />
+            </div>
+            <v-empty-state
+              v-else
+              headline="Sem revisoes cadastradas"
+              text="Quando documentos entrarem em validacao, as aprovacoes e reprovacoes aparecerao aqui."
+            />
           </v-sheet>
         </section>
+        <v-empty-state
+          v-else
+          headline="Acesso restrito"
+          text="Seu perfil nao possui permissao para visualizar revisoes deste projeto."
+        />
       </v-window-item>
 
       <v-window-item value="history">
@@ -905,7 +1057,7 @@ async function submitRemovalDialog() {
                 size="small"
               >
                 <strong>{{ entry.description }}</strong>
-                <div>{{ entry.actorDisplayName || entry.actorName }} · {{ formatDateTime(entry.occurredAt) }}</div>
+                <div>{{ historyActor(entry) }} · {{ formatDateTime(entry.occurredAt) }}</div>
               </v-timeline-item>
             </v-timeline>
             <v-empty-state
@@ -918,15 +1070,60 @@ async function submitRemovalDialog() {
       </v-window-item>
     </v-window>
 
-    <v-dialog v-model="isDocumentModalOpen" max-width="780" scrollable>
+    <v-dialog
+      :model-value="isDocumentModalOpen"
+      max-width="780"
+      scrollable
+      @update:model-value="$event ? (isDocumentModalOpen = true) : closeDocumentModal()"
+    >
       <DocumentUpload
         :projects="[project]"
         :deliverables="deliverables"
+        :users="organizationUsers"
+        :document="documentModalDocument"
         :saving="isSavingDocument"
         :initial-project-id="project.id"
         locked-project
         @submit="handleDocumentSubmit"
       />
+    </v-dialog>
+
+    <v-dialog
+      :model-value="Boolean(pendingReviewDecision)"
+      max-width="560"
+      @update:model-value="!$event && (pendingReviewDecision = null)"
+    >
+      <v-card rounded="lg">
+        <v-card-title>
+          {{ pendingReviewDecision?.decision === 'approve' ? 'Aprovar revisao' : 'Reprovar revisao' }}
+        </v-card-title>
+        <v-card-text class="project-cockpit__review-dialog">
+          <p>{{ pendingReviewDecision?.review.comment || 'Revisao tecnica do projeto.' }}</p>
+          <v-alert :type="pendingReviewDecision?.decision === 'approve' ? 'success' : 'warning'" variant="tonal">
+            Esta decisao ficara registrada no historico do projeto e atualizara o status da revisao.
+          </v-alert>
+          <v-textarea
+            v-model="reviewDecisionComment"
+            label="Comentario da decisao"
+            rows="4"
+            maxlength="1000"
+            counter
+            variant="outlined"
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-btn variant="text" @click="pendingReviewDecision = null">Cancelar</v-btn>
+          <v-spacer />
+          <v-btn
+            :color="pendingReviewDecision?.decision === 'approve' ? 'green' : 'red'"
+            variant="flat"
+            :loading="isSavingReviewDecision"
+            @click="confirmReviewDecision"
+          >
+            Confirmar
+          </v-btn>
+        </v-card-actions>
+      </v-card>
     </v-dialog>
 
     <v-dialog :model-value="Boolean(removalDialog)" max-width="560" @update:model-value="!$event && (removalDialog = null)">
@@ -1352,8 +1549,45 @@ async function submitRemovalDialog() {
 
 .project-cockpit__deliverable-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 21rem), 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18.5rem), 1fr));
+  gap: 0.75rem;
+}
+
+.project-cockpit__metrics--compact {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr));
+}
+
+.project-cockpit__metrics--compact .project-cockpit__metric {
+  min-height: 7.2rem;
+  padding: 0.85rem;
+}
+
+.project-cockpit__metrics--compact .project-cockpit__metric strong {
+  font-size: 1.55rem;
+}
+
+.project-cockpit__flow-board {
+  display: grid;
+  gap: 0.85rem;
+  border-color: #9bd9cb;
+  background:
+    radial-gradient(circle at top left, rgb(0 150 136 / 0.14), transparent 18rem),
+    linear-gradient(135deg, #f2fffb, #ffffff 62%);
+  padding: 1rem;
+  box-shadow: 0 16px 34px rgb(15 45 38 / 0.07);
+}
+
+.project-cockpit__flow-board h3 {
+  margin: 0 0 0.2rem;
+  color: #123c32;
+  font-size: 1.05rem;
+}
+
+.project-cockpit__document-grid,
+.project-cockpit__review-grid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
 }
 
 .project-cockpit__focus-list {
@@ -1395,6 +1629,16 @@ async function submitRemovalDialog() {
   border: 1px solid #d7e9e2;
   border-radius: 1rem;
   overflow: hidden;
+  background: #ffffff;
+}
+
+.project-cockpit__flow-panel :deep(.v-expansion-panel-title) {
+  color: #176b5f;
+  font-weight: 800;
+}
+
+.project-cockpit__flow-panel :deep(.v-expansion-panel-text__wrapper) {
+  padding: 0.75rem;
 }
 
 .project-cockpit__knowledge-anchor {
@@ -1481,6 +1725,12 @@ async function submitRemovalDialog() {
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
+}
+
+.project-cockpit__removal-dialog,
+.project-cockpit__review-dialog {
+  display: grid;
+  gap: 0.85rem;
 }
 
 .project-cockpit__history {

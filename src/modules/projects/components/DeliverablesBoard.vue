@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { apiClient } from '@/shared/http/api-client'
 import { formatShortDate } from '@/shared/formatters/date.formatter'
+import { displayUserName } from '@/shared/formatters/user.formatter'
 import type { Deliverable, User } from '@/shared/types/api-contracts'
 
 const props = defineProps<{
   deliverables: Deliverable[]
+  users?: User[]
 }>()
 
 const emit = defineEmits<{
@@ -20,6 +22,7 @@ const columns: Array<{ status: Deliverable['status']; title: string; color: stri
 ]
 const users = ref<User[]>([])
 const draggedDeliverable = ref<Deliverable | null>(null)
+const availableUsers = computed(() => (props.users?.length ? props.users : users.value))
 
 onMounted(async () => {
   try {
@@ -34,7 +37,7 @@ function byStatus(status: Deliverable['status']) {
 }
 
 function userName(userId: string) {
-  return users.value.find((user) => user.id === userId)?.fullName ?? userId
+  return displayUserName(userId, availableUsers.value)
 }
 
 function startDrag(deliverable: Deliverable) {
@@ -60,15 +63,18 @@ function dropOn(status: Deliverable['status']) {
       variant="flat"
       border
       rounded="lg"
-      class="deliverables-board__column"
+      :class="['deliverables-board__column', `deliverables-board__column--${column.status}`]"
       @dragover.prevent
       @drop="dropOn(column.status)"
     >
-      <v-card-title class="d-flex align-center justify-space-between text-subtitle-1">
-        <span>{{ column.title }}</span>
-        <v-chip :color="column.color" size="small" variant="tonal">{{
-          byStatus(column.status).length
-        }}</v-chip>
+      <v-card-title class="deliverables-board__column-title">
+        <div>
+          <span>{{ column.title }}</span>
+          <small>Fluxo operacional</small>
+        </div>
+        <v-chip :color="column.color" size="small" variant="flat">
+          {{ byStatus(column.status).length }}
+        </v-chip>
       </v-card-title>
 
       <v-card-text class="d-grid ga-3">
@@ -84,7 +90,24 @@ function dropOn(status: Deliverable['status']) {
         >
           <div class="deliverables-board__card-head">
             <v-icon icon="$command" size="16" />
-            <strong>{{ deliverable.title }}</strong>
+            <div>
+              <strong>{{ deliverable.title }}</strong>
+              <small>{{ deliverable.description || 'Sem descrição técnica.' }}</small>
+            </div>
+          </div>
+          <div v-if="deliverable.tags?.length" class="deliverables-board__tags">
+            <v-chip
+              v-for="tag in deliverable.tags.slice(0, 3)"
+              :key="tag.id"
+              size="x-small"
+              color="teal"
+              variant="tonal"
+            >
+              {{ tag.name }}
+            </v-chip>
+            <v-chip v-if="deliverable.tags.length > 3" size="x-small" color="teal" variant="outlined">
+              +{{ deliverable.tags.length - 3 }}
+            </v-chip>
           </div>
           <div class="deliverables-board__assignees">
             <v-chip
@@ -134,21 +157,59 @@ function dropOn(status: Deliverable['status']) {
 <style scoped>
 .deliverables-board {
   display: grid;
-  gap: 1rem;
+  gap: 0.85rem;
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .deliverables-board__column {
   min-height: 100%;
+  overflow: hidden;
+  border-color: #cfe3dc;
+  background:
+    linear-gradient(180deg, rgb(235 250 245 / 0.92), #ffffff 34%),
+    #ffffff;
+}
+
+.deliverables-board__column--blocked {
+  border-color: #f0c7c2;
+  background:
+    linear-gradient(180deg, rgb(255 238 235 / 0.95), #ffffff 34%),
+    #ffffff;
+}
+
+.deliverables-board__column--done {
+  border-color: #bee6cf;
+  background:
+    linear-gradient(180deg, rgb(232 249 239 / 0.95), #ffffff 34%),
+    #ffffff;
+}
+
+.deliverables-board__column-title {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: #143b33;
+  font-size: 0.95rem;
+  font-weight: 850;
+}
+
+.deliverables-board__column-title small {
+  display: block;
+  color: #64736f;
+  font-size: 0.72rem;
+  font-weight: 600;
 }
 
 .deliverables-board__card {
   display: grid;
-  gap: 0.65rem;
+  gap: 0.55rem;
   border-color: #d7e4df;
-  background: #ffffff;
+  background:
+    radial-gradient(circle at top right, rgb(0 150 136 / 0.1), transparent 7rem),
+    #ffffff;
   cursor: grab;
-  padding: 0.8rem;
+  padding: 0.7rem;
 }
 
 .deliverables-board__card:hover {
@@ -165,7 +226,23 @@ function dropOn(status: Deliverable['status']) {
 }
 
 .deliverables-board__card-head strong {
+  display: block;
   overflow-wrap: anywhere;
+}
+
+.deliverables-board__card-head small {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #64736f;
+  font-size: 0.75rem;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.deliverables-board__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
 }
 
 .deliverables-board__assignees {

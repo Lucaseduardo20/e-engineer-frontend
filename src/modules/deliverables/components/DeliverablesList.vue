@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import BasePagination from '@/shared/components/BasePagination.vue'
 import BaseStatusBadge from '@/shared/components/BaseStatusBadge.vue'
 import { formatShortDate } from '@/shared/formatters/date.formatter'
+import { displayUserName } from '@/shared/formatters/user.formatter'
 import type { Deliverable, DeliverableType, User } from '@/shared/types/api-contracts'
 import { deliverableBadgeKind } from '@/shared/ui/status-badges'
 
@@ -75,7 +76,7 @@ function typeLabel(type?: DeliverableType) {
 }
 
 function userName(userId: string) {
-  return props.users.find((user) => user.id === userId)?.fullName ?? userId
+  return displayUserName(userId, props.users)
 }
 
 function tagSummary(deliverable: Deliverable) {

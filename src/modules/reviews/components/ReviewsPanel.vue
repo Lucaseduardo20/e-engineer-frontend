@@ -2,6 +2,7 @@
 import { computed, onMounted, watch } from 'vue'
 import { useReviewsStore } from '@/modules/reviews/stores/reviews.store'
 import BaseStatusBadge from '@/shared/components/BaseStatusBadge.vue'
+import { displayUserName } from '@/shared/formatters/user.formatter'
 import { reviewBadgeKind } from '@/shared/ui/status-badges'
 
 const props = defineProps<{
@@ -31,7 +32,7 @@ watch(
 )
 
 function userName(userId: string) {
-  return reviewsStore.reviewers.find((user) => user.id === userId)?.fullName ?? userId.slice(0, 8)
+  return displayUserName(userId, reviewsStore.reviewers)
 }
 </script>
 

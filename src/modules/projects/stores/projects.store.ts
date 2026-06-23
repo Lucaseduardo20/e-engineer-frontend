@@ -94,7 +94,6 @@ export const useProjectsStore = defineStore('projects', () => {
         knowledgeResponse,
         knowledgeRecommendationsResponse,
         technicalProfile,
-        auditPage,
       ] = await Promise.all([
         projectsService.getById(projectId),
         apiClient.deliverables.list({ projectId, page: 1, pageSize: 50 }),
@@ -103,7 +102,6 @@ export const useProjectsStore = defineStore('projects', () => {
         apiClient.projects.listKnowledge(projectId),
         apiClient.projects.recommendKnowledge(projectId),
         projectsService.getTechnicalProfile(projectId),
-        apiClient.audit.list({ entityType: 'project', entityId: projectId, page: 1, pageSize: 20 }),
       ])
       selectedProject.value = project
       deliverables.value = deliverablePage.items
@@ -112,7 +110,13 @@ export const useProjectsStore = defineStore('projects', () => {
       projectKnowledge.value = knowledgeResponse.items
       projectKnowledgeRecommendations.value = knowledgeRecommendationsResponse.items
       projectTechnicalProfile.value = technicalProfile
-      auditLogs.value = auditPage.items
+      auditLogs.value = await loadProjectAuditTrail({
+        projectId,
+        deliverables: deliverablePage.items,
+        documents: documentPage.items,
+        reviews: reviewPage.items,
+        knowledgeItems: knowledgeResponse.items,
+      })
     } catch (loadError) {
       error.value = getApiErrorMessage(
         loadError,
@@ -287,6 +291,39 @@ export const useProjectsStore = defineStore('projects', () => {
       )
       return null
     }
+  }
+
+  async function loadProjectAuditTrail(input: {
+    projectId: string
+    deliverables: Deliverable[]
+    documents: DocumentSummary[]
+    reviews: ReviewSummary[]
+    knowledgeItems: ProjectKnowledgeItem[]
+  }) {
+    const entities = [
+      { entityType: 'project', entityId: input.projectId },
+      ...input.deliverables.slice(0, 40).map((item) => ({ entityType: 'deliverable', entityId: item.id })),
+      ...input.documents.slice(0, 40).map((item) => ({ entityType: 'document', entityId: item.id })),
+      ...input.reviews.slice(0, 40).map((item) => ({ entityType: 'review', entityId: item.id })),
+      ...input.knowledgeItems.slice(0, 40).map((item) => ({
+        entityType: 'knowledge_item',
+        entityId: item.knowledgeItem.id,
+      })),
+    ]
+
+    const pages = await Promise.all(
+      entities.map((entity) =>
+        apiClient.audit
+          .list({ ...entity, page: 1, pageSize: 8 })
+          .catch(() => ({ items: [], total: 0, page: 1, pageSize: 8 })),
+      ),
+    )
+    const entries = pages.flatMap((page) => page.items)
+    const uniqueEntries = new Map(entries.map((entry) => [entry.id, entry]))
+
+    return [...uniqueEntries.values()]
+      .sort((first, second) => second.occurredAt - first.occurredAt)
+      .slice(0, 50)
   }
 
   return {

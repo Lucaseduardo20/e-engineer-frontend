@@ -7,7 +7,7 @@ import type {
   ReviewSummary,
 } from '@/shared/types/api-contracts'
 import BaseStatusBadge from '@/shared/components/BaseStatusBadge.vue'
-import { deliverableBadgeKind, documentBadgeKind, reviewBadgeKind } from '@/shared/ui/status-badges'
+import { deliverableBadgeKind } from '@/shared/ui/status-badges'
 import { formatRelativeDueDate, formatShortDate, toTimestamp } from '@/shared/formatters/date.formatter'
 
 const props = defineProps<{
@@ -139,12 +139,6 @@ const contextualKnowledgeItems = computed(() => {
   return projectWideKnowledgeItems.value.slice(0, 2)
 })
 
-const knowledgeSignalLabel = computed(() => {
-  if (directlyAppliedKnowledgeItems.value.length) return 'aplicado no entregavel'
-  if (matchedKnowledgeItems.value.length) return 'afinidade do projeto'
-  return 'contexto do projeto'
-})
-
 const isOverdue = computed(() => {
   const dueDate = toTimestamp(props.deliverable.dueDate)
   return Boolean(dueDate && dueDate < todayStart.value && props.deliverable.status !== 'done')
@@ -211,6 +205,22 @@ const riskLabel = computed(() => {
   if (riskTone.value === 'warning') return 'Atenção técnica'
   return 'Saudável'
 })
+const primaryRisk = computed(() => riskItems.value[0] ?? 'Sem ponto crítico evidente')
+const documentSignal = computed(() => {
+  if (!linkedDocuments.value.length) return 'Sem documento vinculado'
+  if (!officialDocuments.value.length) return `${linkedDocuments.value.length} doc(s), sem oficial`
+  return `${officialDocuments.value.length}/${linkedDocuments.value.length} oficial(is)`
+})
+const reviewSignal = computed(() => {
+  if (pendingReviews.value.length) return `${pendingReviews.value.length} pendente(s)`
+  if (rejectedReviews.value.length) return `${rejectedReviews.value.length} reprovada(s)`
+  return `${linkedReviews.value.length} revisão(ões)`
+})
+const knowledgeSignal = computed(() =>
+  contextualKnowledgeItems.value.length
+    ? `${contextualKnowledgeItems.value.length} referência(s)`
+    : 'Sem knowledge aplicado',
+)
 
 const actionHint = computed(() => {
   if (props.deliverable.status === 'blocked') return 'Remover bloqueio'
@@ -273,123 +283,42 @@ function normalizeText(value: string) {
       </span>
     </div>
 
-    <div class="deliverable-technical-card__quick-info">
-      <div>
-        <span>Responsavel</span>
-        <strong>{{ assigneeLabel }}</strong>
-      </div>
-      <div>
+    <div class="deliverable-technical-card__signals">
+      <v-sheet rounded="lg" class="deliverable-technical-card__signal">
         <span>Prazo</span>
         <strong>{{ dueDateLabel }}</strong>
         <small v-if="deliverable.dueDate">{{ formatShortDate(deliverable.dueDate) }}</small>
+      </v-sheet>
+      <v-sheet rounded="lg" class="deliverable-technical-card__signal">
+        <span>Responsável</span>
+        <strong>{{ assigneeLabel }}</strong>
+      </v-sheet>
+      <v-sheet rounded="lg" class="deliverable-technical-card__signal">
+        <span>Próxima ação</span>
+        <strong>{{ actionHint }}</strong>
+      </v-sheet>
+    </div>
+
+    <div class="deliverable-technical-card__compact-insights">
+      <div>
+        <span>Documentos</span>
+        <strong>{{ documentSignal }}</strong>
+        <small v-if="linkedDocuments[0]">{{ linkedDocuments[0].title }}</small>
       </div>
       <div>
-        <span>Proxima acao</span>
-        <strong>{{ actionHint }}</strong>
+        <span>Revisões</span>
+        <strong>{{ reviewSignal }}</strong>
+        <small v-if="linkedReviews[0]">{{ linkedReviews[0].comment || 'Revisão técnica' }}</small>
       </div>
-    </div>
-
-    <div class="deliverable-technical-card__signals">
-      <v-sheet rounded="lg" class="deliverable-technical-card__signal">
-        <span>Documentos oficiais</span>
-        <strong>{{ officialDocuments.length }}/{{ linkedDocuments.length }}</strong>
-        <small>{{ linkedDocuments.length ? 'rastreaveis no entregavel' : 'nenhum documento vinculado' }}</small>
-      </v-sheet>
-      <v-sheet rounded="lg" class="deliverable-technical-card__signal">
-        <span>Revisoes pendentes</span>
-        <strong>{{ pendingReviews.length }}</strong>
-        <small>{{ rejectedReviews.length }} reprovada(s)</small>
-      </v-sheet>
-      <v-sheet rounded="lg" class="deliverable-technical-card__signal">
-        <span>Knowledge aplicado</span>
-        <strong>{{ contextualKnowledgeItems.length }}</strong>
-        <small>{{ knowledgeSignalLabel }}</small>
-      </v-sheet>
-    </div>
-
-    <div class="deliverable-technical-card__content-grid">
-      <section>
-        <div class="deliverable-technical-card__section-head">
-          <h4>Documentos e revisoes</h4>
-          <span>{{ linkedReviews.length }} revisao(oes)</span>
-        </div>
-        <div class="deliverable-technical-card__list">
-          <div
-            v-for="document in linkedDocuments.slice(0, 3)"
-            :key="document.id"
-            class="deliverable-technical-card__list-item"
-          >
-            <div>
-              <strong>{{ document.title }}</strong>
-              <small>
-                {{ document.officialVersion?.revision ? `Oficial ${document.officialVersion.revision}` : 'Sem oficial definida' }}
-              </small>
-            </div>
-            <BaseStatusBadge :kind="documentBadgeKind(document.status)" size="x-small" />
-          </div>
-
-          <div
-            v-for="review in linkedReviews.slice(0, 2)"
-            :key="review.id"
-            class="deliverable-technical-card__list-item deliverable-technical-card__list-item--review"
-          >
-            <div>
-              <strong>{{ review.comment || 'Revisao tecnica' }}</strong>
-              <small>{{ review.dueDate ? formatRelativeDueDate(review.dueDate) : 'Sem prazo de revisao' }}</small>
-            </div>
-            <BaseStatusBadge :kind="reviewBadgeKind(review.status)" size="x-small" />
-          </div>
-
-          <v-empty-state
-            v-if="linkedDocuments.length === 0 && linkedReviews.length === 0"
-            density="compact"
-            headline="Sem vinculos ainda"
-            text="Quando documentos e revisoes forem conectados, este card vira o mapa operacional do entregavel."
-          />
-        </div>
-      </section>
-
-      <section>
-        <div class="deliverable-technical-card__section-head">
-          <h4>Conhecimento e riscos</h4>
-          <span>{{ riskItems.length || 'sem' }} alerta(s)</span>
-        </div>
-
-        <div class="deliverable-technical-card__knowledge">
-          <v-chip
-            v-for="{ knowledgeItem } in contextualKnowledgeItems"
-            :key="knowledgeItem.id"
-            color="teal"
-            variant="tonal"
-            size="small"
-          >
-            {{ knowledgeItem.title }}
-          </v-chip>
-          <span v-if="contextualKnowledgeItems.length === 0" class="deliverable-technical-card__muted">
-            Aplique referencias ou padroes para orientar decisoes deste entregavel.
-          </span>
-        </div>
-
-        <div class="deliverable-technical-card__risks">
-          <v-alert
-            v-if="riskItems.length === 0"
-            type="success"
-            variant="tonal"
-            density="compact"
-          >
-            Sem ponto critico evidente.
-          </v-alert>
-          <v-alert
-            v-for="risk in riskItems.slice(0, 3)"
-            :key="risk"
-            :type="riskTone === 'error' ? 'error' : 'warning'"
-            variant="tonal"
-            density="compact"
-          >
-            {{ risk }}
-          </v-alert>
-        </div>
-      </section>
+      <div>
+        <span>Knowledge</span>
+        <strong>{{ knowledgeSignal }}</strong>
+        <small v-if="contextualKnowledgeItems[0]">{{ contextualKnowledgeItems[0].knowledgeItem.title }}</small>
+      </div>
+      <div>
+        <span>Alerta</span>
+        <strong>{{ primaryRisk }}</strong>
+      </div>
     </div>
 
     <div class="deliverable-technical-card__footer">
@@ -419,19 +348,19 @@ function normalizeText(value: string) {
 .deliverable-technical-card {
   position: relative;
   display: grid;
-  gap: 1rem;
+  gap: 0.7rem;
   overflow: hidden;
   background:
     linear-gradient(135deg, rgb(232 248 242 / 0.82), rgb(255 255 255 / 0.96) 34%),
     #ffffff;
-  padding: 1rem 1rem 1rem 1.25rem;
-  box-shadow: 0 16px 36px rgb(15 45 38 / 0.08);
+  padding: 0.8rem 0.85rem 0.85rem 1rem;
+  box-shadow: 0 10px 24px rgb(15 45 38 / 0.06);
 }
 
 .deliverable-technical-card__status-rail {
   position: absolute;
   inset: 0 auto 0 0;
-  width: 0.35rem;
+  width: 0.28rem;
   background: #0f766e;
 }
 
@@ -444,13 +373,11 @@ function normalizeText(value: string) {
 }
 
 .deliverable-technical-card__header,
-.deliverable-technical-card__footer,
-.deliverable-technical-card__section-head,
-.deliverable-technical-card__list-item {
+.deliverable-technical-card__footer {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 0.85rem;
+  gap: 0.65rem;
 }
 
 .deliverable-technical-card__title-block {
@@ -458,11 +385,9 @@ function normalizeText(value: string) {
 }
 
 .deliverable-technical-card__eyebrow,
-.deliverable-technical-card__quick-info span,
-.deliverable-technical-card__signal span,
-.deliverable-technical-card__section-head span {
+.deliverable-technical-card__signal span {
   color: #267365;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.02em;
   text-transform: uppercase;
@@ -475,8 +400,8 @@ function normalizeText(value: string) {
 }
 
 .deliverable-technical-card h3 {
-  margin-top: 0.2rem;
-  font-size: 1.12rem;
+  margin-top: 0.12rem;
+  font-size: 1rem;
   line-height: 1.22;
 }
 
@@ -491,25 +416,31 @@ function normalizeText(value: string) {
 }
 
 .deliverable-technical-card p {
-  margin: 0.35rem 0 0;
+  display: -webkit-box;
+  margin: 0.25rem 0 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 0.88rem;
 }
 
 .deliverable-technical-card__status {
-  display: grid;
-  justify-items: end;
-  gap: 0.45rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem;
 }
 
 .deliverable-technical-card__tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
+  gap: 0.3rem;
 }
 
 .deliverable-technical-card__risk {
   border-radius: 999px;
-  padding: 0.28rem 0.55rem;
-  font-size: 0.72rem;
+  padding: 0.22rem 0.48rem;
+  font-size: 0.68rem;
   font-weight: 800;
 }
 
@@ -528,30 +459,23 @@ function normalizeText(value: string) {
   color: #9a2f28;
 }
 
-.deliverable-technical-card__quick-info,
 .deliverable-technical-card__signals,
-.deliverable-technical-card__content-grid {
+.deliverable-technical-card__compact-insights {
   display: grid;
-  gap: 0.75rem;
+  gap: 0.55rem;
 }
 
-.deliverable-technical-card__quick-info {
-  grid-template-columns: 1.25fr 0.9fr 1fr;
-}
-
-.deliverable-technical-card__quick-info > div,
 .deliverable-technical-card__signal {
   display: grid;
-  gap: 0.22rem;
+  gap: 0.12rem;
   border: 1px solid #d8e5df;
-  border-radius: 0.8rem;
+  border-radius: 0.7rem;
   background: rgb(255 255 255 / 0.82);
-  padding: 0.75rem;
+  padding: 0.55rem 0.6rem;
 }
 
-.deliverable-technical-card__quick-info strong,
 .deliverable-technical-card__signal strong,
-.deliverable-technical-card__list-item strong {
+.deliverable-technical-card__compact-insights strong {
   color: #1b332c;
 }
 
@@ -564,65 +488,59 @@ function normalizeText(value: string) {
 }
 
 .deliverable-technical-card__signal strong {
-  font-size: 1.35rem;
-  line-height: 1;
+  font-size: 0.92rem;
+  line-height: 1.25;
 }
 
-.deliverable-technical-card__content-grid {
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+.deliverable-technical-card__compact-insights {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.deliverable-technical-card__content-grid section {
+.deliverable-technical-card__compact-insights > div {
   display: grid;
-  align-content: start;
-  gap: 0.65rem;
-  border: 1px solid #d8e5df;
-  border-radius: 0.9rem;
-  background: rgb(255 255 255 / 0.72);
-  padding: 0.85rem;
-}
-
-.deliverable-technical-card__list,
-.deliverable-technical-card__knowledge,
-.deliverable-technical-card__risks {
-  display: grid;
-  gap: 0.55rem;
-}
-
-.deliverable-technical-card__list-item {
-  align-items: center;
-  border-radius: 0.75rem;
-  background: #f8fcfa;
-  padding: 0.65rem;
-}
-
-.deliverable-technical-card__list-item--review {
-  background: #fffaf0;
-}
-
-.deliverable-technical-card__list-item > div {
-  display: grid;
+  gap: 0.15rem;
   min-width: 0;
+  border: 1px solid #d8e5df;
+  border-radius: 0.7rem;
+  background: rgb(255 255 255 / 0.72);
+  padding: 0.55rem 0.6rem;
 }
 
-.deliverable-technical-card__knowledge {
-  grid-template-columns: repeat(auto-fit, minmax(9rem, max-content));
-  align-items: center;
+.deliverable-technical-card__compact-insights span {
+  color: #267365;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.deliverable-technical-card__compact-insights strong,
+.deliverable-technical-card__compact-insights small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deliverable-technical-card__compact-insights strong {
+  font-size: 0.86rem;
 }
 
 .deliverable-technical-card__footer {
   align-items: center;
 }
 
+.deliverable-technical-card__footer :deep(.v-btn) {
+  min-height: 2.25rem;
+}
+
 .deliverable-technical-card__status-select {
-  max-width: 14rem;
+  max-width: 13rem;
 }
 
 @media (max-width: 1100px) {
-  .deliverable-technical-card__quick-info,
   .deliverable-technical-card__signals,
-  .deliverable-technical-card__content-grid {
-    grid-template-columns: 1fr;
+  .deliverable-technical-card__compact-insights {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -638,6 +556,10 @@ function normalizeText(value: string) {
 
   .deliverable-technical-card__status-select {
     max-width: none;
+  }
+
+  .deliverable-technical-card__compact-insights {
+    grid-template-columns: 1fr;
   }
 }
 </style>

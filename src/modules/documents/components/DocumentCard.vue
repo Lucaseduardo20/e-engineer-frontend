@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import BaseStatusBadge from '@/shared/components/BaseStatusBadge.vue'
 import TraceableLinkButton from '@/shared/components/TraceableLinkButton.vue'
 import { formatDateTime, formatShortDate } from '@/shared/formatters/date.formatter'
+import { displayUserName } from '@/shared/formatters/user.formatter'
 import type { DocumentSummary, User } from '@/shared/types/api-contracts'
 import { documentBadgeKind } from '@/shared/ui/status-badges'
 
@@ -10,6 +11,8 @@ const props = defineProps<{
   document: DocumentSummary
   users?: User[]
   canSaveModel?: boolean
+  canManage?: boolean
+  canAssignReviewers?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -20,15 +23,19 @@ const emit = defineEmits<{
   delete: [document: DocumentSummary]
   'save-model': [document: DocumentSummary]
 }>()
-const actions = [
+const canManageDocument = computed(() => props.canManage !== false)
+const actions = computed(() => [
   { key: 'download', label: 'Baixar', icon: '$file' },
-  { key: 'upload', label: 'Nova versao', icon: '$upload' },
-  ...(props.canSaveModel ? [{ key: 'save-model', label: 'Salvar como modelo', icon: '$file' }] : []),
+  ...(canManageDocument.value ? [{ key: 'upload', label: 'Nova versao', icon: '$upload' }] : []),
+  ...(props.canSaveModel && canManageDocument.value
+    ? [{ key: 'save-model', label: 'Salvar como modelo', icon: '$file' }]
+    : []),
   { key: 'history', label: 'Historico', icon: '$calendar' },
-  { key: 'edit', label: 'Editar', icon: '$edit' },
-  { key: 'assign', label: 'Revisores', icon: '$success' },
-  { key: 'delete', label: 'Excluir', icon: '$delete' },
-]
+  ...(canManageDocument.value ? [{ key: 'edit', label: 'Editar descricao e tags', icon: '$edit' }] : []),
+  ...(canManageDocument.value && props.canAssignReviewers !== false
+    ? [{ key: 'assign', label: 'Revisores', icon: '$success' }]
+    : []),
+])
 function runAction(key: string) {
   if (key === 'download') {
     if (downloadUrl.value) globalThis.open(downloadUrl.value, '_blank')
@@ -71,7 +78,7 @@ function userName(userId?: string | null) {
     return 'Sem autor'
   }
 
-  return props.users?.find((user) => user.id === userId)?.fullName ?? userId.slice(0, 8)
+  return displayUserName(userId, props.users, 'Sem autor identificado')
 }
 </script>
 

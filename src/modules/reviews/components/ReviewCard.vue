@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import BaseStatusBadge from '@/shared/components/BaseStatusBadge.vue'
 import TraceableLinkButton from '@/shared/components/TraceableLinkButton.vue'
 import { formatShortDate } from '@/shared/formatters/date.formatter'
+import { displayUserName } from '@/shared/formatters/user.formatter'
 import type { ReviewSummary, User } from '@/shared/types/api-contracts'
 import { reviewBadgeKind } from '@/shared/ui/status-badges'
 
@@ -11,6 +12,7 @@ const props = defineProps<{
   users?: User[]
   saving?: boolean
   canRegisterLesson?: boolean
+  canDecideReview?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -25,7 +27,7 @@ const canDecide = computed(
 )
 
 function userName(userId: string) {
-  return props.users?.find((user) => user.id === userId)?.fullName ?? userId.slice(0, 8)
+  return displayUserName(userId, props.users)
 }
 </script>
 
@@ -50,7 +52,7 @@ function userName(userId: string) {
                 density="compact"
                 @click.stop
               >
-                Ir para projeto · {{ review.projectId.slice(0, 8) }}
+                Abrir projeto
               </v-btn>
             </template>
           </v-tooltip>
@@ -66,7 +68,7 @@ function userName(userId: string) {
                 density="compact"
                 @click.stop
               >
-                Ir para documento · {{ review.documentId.slice(0, 8) }}
+                Abrir documento
               </v-btn>
             </template>
           </v-tooltip>
@@ -82,7 +84,7 @@ function userName(userId: string) {
       </span>
       <span :class="{ 'review-card__meta--muted': !review.documentId }">
         <v-icon icon="$file" size="15" />
-        {{ review.documentId ? `Documento ${review.documentId.slice(0, 8)}` : 'Sem documento' }}
+        {{ review.documentId ? 'Documento vinculado' : 'Sem documento' }}
       </span>
       <span>
         <v-icon icon="$success" size="15" />
@@ -115,7 +117,7 @@ function userName(userId: string) {
         Registrar licao aprendida
       </v-btn>
       <v-btn
-        v-if="canDecide"
+        v-if="canDecide && canDecideReview !== false"
         size="small"
         color="green"
         variant="tonal"
@@ -126,7 +128,7 @@ function userName(userId: string) {
         Aprovar
       </v-btn>
       <v-btn
-        v-if="canDecide"
+        v-if="canDecide && canDecideReview !== false"
         size="small"
         color="red"
         variant="tonal"

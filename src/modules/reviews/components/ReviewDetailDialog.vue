@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import BaseStatusBadge from '@/shared/components/BaseStatusBadge.vue'
 import TraceableLinkButton from '@/shared/components/TraceableLinkButton.vue'
 import { formatDateTime, formatShortDate } from '@/shared/formatters/date.formatter'
+import { displayUserName } from '@/shared/formatters/user.formatter'
 import type { ReviewDetail, ReviewSummary, User } from '@/shared/types/api-contracts'
 import { reviewBadgeKind } from '@/shared/ui/status-badges'
 
@@ -47,7 +48,7 @@ function userName(userId?: string | null) {
     return 'Nao informado'
   }
 
-  return props.users.find((user) => user.id === userId)?.fullName ?? userId.slice(0, 8)
+  return displayUserName(userId, props.users, 'Nao informado')
 }
 
 function submitComment() {
