@@ -44,3 +44,53 @@ a:focus-visible {
 #app {
   min-height: 100vh;
 }
+
+strong {
+  font-weight: 680;
+}
+
+.v-field {
+  background: #fbfdfc;
+  color: #22332e;
+}
+
+.v-field--variant-outlined .v-field__outline {
+  color: #9bb2ab;
+}
+
+.v-field:hover .v-field__outline {
+  color: #48776d;
+}
+
+.v-field--focused .v-field__outline {
+  color: #1d6f61;
+}
+
+.v-label {
+  color: #53655f;
+  opacity: 1;
+}
+
+.v-btn {
+  font-weight: 640;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.v-card-title {
+  font-weight: 680;
+  letter-spacing: 0;
+}
+
+.v-btn:not(.v-btn--disabled):hover {
+  filter: brightness(0.98);
+}
+
+.v-btn.v-btn--disabled {
+  opacity: 0.48;
+}
+
+.v-btn:focus-visible {
+  outline: 3px solid #8bc7ff;
+  outline-offset: 2px;
+}

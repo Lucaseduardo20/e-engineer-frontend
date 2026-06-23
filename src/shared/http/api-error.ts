@@ -27,6 +27,10 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
     return apiError.message
   }
 
+  if (error instanceof AxiosError && error.response?.status === 403) {
+    return 'Voce nao tem permissao para executar esta acao.'
+  }
+
   if (
     error instanceof AxiosError &&
     (error.response?.status === 0 || error.code === 'ERR_NETWORK')

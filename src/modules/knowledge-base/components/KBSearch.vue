@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { apiClient } from '@/shared/http/api-client'
-import type { Project } from '@/shared/types/api-contracts'
 import { getApiErrorMessage } from '@/shared/http/api-error'
+import type { KnowledgeItem } from '@/modules/knowledge-base/types/knowledge.types'
 
 const query = ref('')
-const results = ref<Project[]>([])
+const results = ref<KnowledgeItem[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 const hasSearched = ref(false)
@@ -40,7 +40,7 @@ async function search() {
     <v-card-text>
       <v-text-field
         v-model="query"
-        label="Buscar projetos de referencia"
+        label="Buscar na base de conhecimento"
         density="comfortable"
         variant="outlined"
         prepend-inner-icon="$search"
@@ -55,7 +55,7 @@ async function search() {
         block
         prepend-icon="$search"
         @click="search"
-        >Buscar referencia</v-btn
+        >Buscar conhecimento</v-btn
       >
 
       <v-alert v-if="error" type="error" variant="tonal" density="compact" class="mt-3">
@@ -63,10 +63,11 @@ async function search() {
       </v-alert>
       <v-list v-if="results.length" class="mt-3" lines="two">
         <v-list-item
-          v-for="project in results"
-          :key="project.id"
-          :title="project.name"
-          :subtitle="project.description"
+          v-for="item in results"
+          :key="item.id"
+          :to="`/knowledge-base/${item.id}`"
+          :title="item.title"
+          :subtitle="item.description ?? undefined"
         >
           <template #prepend>
             <v-avatar color="teal" variant="tonal" size="32">
@@ -79,7 +80,7 @@ async function search() {
         v-else-if="hasSearched && !loading && !error"
         class="mt-3"
         headline="Sem referencias"
-        text="Nenhum projeto anterior encontrado."
+        text="Nenhum conhecimento publicado encontrado."
       />
     </v-card-text>
   </v-card>
